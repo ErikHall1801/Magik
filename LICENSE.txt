@@ -2,7 +2,7 @@ Copyright (c) 2026 Christian Villandseie and Erik Kurt Hall
 
 Project: Magik
 License: PolyForm Small Business License 1.0.0
-Source: https://polyformproject.org/licenses/small-business/1.0.0/
+Source: https://polyformproject.org/licenses/small-business/1.0.0
 
 1. Acceptance
 In order to get  any  license under  these  terms, you  must agree to 
