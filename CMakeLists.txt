@@ -1,9 +1,11 @@
 # Standard setup
 cmake_minimum_required(VERSION 3.21)
-project(Magik VERSION 0.1.0 LANGUAGES CXX C)
+project(Magik VERSION 0.1.0 LANGUAGES CXX C CUDA)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 
 # Find packages
 # find_package(xyz CONFIG REQUIERED) for example
@@ -11,7 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Link static libraries
 
 # Declare a shared library
-add_library(magik SHARED src/magik.cpp)
+add_library(magik SHARED src/magik.cpp src/cuda_test.cu)
 
 # Define the location of the header file
 target_include_directories(magik PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/magik)
@@ -28,6 +30,8 @@ set_target_properties(magik PROPERTIES
     CXX_VISIBILITY_PRESET hidden
     C_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN ON
+
+    CUDA_RUNTIME_LIBRARY Static
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
