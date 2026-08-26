@@ -1,5 +1,5 @@
-#include <cuda_runtime.h>
-#include "magik.h"
+#include "magik_internal.h"
+#include "cuda_test.cuh"
 
 __device__ bool is_valid_thread(const unsigned int x_resolution, const unsigned int y_resolution)
 {
@@ -24,7 +24,7 @@ __device__ unsigned int get_pixel_id(const unsigned int x_resolution)
     return i_y*x_resolution*4 + i_x*4;
 }
 
-__global__ void test_gradient_kernel(float* data, const unsigned int x_resolution, const unsigned int y_resolution)
+__global__ void test_gradient_kernel(magik_rgba_test_frame_buffer rgba_buffer, const unsigned int x_resolution, const unsigned int y_resolution)
 {
     unsigned int pixel_id = get_pixel_id(x_resolution);
     
@@ -35,10 +35,10 @@ __global__ void test_gradient_kernel(float* data, const unsigned int x_resolutio
     float fy = static_cast<float>(i_y)/static_cast<float>(y_resolution - 1);
 
 
-    if (!data) return;
+    if (!rgba_buffer->data) return;
 
-    data[pixel_id] = fx;
-    data[pixel_id + 1] = fy;
-    data[pixel_id + 2] = 0.5;
-    data[pixel_id + 3] = 1.0f;
+    rgba_buffer->data[pixel_id] = fx;
+    rgba_buffer->data[pixel_id + 1] = fy;
+    rgba_buffer->data[pixel_id + 2] = 0.5;
+    rgba_buffer->data[pixel_id + 3] = 1.0f;
 }
