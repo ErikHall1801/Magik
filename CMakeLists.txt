@@ -13,7 +13,7 @@ set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 # Link static libraries
 
 # Declare a shared library
-add_library(magik SHARED src/magik.cpp src/cuda_test.cu)
+add_library(magik SHARED src/magik.cpp src/cuda)
 
 # Define the location of the header file
 target_include_directories(magik PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/magik)
