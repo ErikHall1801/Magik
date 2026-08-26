@@ -1,0 +1,6 @@
+{
+  "name": "magik",
+  "version": "0.1.0",
+  "description": "A spectral relativistic pathtracer API",
+  "dependencies": []
+}
