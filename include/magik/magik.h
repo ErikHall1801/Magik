@@ -144,13 +144,6 @@ MAGIK_API void check_magik(e_magik_result_types result, char const* func, const 
 * [SECTION] Tests
 */
 
-struct magik_rgba_test_frame_buffer_t
-{
-    uint32_t x_res = 0;
-    uint32_t y_res = 0;
-    float* data = nullptr;
-};
-
 /**
 * @brief Example of an opaque pointer & struct. Note, in this example the opaque type is a pointer, but this works with raw pointers / structs too. 
 */
