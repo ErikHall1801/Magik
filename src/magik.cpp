@@ -47,13 +47,6 @@ MAGIK_API void check_magik(e_magik_result_types result, char const* func, const 
 * [SECTION] Tests
 */
 
-struct magik_rgba_test_frame_buffer_t
-{
-    uint32_t x_res = 0;
-    uint32_t y_res = 0;
-    float* data = nullptr;
-};
-
 MAGIK_API e_magik_result_types magik_allocate_host_rgba_test(magik_rgba_test_frame_buffer* buffer, uint32_t width, uint32_t height)
 {
     try // Memory allocation can fail !

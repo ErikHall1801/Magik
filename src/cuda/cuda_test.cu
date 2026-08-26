@@ -1,14 +1,44 @@
 #include <cuda_runtime.h>
+#include "magik.h"
 
-__global__ void test_gradient_kernel(int width, int height, float* r, float* g, float* b)
+__device__ bool is_valid_thread(const unsigned int x_resolution, const unsigned int y_resolution)
 {
-    int x = blockIdx.x*blockDim.x + threadIdx.x;
-    int y = blockIdx.y*blockDim.y + threadIdx.y;
+    unsigned int i_x = threadIdx.x + blockIdx.x*blockDim.x;
+    unsigned int i_y = threadIdx.y + blockIdx.y*blockDim.y;
+    bool cond = (i_x < x_resolution) && (i_y < y_resolution);
 
-    float fx = static_cast<float>(x)/static_cast<float>(width - 1);
-    float fy = static_cast<float>(x)/static_cast<float>(height - 1);
+    return cond;
+}
 
-    r[y*width + x] = fx*255.0f;
-    g[y*width + x] = fy*255.0f;
-    b[y*width + x] = 128.0f;
+__device__ unsigned int get_thread_id(const unsigned int x_resolution)
+{
+    unsigned int i_x = threadIdx.x + blockIdx.x*blockDim.x;
+    unsigned int i_y = threadIdx.y + blockIdx.y*blockDim.y;
+    return i_y*x_resolution + i_x;
+}
+
+__device__ unsigned int get_pixel_id(const unsigned int x_resolution)
+{
+    unsigned int i_x = threadIdx.x + blockIdx.x*blockDim.x;
+    unsigned int i_y = threadIdx.y + blockIdx.y*blockDim.y;
+    return i_y*x_resolution*4 + i_x*4;
+}
+
+__global__ void test_gradient_kernel(magik_rgba_test_frame_buffer rgba_buffer, const unsigned int x_resolution, const unsigned int y_resolution)
+{
+    unsigned int pixel_id = get_pixel_id(x_resolution);
+    
+    unsigned int i_x = threadIdx.x + blockIdx.x*blockDim.x;
+    unsigned int i_y = threadIdx.y + blockIdx.y*blockDim.y;
+    
+    float fx = static_cast<float>(i_x)/static_cast<float>(x_resolution - 1);
+    float fy = static_cast<float>(i_y)/static_cast<float>(y_resolution - 1);
+
+
+    if (!rgba_buffer->data) return;
+
+    rgba_buffer->data[pixel_id] = fx;
+    rgba_buffer->data[pixel_id + 1] = fy;
+    rgba_buffer->data[pixel_id + 2] = 0.5;
+    rgba_buffer->data[pixel_id + 3] = 1.0f;
 }
