@@ -40,6 +40,11 @@ set_target_properties(magik PROPERTIES
     CUDA_RUNTIME_LIBRARY Static
 )
 
+# Suppress static CRT conflicts caused by the static CUDA runtime in MSVC
+if(MSVC)
+    target_link_options(magik PRIVATE /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD)
+endif()
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
