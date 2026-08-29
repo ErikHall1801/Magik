@@ -1,0 +1,131 @@
+/*
+* This file is no longer public and implements the core host-side API logic. 
+*/
+
+#include "magik.h"
+#include "../device/bridge/magik_bridge.h"
+#include "../shared/magik_internal_types.h"
+#include <iostream>
+
+
+/**
+* [SECTION] Result types
+*/
+
+static magik_error_callback g_error_callback = nullptr;
+
+static void* g_error_user_data = nullptr;
+
+static thread_local e_magik_result_types g_last_error = MAGIK_SUCCESS;
+
+MAGIK_API void magik_set_error_callback(magik_error_callback callback, void* user_data)
+{
+    g_error_callback = callback;
+    g_error_user_data = user_data;
+}
+
+MAGIK_API e_magik_result_types magik_get_last_error(void)
+{
+    return g_last_error;
+}
+
+MAGIK_API void check_magik(e_magik_result_types result, char const* func, const char* const file, int const line)
+{
+    if(result != MAGIK_SUCCESS)
+    {
+        g_last_error = result;
+
+        if(g_error_callback)
+        {
+            g_error_callback(result, func, file, line, g_error_user_data);
+        }
+        else
+        {
+            printf("Magik error = %u at %s:%d '%s'\n", static_cast<unsigned int>(result), file, line, func);
+        }
+    }
+}
+
+
+
+/**
+* [SECTION] Tests
+*/
+
+MAGIK_API magik_test_rgba_frame_buffer_t magik_test_allocate_dcc_rgba_frame_buffer(uint32_t width, uint32_t height)
+{
+    try
+    {
+        size_t size_of_buffer = size_t(width*height)*sizeof(float)*4;
+
+        auto internal_buffer = new magik_test_rgba_frame_buffer();
+        internal_buffer->x_resolution = width;
+        internal_buffer->y_resolution = height;
+        internal_buffer->h_data = magik::bridge::host_allocate_host_memory(size_of_buffer);
+        internal_buffer->d_data = magik::bridge::host_allocate_device_memory(size_of_buffer);
+
+        return internal_buffer;
+        g_last_error = MAGIK_SUCCESS;
+    }
+    catch(...)
+    {
+        g_last_error = MAGIK_ERROR_HOST_MEMORY_ALLOCATION_FAILED;
+        return new magik_test_rgba_frame_buffer();
+    }
+}
+
+MAGIK_API e_magik_result_types magik_test_destroy_dcc_rgba_frame_buffer(magik_test_rgba_frame_buffer_t buffer)
+{
+    magik::bridge::host_destroy_host_memory(buffer->h_data);
+    magik::bridge::host_destroy_device_memory(buffer->d_data);
+    return MAGIK_SUCCESS;
+}
+
+MAGIK_API e_magik_result_types magik_test_fetch_rgba_frame_buffer_data(float** data, magik_test_rgba_frame_buffer_t buffer)
+{
+    size_t size_of_buffer = size_t(buffer->x_resolution*buffer->y_resolution)*sizeof(float)*4;
+    magik::bridge::host_memcpy_device_to_host(buffer->h_data, buffer->d_data, size_of_buffer);
+    *data = buffer->h_data;
+    return MAGIK_SUCCESS;
+}
+
+MAGIK_API e_magik_result_types magik_test_kernel(magik_test_rgba_frame_buffer_t buffer, e_magik_test_kernel_pattern_types pattern_type)
+{
+    switch(pattern_type)
+    {
+        case uv_gradient:
+        {
+            magik::bridge::call_test_pattern_gradient_kernel(buffer->d_data, buffer->x_resolution, buffer->y_resolution);
+            break;
+        }
+
+        case mandelbrot:
+        {
+            magik::bridge::call_test_pattern_mandelbrot_kernel(buffer->d_data, buffer->x_resolution, buffer->y_resolution);
+            break;
+        }
+    }
+
+    return MAGIK_SUCCESS;
+}
+
+
+
+/**
+* [SECTION] Version checking
+*/
+
+MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* minor, uint32_t* revision, const char** as_char)
+{
+    if(major) *major = MAGIK_VERSION_MAJOR;
+    if(minor) *minor = MAGIK_VERSION_MINOR;
+    if(revision) *revision = MAGIK_VERSION_REVISION;
+    if(as_char) 
+    {
+        static char buffer[256];
+        snprintf(buffer, sizeof(buffer), "Magik ! %u.%u.%u - %s", 
+                MAGIK_VERSION_MAJOR, MAGIK_VERSION_MINOR, MAGIK_VERSION_REVISION, MAGIK_VERSION_NAME);
+        *as_char = buffer;
+    }
+    return MAGIK_SUCCESS;
+}
