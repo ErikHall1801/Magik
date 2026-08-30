@@ -5,9 +5,9 @@
 #pragma once
 
 #include "magik.h"
-#include "magik_error.h"
-#include "../device/bridge/magik_bridge.h"
-#include "../shared/magik_internal_types.h"
+#include "../error/magik_error.h"
+#include "../../device/bridge/magik_bridge.h"
+#include "../../shared/magik_internal_types.h"
 #include <iostream>
 
 

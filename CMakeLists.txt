@@ -15,8 +15,8 @@ set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 # Declare a shared library
 add_library(magik SHARED 
     # Core Host
-    src/host/magik.cpp
-    src/host/magik_error.cpp
+    src/host/core/magik.cpp
+    src/host/error/magik_error.cpp
     
     # CUDA Bridge
     src/device/bridge/magik_bridge.cu
