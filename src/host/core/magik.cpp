@@ -47,8 +47,8 @@ MAGIK_API magik_test_rgba_frame_buffer_t magik_test_allocate_dcc_rgba_frame_buff
         internal_buffer->h_data = magik::bridge::host_allocate_host_memory(size_of_buffer);
         internal_buffer->d_data = magik::bridge::host_allocate_device_memory(size_of_buffer);
 
-        return internal_buffer;
         g_last_error = MAGIK_SUCCESS;
+        return internal_buffer;
     }
     catch(...)
     {
@@ -61,6 +61,8 @@ MAGIK_API e_magik_result_types magik_test_destroy_dcc_rgba_frame_buffer(magik_te
 {
     magik::bridge::host_destroy_host_memory(buffer->h_data);
     magik::bridge::host_destroy_device_memory(buffer->d_data);
+
+    g_last_error = MAGIK_SUCCESS;
     return MAGIK_SUCCESS;
 }
 
@@ -69,6 +71,8 @@ MAGIK_API e_magik_result_types magik_test_fetch_rgba_frame_buffer_data(float** d
     size_t size_of_buffer = size_t(buffer->x_resolution*buffer->y_resolution)*sizeof(float)*4;
     magik::bridge::host_memcpy_device_to_host(buffer->h_data, buffer->d_data, size_of_buffer);
     *data = buffer->h_data;
+
+    g_last_error = MAGIK_SUCCESS;
     return MAGIK_SUCCESS;
 }
 
@@ -89,6 +93,7 @@ MAGIK_API e_magik_result_types magik_test_kernel(magik_test_rgba_frame_buffer_t 
         }
     }
 
+    g_last_error = MAGIK_SUCCESS;
     return MAGIK_SUCCESS;
 }
 
@@ -110,5 +115,7 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
                 MAGIK_VERSION_MAJOR, MAGIK_VERSION_MINOR, MAGIK_VERSION_REVISION, MAGIK_VERSION_NAME);
         *as_char = buffer;
     }
+
+    g_last_error = MAGIK_SUCCESS;
     return MAGIK_SUCCESS;
 }

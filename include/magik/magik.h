@@ -47,7 +47,7 @@ typedef enum e_magik_result_types
     // API specific 100 - 199
     MAGIK_ERROR_NOT_RUNNING = 1, // A runtime function was called before the Magik thread was running. This can happen by out-of-order initalization 
     MAGIK_ERROR_INVALID_POINTER = 2,
-    MAGIK_UNKNOWN_ENUM_TYPE = 3,
+    MAGIK_UNKNOWN_ENUM_TYPE = 3, 
 
     // Host 200 - 299
     MAGIK_ERROR_HOST_OUT_OF_MEMORY = 100,
@@ -142,7 +142,17 @@ MAGIK_API void magik_set_error_callback(magik_error_callback callback, void* use
 MAGIK_API e_magik_result_types magik_get_last_error(void);
 
 /**
+* @brief This is the default error checking function which the macro "check_magik_errors" uses. 
 * 
+* @param [in] result The result of a function which returns e_magik_result_types. In case an API function does not 
+                     return this type, you can instead use magik_get_last_error() as the input. All Magik functions 
+                     record the last error.
+* @param [in] func The name of the function which caused the error. 
+* @param [in] file The file the function which caused the error was located in. You can use the "__FILE__" macro here. 
+* @param [in] line The line in which the error occured. You can use the "__LINE__" macro here. 
+* 
+* @warning This function does not interfer with the programs operation. It only prints that an error has occured. 
+           It is strongly recommended to set a error callback using magik_set_error_callback()
 */
 MAGIK_API void check_magik(e_magik_result_types result, char const* func, const char* const file, int const line); 
 
