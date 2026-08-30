@@ -105,7 +105,7 @@ typedef enum e_magik_result_types
            them, such as MAGIK_ERROR_HOST_OUT_OF_MEMORY will cause a crash sooner rather than later if left to their 
            own devices. The default behaivor does not cause the application to crash. 
 */
-#define check_magik_errors(val) check_magik( (val), #val, __FILE__, __LINE__);
+#define check_magik_errors(val) check_magik( (val), #val, __FILE__, __LINE__)
 
 /**
 * @brief Typedef for error callbacks

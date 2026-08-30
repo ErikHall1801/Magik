@@ -1,35 +1,36 @@
 #include "magik_bridge.h"
 #include "../kernels/magik_test_pattern.cuh"
+#include "../library/magik_library.cuh"
 
 namespace magik::bridge
 {
     template<typename T> static  T* allocate_device_memory(size_t size)
     {
         T* d_ptr = nullptr;
-        cudaMalloc(&d_ptr, size);
+        check_cuda_errors(cudaMalloc(&d_ptr, size));
         return d_ptr;
     }
 
     template<typename T> static  T* allocate_host_memory(size_t size)
     {
         T* h_ptr = nullptr;
-        cudaMallocHost(&h_ptr, size);
+        check_cuda_errors(cudaMallocHost(&h_ptr, size));
         return h_ptr;
     }
 
     template<typename T> static void destroy_device_memory(T* ptr)
     {
-        cudaFree(ptr);
+        check_cuda_errors(cudaFree(ptr));
     }
 
     template<typename T> static void destroy_host_memory(T* ptr)
     {
-        cudaFreeHost(ptr);
+        check_cuda_errors(cudaFreeHost(ptr));
     }
 
     template<typename T> static void memcpy_device_to_host(T* h_ptr, T* d_ptr, size_t size)
     {
-        cudaMemcpy(h_ptr, d_ptr, size, cudaMemcpyDeviceToHost);
+        check_cuda_errors(cudaMemcpy(h_ptr, d_ptr, size, cudaMemcpyDeviceToHost));
     }
 
     float* host_allocate_device_memory(size_t size)

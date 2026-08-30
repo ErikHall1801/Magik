@@ -8,6 +8,7 @@
 
 // General
 #include <iostream>
+#include <stdint.h>
 
 // CUDA 
 #include <cuda_runtime.h>
@@ -15,9 +16,6 @@
 // Error macro 
 
 // Magik
-    // Shared
-    #include "magik_error.h"
-
     // Include
     #include "magik_utilities.cuh"
     #include "magik_math.cuh"

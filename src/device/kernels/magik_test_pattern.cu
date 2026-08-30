@@ -9,6 +9,7 @@
 */
 
 #include "magik_test_pattern.cuh"
+#include "../library/magik_library.cuh"
 
 namespace magik::kernels
 {
@@ -87,8 +88,8 @@ namespace magik::kernels
         dim3 n_block = magik::utilities::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
 
         test_pattern_gradient<<<n_block, threads_per_block>>>(d_rgba_fb, x_resolution, y_resolution);
-        cudaGetLastError();
-        cudaDeviceSynchronize();
+        check_cuda_errors(cudaGetLastError());
+        check_cuda_errors(cudaDeviceSynchronize());
     }
 
     void launch_test_pattern_mandelbrot(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block)
@@ -97,7 +98,7 @@ namespace magik::kernels
         dim3 n_block = magik::utilities::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
 
         test_pattern_mandelbrot<<<n_block, threads_per_block>>>(d_rgba_fb, x_resolution, y_resolution);
-        cudaGetLastError();
-        cudaDeviceSynchronize();
+        check_cuda_errors(cudaGetLastError());
+        check_cuda_errors(cudaDeviceSynchronize());
     }
 }

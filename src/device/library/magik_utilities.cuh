@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <iostream>
+
 namespace magik::utilities
 {
     __inline__ __device__ bool is_valid_thread(const uint32_t x_resolution, const uint32_t y_resolution)
@@ -29,4 +31,16 @@ namespace magik::utilities
     {
         return dim3(( x_resolution / x_threads_per_block) + 1, (y_resolution / y_threads_per_block) + 1, 1);
     }
+
+    __inline__ __host__ void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line)
+    {
+        if(result) 
+        {
+            std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " : '" << cudaGetErrorString(result) << "' at " << file << ":" << line << " '" << func << "' \n";
+            cudaDeviceReset();
+            exit(99);
+        }
+    }
+
+    #define check_cuda_errors(val) magik::utilities::check_cuda( (val), #val, __FILE__, __LINE__ )
 }

@@ -26,7 +26,6 @@ add_library(magik SHARED
     
     # (Optional)
     src/device/bridge/magik_bridge.h
-
     src/shared/
 )
 

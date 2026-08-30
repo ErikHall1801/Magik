@@ -3,7 +3,6 @@
 */
 
 #pragma once
-#include "../library/magik_library.cuh"
 
 namespace magik::kernels
 {
