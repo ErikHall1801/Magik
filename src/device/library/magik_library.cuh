@@ -16,7 +16,7 @@
 
 // Magik
     // Shared
-    #include "magik_error_types.h"
+    #include "magik_error.h"
 
     // Include
     #include "magik_utilities.cuh"

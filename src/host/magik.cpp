@@ -2,51 +2,34 @@
 * This file is no longer public and implements the core host-side API logic. 
 */
 
+#pragma once
+
 #include "magik.h"
+#include "magik_error.h"
 #include "../device/bridge/magik_bridge.h"
 #include "../shared/magik_internal_types.h"
 #include <iostream>
 
 
+
 /**
-* [SECTION] Result types
+* [SECTION] Error handling & result types
 */
-
-static magik_error_callback g_error_callback = nullptr;
-
-static void* g_error_user_data = nullptr;
-
-static thread_local e_magik_result_types g_last_error = MAGIK_SUCCESS;
 
 MAGIK_API void magik_set_error_callback(magik_error_callback callback, void* user_data)
 {
-    g_error_callback = callback;
-    g_error_user_data = user_data;
+    magik_set_error_callback_internal(callback, user_data);
 }
 
 MAGIK_API e_magik_result_types magik_get_last_error(void)
 {
-    return g_last_error;
+    return magik_get_last_error_internal();
 }
 
 MAGIK_API void check_magik(e_magik_result_types result, char const* func, const char* const file, int const line)
 {
-    if(result != MAGIK_SUCCESS)
-    {
-        g_last_error = result;
-
-        if(g_error_callback)
-        {
-            g_error_callback(result, func, file, line, g_error_user_data);
-        }
-        else
-        {
-            printf("Magik error = %u at %s:%d '%s'\n", static_cast<unsigned int>(result), file, line, func);
-        }
-    }
+    check_magik_internal(result, func, file, line);
 }
-
-
 
 /**
 * [SECTION] Tests
