@@ -2,8 +2,6 @@
 * This file is no longer public and implements the core host-side API logic. 
 */
 
-#pragma once
-
 #include "magik.h"
 #include "magik_error.h"
 #include "magik_bridge.h"
