@@ -30,10 +30,10 @@ extern "C" {
 /**
 * [SECTION] Version
 */
-#define MAGIK_VERSION_NAME "Rhapsody"
-#define MAGIK_VERSION_MAJOR 0
-#define MAGIK_VERSION_MINOR 1
-#define MAGIK_VERSION_REVISION 0
+#define MAGIK_VERSION_NAME "Rhapsody"   // Codename
+#define MAGIK_VERSION_MAJOR 0           // New features (In our case before the API switch)
+#define MAGIK_VERSION_MINOR 3           // Small changes / additions
+#define MAGIK_VERSION_REVISION 0        // Bug fix release
 
 
 

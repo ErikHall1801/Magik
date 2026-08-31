@@ -5,9 +5,9 @@
 #pragma once
 
 #include "magik.h"
-#include "../error/magik_error.h"
-#include "../../device/bridge/magik_bridge.h"
-#include "../../shared/magik_internal_types.h"
+#include "magik_error.h"
+#include "magik_bridge.h"
+#include "magik_internal_types.h"
 #include <iostream>
 
 
@@ -30,6 +30,8 @@ MAGIK_API void check_magik(e_magik_result_types result, char const* func, const 
 {
     check_magik_internal(result, func, file, line);
 }
+
+
 
 /**
 * [SECTION] Tests

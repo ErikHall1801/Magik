@@ -9,7 +9,7 @@
 */
 
 #include "magik_test_pattern.cuh"
-#include "../library/magik_library.cuh"
+#include "magik_library.cuh"
 
 namespace magik::kernels
 {

@@ -1,6 +1,6 @@
 #include "magik_bridge.h"
-#include "../kernels/magik_test_pattern.cuh"
-#include "../library/magik_library.cuh"
+#include "magik_test_pattern.cuh"
+#include "magik_library.cuh"
 
 namespace magik::bridge
 {

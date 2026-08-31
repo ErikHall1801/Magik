@@ -38,6 +38,14 @@ target_include_directories(magik
     # Private includes for internal build
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/bridge
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/kernels
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/library
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/host
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/core
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/error
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/shared
 )
 
 target_compile_definitions(magik PRIVATE MAGIK_BUILD_DLL)
