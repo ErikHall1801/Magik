@@ -13,15 +13,39 @@ set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 # Link static libraries
 
 # Declare a shared library
-add_library(magik SHARED src/magik.cpp src/cuda/cuda_test.cu)
+add_library(magik SHARED 
+    # Core Host
+    src/host/core/magik.cpp
+    src/host/error/magik_error.cpp
+    
+    # CUDA Bridge
+    src/device/bridge/magik_bridge.cu
+    
+    # CUDA Kernels
+    src/device/kernels/magik_test_pattern.cu
+    
+    # (Optional)
+    src/device/bridge/magik_bridge.h
+    src/shared/
+)
 
 # Define the location of the header files
 target_include_directories(magik 
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/magik
+    # Public includes exposed to users of the library
+    PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/magik
 
+    # Private includes for internal build
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/cuda
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/bridge
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/kernels
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/library
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/host
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/core
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/error
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/shared
 )
 
 target_compile_definitions(magik PRIVATE MAGIK_BUILD_DLL)
@@ -39,6 +63,11 @@ set_target_properties(magik PROPERTIES
 
     CUDA_RUNTIME_LIBRARY Static
 )
+
+# Suppress static CRT conflicts caused by the static CUDA runtime in MSVC
+if(MSVC)
+    target_link_options(magik PRIVATE /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD)
+endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")

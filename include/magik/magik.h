@@ -1,3 +1,9 @@
+/*
+* This is the APIs public header. It uses opaque structs to hide the 
+* actual implementation logic. 
+* The core rule of this file is to keep everything opaque and C-style. 
+*/ 
+
 #ifndef MAGIK_H
 #define MAGIK_H
 
@@ -24,19 +30,15 @@ extern "C" {
 /**
 * [SECTION] Version
 */
-#define MAGIK_VERSION_NAME "Rhapsody"
-#define MAGIK_VERSION_MAJOR 0
-#define MAGIK_VERSION_MINOR 1
-#define MAGIK_VERSION_REVISION 0
+#define MAGIK_VERSION_NAME "Rhapsody"   // Codename
+#define MAGIK_VERSION_MAJOR 0           // New features (In our case before the API switch)
+#define MAGIK_VERSION_MINOR 3           // Small changes / additions
+#define MAGIK_VERSION_REVISION 0        // Bug fix release
 
 
 
 /**
 * [SECTION] Error handling & result types
-*/
-
-/**
-* @brief Magik error results. "enum class" and ": type" are C++ features.
 */
 typedef enum e_magik_result_types
 {
@@ -45,9 +47,11 @@ typedef enum e_magik_result_types
     // API specific 100 - 199
     MAGIK_ERROR_NOT_RUNNING = 1, // A runtime function was called before the Magik thread was running. This can happen by out-of-order initalization 
     MAGIK_ERROR_INVALID_POINTER = 2,
+    MAGIK_UNKNOWN_ENUM_TYPE = 3, 
 
     // Host 200 - 299
     MAGIK_ERROR_HOST_OUT_OF_MEMORY = 100,
+    MAGIK_ERROR_HOST_MEMORY_ALLOCATION_FAILED = 101,
 
     // Device 300 - 399
     MAGIK_ERROR_DEVICE_OUT_OF_MEMORY = 200,
@@ -56,6 +60,10 @@ typedef enum e_magik_result_types
     MAGIK_ERROR_INVALID_ID = 400, // Happens when the id provided to a function related to the command queue system is not valid, i.e 0 or uninitialized
     MAGIK_ERROR_PROVIDED_ID_NOT_FOUND = 401, // Happens when the id provided to a function used command queue system has not been found, for example if the asset was not added. 
     MAGIK_ERROR_REQUESTED_ASSET_IS_NOT_A_CHILD_OF_THE_SCENE = 402,
+    MAGIK_ERROR_COMMAND_BUFFER_OVERFLOW = 403,
+    MAGIK_ERROR_INVALID_COMMAND = 404,
+    MAGIK_ERROR_PACKED_DATA_NOT_ALLIGNED = 405,
+    MAGIK_ERROR_COMMAND_DROPPED = 406,
 
     // General rendering 500 - 599
     MAGIK_ERROR_NEGATIVE_WAVELENGTH = 500,
@@ -97,7 +105,7 @@ typedef enum e_magik_result_types
            them, such as MAGIK_ERROR_HOST_OUT_OF_MEMORY will cause a crash sooner rather than later if left to their 
            own devices. The default behaivor does not cause the application to crash. 
 */
-#define check_magik_error(val) check_magik( (val), #val, __FILE__, __LINE__);
+#define check_magik_errors(val) check_magik( (val), #val, __FILE__, __LINE__)
 
 /**
 * @brief Typedef for error callbacks
@@ -134,7 +142,17 @@ MAGIK_API void magik_set_error_callback(magik_error_callback callback, void* use
 MAGIK_API e_magik_result_types magik_get_last_error(void);
 
 /**
+* @brief This is the default error checking function which the macro "check_magik_errors" uses. 
 * 
+* @param [in] result The result of a function which returns e_magik_result_types. In case an API function does not 
+                     return this type, you can instead use magik_get_last_error() as the input. All Magik functions 
+                     record the last error.
+* @param [in] func The name of the function which caused the error. 
+* @param [in] file The file the function which caused the error was located in. You can use the "__FILE__" macro here. 
+* @param [in] line The line in which the error occured. You can use the "__LINE__" macro here. 
+* 
+* @warning This function does not interfer with the programs operation. It only prints that an error has occured. 
+           It is strongly recommended to set a error callback using magik_set_error_callback()
 */
 MAGIK_API void check_magik(e_magik_result_types result, char const* func, const char* const file, int const line); 
 
@@ -145,9 +163,21 @@ MAGIK_API void check_magik(e_magik_result_types result, char const* func, const 
 */
 
 /**
-* @brief Example of an opaque pointer & struct. Note, in this example the opaque type is a pointer, but this works with raw pointers / structs too. 
+* @brief Example of an opaque pointer & struct. More specifically, this defines an opaque alias to a 
+         pointer of an internal struct. Where magik_rgba_test_frame_buffer is internal and 
+         magik_rgba_test_frame_buffer_t is the alias. 
 */
-typedef struct magik_rgba_test_frame_buffer_t* magik_rgba_test_frame_buffer;
+typedef struct magik_test_rgba_frame_buffer* magik_test_rgba_frame_buffer_t;
+
+/**
+* @brief Two test-kernel patterns are available. The UV gradient should appear with the black corner, R = G = B = 0, 
+         at the lower left side of your window. The mandelbrot is intended to test resource allocation performance. 
+*/
+enum e_magik_test_kernel_pattern_types
+{
+    uv_gradient = 0,
+    mandelbrot = 1
+};
 
 /**
 * @brief Allocate width x height x 4 (RGBA) host frame buffer
@@ -156,12 +186,12 @@ typedef struct magik_rgba_test_frame_buffer_t* magik_rgba_test_frame_buffer;
 * @param [in] width The width of the frame buffer in pixels.
 * @param [in] height The height of the frame buffer in pixels.
 * 
-* @return MAGIK_SUCCESS on successful allocation.
-* @return MAGIK_OUT_OF_MEMORY when the system ran out of memory
+* @return e_magik_result_types MAGIK_SUCCESS on successful allocation, MAGIK_ERROR_HOST_MEMORY_ALLOCATION_FAILED when 
+          the system failed to allocated memory
 *
 * @warning The caller is responsible for freeing the allocated buffer by passing it into magik_host_destroy_rgba_test
 */
-MAGIK_API e_magik_result_types magik_allocate_host_rgba_test(magik_rgba_test_frame_buffer* buffer, uint32_t width, uint32_t height);
+MAGIK_API magik_test_rgba_frame_buffer_t magik_test_allocate_dcc_rgba_frame_buffer(uint32_t width, uint32_t height);
 
 /**
 * @brief Destroys previously allocated RGBA buffer
@@ -169,7 +199,35 @@ MAGIK_API e_magik_result_types magik_allocate_host_rgba_test(magik_rgba_test_fra
 * @param [out] result MAGIK_SUCCESS if the destruction was successful. Freeing null data is safe. 
 * @param [in] buffer magik_rgba_test_frame_buffer struct
 */
-MAGIK_API e_magik_result_types magik_destroy_host_rgba_test(magik_rgba_test_frame_buffer buffer);
+MAGIK_API e_magik_result_types magik_test_destroy_dcc_rgba_frame_buffer(magik_test_rgba_frame_buffer_t buffer);
+
+/** 
+* @brief Transfers the API internal device frame buffer to the DCC buffer by invoking memcpy.
+*
+* @param [out] data A plain float pointer.
+* @param [in] buffer magik_rgba_test_frame_buffer struct which has to have been allocated by calling 
+                     magik_test_allocate_host_rgba_frame_buffer before ! 
+* 
+* @return MAGIK_SUCCESS on successful transfer. MAGIK_INVALID_POINTER if the buffer or data members are null. 
+* 
+* @warning Do not free the pointer fetched by this function manually !
+*/
+MAGIK_API e_magik_result_types magik_test_fetch_rgba_frame_buffer_data(float** data, magik_test_rgba_frame_buffer_t buffer);
+
+/**
+* @brief A minimum-setup kernel initially designed for us to validate the APIs behaivor. We decided to keep this logic 
+         if other coders wish to test a simple kernel with a display output before setting up Magiks command queue 
+         system and initialization logic.
+* 
+* @param [in] buffer magik_rgba_test_frame_buffer struct
+* @param [in] pattern_type Either "uv_gradient" or "mandelbrot"
+* 
+* @return MAGIK_SUCCESS on successful execution. MAGIK_INVALID_POINTER if the buffer has not been allocated, 
+          MAGIK_UNKNOWN_ENUM_TYPE if the pattern_type is not valid. 
+* 
+* @warning This kernel runs, and blocks, the main thread until the execution has finished ! 
+*/
+MAGIK_API e_magik_result_types magik_test_kernel(magik_test_rgba_frame_buffer_t buffer, e_magik_test_kernel_pattern_types pattern_type);
 
 
 
@@ -180,9 +238,9 @@ MAGIK_API e_magik_result_types magik_destroy_host_rgba_test(magik_rgba_test_fram
 /**
 * @brief Fetches API version
 * 
-* @param [out] major unsigned 32 bit int for the major version number
-* @param [out] minor unsigned 32 bit int for the minor version number
-* @param [out] revision unsigned 32 bit int ofr the revision number
+* @param [out] major major version number
+* @param [out] minor minor version number
+* @param [out] revision revision number
 * @param [out] as_char Formated char of the version number and codename, MAJOR.MINOR.REVISION - Codename, for example "Magik ! 0.1.0 - Rhapsody" 
 * 
 * @return MAGIK_SUCCESS
