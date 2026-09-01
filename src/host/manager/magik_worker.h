@@ -2,6 +2,7 @@
 #include "magik.h"
 #include "magik_render_manager.h" 
 #include "magik_bridge.h"
+#include "magik_arbitrary_output_variables.h"
 #include <chrono>
 #include <thread>
 #include <iostream>

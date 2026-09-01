@@ -14,6 +14,8 @@
     #define MAGIK_INLINE inline
 #endif
 
+#define set_error(val) { g_last_error = val; return val; }
+
 /**
 * [SECTION] Error handling & result types
 */

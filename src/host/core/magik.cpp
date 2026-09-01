@@ -147,7 +147,9 @@ MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager
 {
     manager->is_running.store(false, std::memory_order_release);
     manager->worker_thread.join();
-    return MAGIK_SUCCESS;
+    delete manager;
+
+    set_error(MAGIK_SUCCESS);
 }
 
 
@@ -166,6 +168,8 @@ MAGIK_API magik_aov_buffer_external_t magik_configure_aov_buffer(e_magik_aov_con
 
 MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_buffer_external_t dcc_buffer)
 {
+    check_magik_errors(magik::aov::swap_front_framebuffer(&manager->aov_context));
+
     g_last_error = MAGIK_SUCCESS;
     return true;
 }

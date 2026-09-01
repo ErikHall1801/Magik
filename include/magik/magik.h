@@ -90,6 +90,7 @@ typedef enum e_magik_result_types
 
     // Arbitrary Output Variables 900 - 999
     MAGIK_ERROR_AOV_INCORRECT_EXTRACT_CALL = 900,
+    MAGIK_ERROR_AOV_ALLOCATED_BEFORE_INITIALIZATION = 901,
 
     // General 10000 - 10099
     MAGIK_ERROR_UNKNOWN = 10000,
@@ -256,13 +257,6 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 * [SECTION] Render manager
 */
 
-/*
- The idea is that we take a bit of a step back from the AOV and just focus on getting the threading to work. 
- All this means is having a thread launch and a temporary terminate function so we can test things. So what 
- is the specific goal ? For now, just to launch a thread which does something, idk printf, and have to 
- terminate. 
-*/
-
 /**
 * @brief 
 */
@@ -288,6 +282,11 @@ MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager
 
 /**
 * [SECTION] Arbitrary Output Variables
+*/
+
+/*
+ The goal now is to make the AOV handshake work between the GUI and render thread. So that we can display
+ a texture without invoking CUDA. 
 */
 
 /**

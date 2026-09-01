@@ -4,6 +4,7 @@
 #include <memory>
 #include <variant>
 #include "magik.h" 
+#include "magik_arbitrary_output_variables.h" 
 
 namespace magik::render_manager
 {
@@ -21,9 +22,11 @@ namespace magik::render_manager
 
 struct magik_render_manager
 {
-    std::atomic<bool> is_running = true;
+    std::atomic<bool> is_running = false;
     std::thread worker_thread;
     uint32_t cuda_device = 0;
+
+    magik::aov::context aov_context;
 
     // magik::render_manager::aov_context aov;
     // magik::render_manager::cqs_context cqs;
