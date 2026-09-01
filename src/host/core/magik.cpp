@@ -175,6 +175,51 @@ MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_aov_container
     set_error(MAGIK_SUCCESS);
 }
 
+MAGIK_API e_magik_result_types magik_aov_resize(magik_render_manager_t manager, uint32_t x_resolution, uint32_t y_resolution)
+{
+    manager->aov_context.x_resolution = x_resolution;
+    manager->aov_context.y_resolution = y_resolution;
+    set_error(MAGIK_SUCCESS);
+}
+
+MAGIK_API e_magik_result_types magik_aov_destroy(magik_aov_framebuffer_object_external_t dcc_buffer)
+{
+    if(!dcc_buffer) set_error(MAGIK_SUCCESS);
+
+    if(dcc_buffer->config_type != MAGIK_AOV_CONFIG_HOST && dcc_buffer->config_type != MAGIK_AOV_CONFIG_CUDA && dcc_buffer->config_type != MAGIK_AOV_CONFIG_OPENGL_INTEROP && dcc_buffer->config_type != MAGIK_AOV_CONFIG_VULKAN_INTEROP)
+    {
+        set_error(MAGIK_UNKNOWN_ENUM_TYPE);
+    }
+
+    switch(dcc_buffer->config_type)
+    {
+        case MAGIK_AOV_CONFIG_HOST:
+        {
+            magik::bridge::host_destroy_host_memory(dcc_buffer->data.config_host.h_albedo);
+            break;
+        }
+
+        case MAGIK_AOV_CONFIG_CUDA:
+        {
+            magik::bridge::host_destroy_device_memory(dcc_buffer->data.config_cuda.d_albedo);
+            break;
+        }
+
+        case MAGIK_AOV_CONFIG_OPENGL_INTEROP:
+        {
+            break;
+        }
+
+        case MAGIK_AOV_CONFIG_VULKAN_INTEROP:
+        {
+            break;
+        }
+    }    
+
+    delete dcc_buffer;
+    set_error(MAGIK_SUCCESS);
+}
+
 
 
 /**

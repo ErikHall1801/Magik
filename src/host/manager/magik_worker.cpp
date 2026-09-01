@@ -37,7 +37,6 @@ namespace magik::worker
                 cycles = 0;
                 fps_timer_start = std::chrono::steady_clock::now();
             }
-
         }
 
         check_magik_errors(magik::aov::destroy_framebuffer_collection(&manager->aov_context));

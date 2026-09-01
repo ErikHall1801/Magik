@@ -28,7 +28,6 @@ namespace magik::aov
             ctx->framebuffer_object_collection[i].n_spectral_bin = ctx->n_spectral_bin;
         }
 
-
         ctx->framebuffer_object_collection[0].debug_id = 0;
         ctx->framebuffer_object_collection[1].debug_id = 1;
         ctx->framebuffer_object_collection[2].debug_id = 2;
@@ -42,9 +41,9 @@ namespace magik::aov
 
     e_magik_result_types allocate_back_framebuffer(magik::aov::context* ctx)
     {
-        size_t size_of_1_float_buffer = static_cast<size_t>(ctx->back->x_resolution*ctx->back->y_resolution*1)*sizeof(float);
-        size_t size_of_3_float_buffer = static_cast<size_t>(ctx->back->x_resolution*ctx->back->y_resolution*3)*sizeof(float);
-        size_t size_of_N_float_buffer = static_cast<size_t>(ctx->back->x_resolution*ctx->back->y_resolution*ctx->back->n_spectral_bin)*sizeof(float);
+        size_t size_of_1_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*1)*sizeof(float);
+        size_t size_of_3_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*3)*sizeof(float);
+        size_t size_of_N_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*ctx->back->n_spectral_bin)*sizeof(float);
 
         if(ctx->back->size_of_d_albedo != size_of_3_float_buffer)
         {

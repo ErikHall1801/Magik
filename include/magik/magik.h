@@ -378,6 +378,11 @@ struct magik_aov_container_config_vulkan_interop_t
 MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop_extract(magik_aov_container_config_vulkan_interop_t& container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
+* @brief This is mega tmp. Probably not thread save.
+*/
+MAGIK_API e_magik_result_types magik_aov_resize(magik_render_manager_t manager, uint32_t x_resolution, uint32_t y_resolution);
+
+/**
 * @brief Free´s the memory associated with an AOV buffer. The user does not have to call this function
          each time the configuration is changed. 
 * 
