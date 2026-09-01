@@ -256,8 +256,15 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 * [SECTION] Render manager
 */
 
+/*
+ The idea is that we take a bit of a step back from the AOV and just focus on getting the threading to work. 
+ All this means is having a thread launch and a temporary terminate function so we can test things. So what 
+ is the specific goal ? For now, just to launch a thread which does something, idk printf, and have to 
+ terminate. 
+*/
+
 /**
-* @brief  
+* @brief 
 */
 typedef struct magik_render_manager* magik_render_manager_t;
 
@@ -271,6 +278,11 @@ typedef struct magik_render_manager* magik_render_manager_t;
 * @warning
 */
 MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_device);
+
+/**
+* @brief TEMP !!! All this does is stop the render thread and call .join(). 
+*/
+MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager_t mananger);
 
 
 

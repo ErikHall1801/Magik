@@ -10,6 +10,8 @@
 #include "magik_internal_types.h" // TO BE REMOVED 
 #include "magik_render_manager.h"
 #include "magik_arbitrary_output_variables.h"
+#include "magik_command_queue_system.h"
+#include "magik_worker.h"
 #include <iostream>
 
 
@@ -129,6 +131,24 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 /**
 * [SECTION] Render manager
 */
+
+MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_device)
+{
+    magik_render_manager* manager = new magik_render_manager();
+    manager->cuda_device = cuda_device;
+
+    manager->worker_thread = std::thread(magik::worker::run, manager);
+
+    g_last_error = MAGIK_SUCCESS;
+    return manager;
+}
+
+MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager_t manager)
+{
+    manager->is_running.store(false, std::memory_order_release);
+    manager->worker_thread.join();
+    return MAGIK_SUCCESS;
+}
 
 
 

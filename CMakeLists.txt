@@ -24,6 +24,12 @@ add_library(magik SHARED
     # CUDA Kernels
     src/device/kernels/magik_test_pattern.cu
     
+    # Manager
+    src/host/manager/magik_arbitrary_output_variables.cpp
+    src/host/manager/magik_command_queue_system.cpp
+    src/host/manager/magik_render_manager.cpp
+    src/host/manager/magik_worker.cpp
+
     # (Optional)
     src/device/bridge/magik_bridge.h
     src/shared/magik_internal_types.h

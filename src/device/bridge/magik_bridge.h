@@ -25,4 +25,6 @@ namespace magik::bridge
     void call_test_pattern_gradient_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution);
 
     void call_test_pattern_mandelbrot_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution);
+
+    void set_cuda_device(uint32_t cuda_device);
 }

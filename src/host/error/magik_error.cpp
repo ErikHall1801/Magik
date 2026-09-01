@@ -1,5 +1,3 @@
-#pragma once
-
 #include "magik_error.h"
 #include <iostream>
 

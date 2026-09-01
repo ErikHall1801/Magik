@@ -67,4 +67,9 @@ namespace magik::bridge
     {
         magik::kernels::launch_test_pattern_mandelbrot(d_rgba_fb, x_resolution, y_resolution, 16, 16);
     }
+
+    void set_cuda_device(uint32_t cuda_device)
+    {
+        check_cuda_errors(cudaSetDevice(cuda_device));
+    }
 }

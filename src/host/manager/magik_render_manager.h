@@ -21,7 +21,7 @@ namespace magik::render_manager
 
 struct magik_render_manager
 {
-    std::atomic<bool> is_running = false;
+    std::atomic<bool> is_running = true;
     std::thread worker_thread;
     uint32_t cuda_device = 0;
 
