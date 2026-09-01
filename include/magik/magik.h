@@ -183,56 +183,6 @@ enum e_magik_test_kernel_pattern_types
     mandelbrot = 1
 };
 
-/**
-* @brief Allocate width x height x 4 (RGBA) host frame buffer
-*
-* @param [out] buffer Pointer to the handle which recieves the data pointer and tracks the state.
-* @param [in] width The width of the frame buffer in pixels.
-* @param [in] height The height of the frame buffer in pixels.
-* 
-* @return e_magik_result_types MAGIK_SUCCESS on successful allocation, MAGIK_ERROR_HOST_MEMORY_ALLOCATION_FAILED when 
-          the system failed to allocated memory
-*
-* @warning The caller is responsible for freeing the allocated buffer by passing it into magik_host_destroy_rgba_test
-*/
-MAGIK_API magik_test_rgba_frame_buffer_t magik_test_allocate_dcc_rgba_frame_buffer(uint32_t width, uint32_t height);
-
-/**
-* @brief Destroys previously allocated RGBA buffer
-* 
-* @param [out] result MAGIK_SUCCESS if the destruction was successful. Freeing null data is safe. 
-* @param [in] buffer magik_rgba_test_frame_buffer struct
-*/
-MAGIK_API e_magik_result_types magik_test_destroy_dcc_rgba_frame_buffer(magik_test_rgba_frame_buffer_t buffer);
-
-/** 
-* @brief Transfers the API internal device frame buffer to the DCC buffer by invoking memcpy.
-*
-* @param [out] data A plain float pointer.
-* @param [in] buffer magik_rgba_test_frame_buffer struct which has to have been allocated by calling 
-                     magik_test_allocate_host_rgba_frame_buffer before ! 
-* 
-* @return MAGIK_SUCCESS on successful transfer. MAGIK_INVALID_POINTER if the buffer or data members are null. 
-* 
-* @warning Do not free the pointer fetched by this function manually !
-*/
-MAGIK_API e_magik_result_types magik_test_fetch_rgba_frame_buffer_data(float** data, magik_test_rgba_frame_buffer_t buffer);
-
-/**
-* @brief A minimum-setup kernel initially designed for us to validate the APIs behaivor. We decided to keep this logic 
-         if other coders wish to test a simple kernel with a display output before setting up Magiks command queue 
-         system and initialization logic.
-* 
-* @param [in] buffer magik_rgba_test_frame_buffer struct
-* @param [in] pattern_type Either "uv_gradient" or "mandelbrot"
-* 
-* @return MAGIK_SUCCESS on successful execution. MAGIK_INVALID_POINTER if the buffer has not been allocated, 
-          MAGIK_UNKNOWN_ENUM_TYPE if the pattern_type is not valid. 
-* 
-* @warning This kernel runs, and blocks, the main thread until the execution has finished ! 
-*/
-MAGIK_API e_magik_result_types magik_test_kernel(magik_test_rgba_frame_buffer_t buffer, e_magik_test_kernel_pattern_types pattern_type);
-
 
 
 /**

@@ -32,7 +32,6 @@ add_library(magik SHARED
 
     # (Optional)
     src/device/bridge/magik_bridge.h
-    src/shared/magik_internal_types.h
 )
 
 # Define the location of the header files
@@ -52,7 +51,6 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/core
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/error
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/manager
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/shared
 )
 
 target_compile_definitions(magik PRIVATE MAGIK_BUILD_DLL)
