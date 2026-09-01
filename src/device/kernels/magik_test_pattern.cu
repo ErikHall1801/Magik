@@ -25,19 +25,19 @@ namespace magik::kernels
         d_rgba_fb[thread_id + 0] = static_cast<float>(i_x) / static_cast<float>(x_resolution);
         d_rgba_fb[thread_id + 1] = static_cast<float>(i_y) / static_cast<float>(y_resolution);
         d_rgba_fb[thread_id + 2] = 0.0f;
-        d_rgba_fb[thread_id + 3] = 1.0f;
+        // d_rgba_fb[thread_id + 3] = 1.0f;
     }
 
-    static __global__ void test_pattern_mandelbrot(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution)
+    static __global__ void test_pattern_mandelbrot(float* d_rgba_fb, uint32_t clock, const uint32_t x_resolution, const uint32_t y_resolution)
     {
         if(!magik::utilities::is_valid_thread(x_resolution, y_resolution)) return;
 
         uint32_t i_x = threadIdx.x + blockIdx.x * blockDim.x;
         uint32_t i_y = threadIdx.y + blockIdx.y * blockDim.y;
-        uint32_t thread_id = magik::utilities::get_n_dimensional_thread_id(x_resolution, 4);
+        uint32_t thread_id = magik::utilities::get_n_dimensional_thread_id(x_resolution, 3);
 
-        float x0 = (static_cast<float>(i_x)-static_cast<float>(x_resolution/2)) / sqrt(static_cast<float>((x_resolution*y_resolution)))*3.3f;
-        float y0 = (static_cast<float>(i_y)-static_cast<float>(y_resolution/2)) / sqrt(static_cast<float>((x_resolution*y_resolution)))*3.3f;
+        float x0 = (static_cast<float>(i_x)-static_cast<float>(x_resolution/2)) / sqrt(static_cast<float>((x_resolution*y_resolution)))*(3.3f * sinf((float)clock*0.005f));
+        float y0 = (static_cast<float>(i_y)-static_cast<float>(y_resolution/2)) / sqrt(static_cast<float>((x_resolution*y_resolution)))*(3.3f * sinf((float)clock*0.005f));
         float x1 = 0.0f;
         float y1 = 0.0f;
         float x2 = 0.0f;
@@ -78,8 +78,8 @@ namespace magik::kernels
             d_rgba_fb[thread_id + 1] = g;
             d_rgba_fb[thread_id + 2] = b;
         }
-        
-        d_rgba_fb[thread_id + 3] = 1.0f;
+
+        // d_rgba_fb[thread_id + 3] = 1.0f;
     }
 
     void launch_test_pattern_gradient(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block)
@@ -97,7 +97,7 @@ namespace magik::kernels
         dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
         dim3 n_block = magik::utilities::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
 
-        test_pattern_mandelbrot<<<n_block, threads_per_block>>>(d_rgba_fb, x_resolution, y_resolution);
+        test_pattern_mandelbrot<<<n_block, threads_per_block>>>(d_rgba_fb, clock(), x_resolution, y_resolution);
         check_cuda_errors(cudaGetLastError());
         check_cuda_errors(cudaDeviceSynchronize());
     }

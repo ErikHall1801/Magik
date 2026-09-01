@@ -329,7 +329,7 @@ typedef enum e_magik_aov_config_types
 * @brief Opaque struct which holds the AOV buffers on the DCC thread. To extract the data you must call the 
          matching extract function. 
 */
-typedef struct magik_aov_buffer_external* magik_aov_buffer_external_t;
+typedef struct magik_aov_framebuffer_object_external* magik_aov_framebuffer_object_external_t;
 
 /**
 * @brief Configurs the DCC side AOV buffer to anticipate a "config_type" backend. The configuration can be changed
@@ -339,7 +339,7 @@ typedef struct magik_aov_buffer_external* magik_aov_buffer_external_t;
 * 
 * @return magik_external_aov_buffer_t, MAGIK_SUCCESS, MAGIK_UNKNOWN_ENUM_TYPE
 */
-MAGIK_API magik_aov_buffer_external_t magik_configure_aov_buffer(e_magik_aov_config_types config_type);
+MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffer(e_magik_aov_config_types config_type);
 
 /**
 * @brief This function fetches the most up-to-date AOV buffer from the API. Magik uses a tripple buffer lock-free
@@ -357,7 +357,7 @@ MAGIK_API magik_aov_buffer_external_t magik_configure_aov_buffer(e_magik_aov_con
 * @warning The user is not responsible for allocating the DCC buffer ! Magik automatically allocates and reallocates the buffers
            depending on the configuration and resolution ! The resolution is automatically updated using the active camera. 
 */
-MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_buffer_external_t dcc_buffer); 
+MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_framebuffer_object_external_t dcc_buffer); 
 
 /**
 * @brief Struct where the matching extract function will store pointers to the AOV memory to. 
@@ -367,7 +367,10 @@ MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_buffer_
 */
 struct magik_aov_container_config_host_t
 {
-    float* albedo = nullptr; // RGB 
+    uint32_t x_resolution = 0;
+    uint32_t y_resolution = 0;
+    size_t size_of_albedo = 0; 
+    float* h_albedo = nullptr; // RGB, h_ means it is a host pointer. 
 };
 
 /**
@@ -383,7 +386,7 @@ struct magik_aov_container_config_host_t
 * 
 * @warning 
 */
-MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_aov_container_config_host_t& container, magik_aov_buffer_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief Struct which containes base types for a CUDA DCC backend. The user is responsible for casting these base types into CUDA ones !
@@ -396,7 +399,7 @@ struct magik_aov_container_config_cuda_t
 /**
 * 
 */
-MAGIK_API e_magik_result_types magik_aov_config_cuda_extract(magik_aov_container_config_cuda_t& container, magik_aov_buffer_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_config_cuda_extract(magik_aov_container_config_cuda_t& container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief Struct which containes base types for a OpenGL DCC backend. The user is responsible for casting these base types into OpenGL ones !
@@ -409,7 +412,7 @@ struct magik_aov_container_config_open_gl_interop_t
 /**
 * 
 */
-MAGIK_API e_magik_result_types magik_aov_extract_open_gl_interop_extract(magik_aov_container_config_open_gl_interop_t& container, magik_aov_buffer_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_extract_open_gl_interop_extract(magik_aov_container_config_open_gl_interop_t& container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief Struct which containes base types for a Vulkan DCC backend. The user is responsible for casting these base types into Vulkan ones !
@@ -422,7 +425,7 @@ struct magik_aov_container_config_vulkan_interop_t
 /**
 * @brief To be implemented ! DO NOT USE ! 
 */
-MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop_extract(magik_aov_container_config_vulkan_interop_t& container, magik_aov_buffer_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop_extract(magik_aov_container_config_vulkan_interop_t& container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief Free´s the memory associated with an AOV buffer. The user does not have to call this function
@@ -434,7 +437,7 @@ MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop_extract(magik_ao
 * 
 * @warning 
 */
-MAGIK_API e_magik_result_types magik_aov_destroy(magik_aov_buffer_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_destroy(magik_aov_framebuffer_object_external_t dcc_buffer);
 
 
 

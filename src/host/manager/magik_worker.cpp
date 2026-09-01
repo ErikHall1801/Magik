@@ -16,19 +16,28 @@ namespace magik::worker
     {
         check_magik_errors(initialize(manager));
 
+        auto fps_timer_start = std::chrono::steady_clock::now();
+        int cycles = 0;
+
         while(manager->is_running.load())
         {
             check_magik_errors(magik::aov::allocate_back_framebuffer(&manager->aov_context));
 
-            using namespace std::chrono_literals;
-            auto start = std::chrono::high_resolution_clock::now();
-            std::this_thread::sleep_for(2000ms);
-            auto end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double, std::milli> elapsed = end - start;
-            // std::cout << "Waited " << elapsed << '\n';
-            // std::cout << "Albedo size " << manager->aov_context.back->size_of_d_albedo << '\n';
+            magik::bridge::call_test_pattern_mandelbrot_kernel(manager->aov_context.back->d_albedo, manager->aov_context.back->x_resolution, manager->aov_context.back->y_resolution);
 
             check_magik_errors(magik::aov::swap_back_framebuffer(&manager->aov_context));
+
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(now - fps_timer_start).count();
+            cycles++;
+
+            if(elapsed_seconds > 1)
+            {
+                printf("API FPS; %i \n", (int)(cycles / elapsed_seconds));
+                cycles = 0;
+                fps_timer_start = std::chrono::steady_clock::now();
+            }
+
         }
 
         check_magik_errors(magik::aov::destroy_framebuffer_collection(&manager->aov_context));
