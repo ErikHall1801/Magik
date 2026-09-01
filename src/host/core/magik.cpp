@@ -7,7 +7,9 @@
 #include "magik.h"
 #include "magik_error.h"
 #include "magik_bridge.h"
-#include "magik_internal_types.h"
+#include "magik_internal_types.h" // TO BE REMOVED 
+#include "magik_render_manager.h"
+#include "magik_arbitrary_output_variables.h"
 #include <iostream>
 
 
@@ -18,17 +20,17 @@
 
 MAGIK_API void magik_set_error_callback(magik_error_callback callback, void* user_data)
 {
-    magik_set_error_callback_internal(callback, user_data);
+    magik::error::set_error_callback_internal(callback, user_data);
 }
 
 MAGIK_API e_magik_result_types magik_get_last_error(void)
 {
-    return magik_get_last_error_internal();
+    return magik::error::get_last_error_internal();
 }
 
 MAGIK_API void check_magik(e_magik_result_types result, char const* func, const char* const file, int const line)
 {
-    check_magik_internal(result, func, file, line);
+    magik::error::check_error_internal(result, func, file, line);
 }
 
 
@@ -121,3 +123,36 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
     g_last_error = MAGIK_SUCCESS;
     return MAGIK_SUCCESS;
 }
+
+
+
+/**
+* [SECTION] Render manager
+*/
+
+
+
+/**
+* [SECTION] Arbitrary Output Variables
+*/
+
+MAGIK_API magik_aov_buffer_external_t magik_configure_aov_buffer(e_magik_aov_config_types config_type)
+{
+    magik_aov_buffer_external* buffer = new magik_aov_buffer_external();
+    buffer->type = config_type;
+    g_last_error = MAGIK_SUCCESS;
+    return buffer;
+}
+
+MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_buffer_external_t dcc_buffer)
+{
+    g_last_error = MAGIK_SUCCESS;
+    return true;
+}
+
+
+
+/**
+* [SECTION] Command Queue System
+*/
+

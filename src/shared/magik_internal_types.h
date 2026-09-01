@@ -7,10 +7,16 @@
 * We will not pass full host structs into kernels but rather unpack them.
 * We cannot use namespaces here because the opaque namespace, global, has to match the 
 * definition. 
+* 
+* This file defines the EXPOSED types ! 
 */
 
 #pragma once
 #include <stdint.h>
+#include <thread>
+#include <atomic>
+#include <memory>
+#include "magik_render_manager.h"
 
 struct magik_test_rgba_frame_buffer
 {
