@@ -5,9 +5,12 @@
 #include "magik_arbitrary_output_variables.h"
 #include <chrono>
 #include <thread>
+#include <atomic>
 #include <iostream>
 
 namespace magik::worker
 {
     void run(magik_render_manager* manager);
 }
+
+extern std::atomic<double> frame_time;

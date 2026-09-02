@@ -66,6 +66,21 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 
 
 /**
+* [SECTION] Frame time
+*/
+
+MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft)
+{
+    if(!ft) set_error(MAGIK_ERROR_INVALID_POINTER);
+
+    *ft = frame_time.load(std::memory_order_relaxed);
+
+    set_error(MAGIK_SUCCESS);
+}
+
+
+
+/**
 * [SECTION] Render manager
 */
 

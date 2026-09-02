@@ -204,6 +204,17 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 
 
 /**
+* [SECTION] Frame time
+*/
+
+/**
+* @brief Returns the frame time in microseconds. 
+*/
+MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft);
+
+
+
+/**
 * [SECTION] Render manager
 */
 
