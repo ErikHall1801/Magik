@@ -1,9 +1,3 @@
-/*
-* This is the APIs public header. It uses opaque structs to hide the 
-* actual implementation logic. 
-* The core rule of this file is to keep everything opaque and C-style. 
-*/
-
 #ifndef MAGIK_H
 #define MAGIK_H
 
@@ -48,6 +42,7 @@ typedef enum e_magik_result_types
     MAGIK_ERROR_NOT_RUNNING = 1, // A runtime function was called before the Magik thread was running. This can happen by out-of-order initalization 
     MAGIK_ERROR_INVALID_POINTER = 2,
     MAGIK_UNKNOWN_ENUM_TYPE = 3, 
+    MAGIK_INVALID_CUDA_DEVICE = 4,
 
     // Host 200 - 299
     MAGIK_ERROR_HOST_OUT_OF_MEMORY = 100,
@@ -93,7 +88,9 @@ typedef enum e_magik_result_types
     MAGIK_ERROR_AOV_ALLOCATED_BEFORE_INITIALIZATION = 901,
 
     // Interops 1000 - 1099
-    MAGIK_ERROR_GL_LOADER_FAILED = 1000,
+    MAGIK_ERROR_GL_LOADER_FAILED = 1000, // 
+    MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED = 1001, // Did you call magik_gl_init ?
+    MAGIK_ERROR_GL_BUFFER_SIZE_MISMATCH = 1002,
 
     // General 10000 - 10099
     MAGIK_ERROR_UNKNOWN = 10000,
@@ -179,6 +176,8 @@ typedef void* (*magik_gl_loader_proc)(const char* name);
 * 
 * @param [in] loader A function which returns the address of a named OpenGL entry point.
 *
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_ERROR_GL_LOADER_FAILED
+*
 * @warning  Magik links its own copy of the OpenGL loader, so the host application loading OpenGL for 
 +           itself does not load Magiks. Call this once, with the OpenGL context current on the calling 
 +           thread, before magik_get_system_Info() or any MAGIK_AOV_CONFIG_OPENGL_INTEROP framebuffer. 
@@ -246,6 +245,8 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 
 /**
 * @brief Returns the frame time in microseconds. 
+* 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
 */
 MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft);
 
@@ -256,18 +257,21 @@ MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft);
 */
 
 /**
-* @brief 
+* @brief Opaque stuct for Magiks render state 
 */
 typedef struct magik_render_manager* magik_render_manager_t;
 
 /**
-* @brief 
+* @brief Creates a render manager bound to a specific cuda device
 * 
-* @param 
+* @param [in] cuda_device The CUDA device with the given ID will be used for Magiks render loop. 
 * 
-* @return 
+* @return MAGIK_SUCCESS, MAGIK_INVALID_CUDA_DEVICE
 * 
-* @warning
+* @warning  Calling this function automatically launches Magiks worker thread which will be ideling 
+            until the DCC has created a valid render context using the command queue system. All 
+            "hot loop" functions, such as magik_aov_fetch() are designed to handle with situations 
+            where they are called before the worker thread is done initalizing. 
 */
 MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_device);
 
@@ -335,25 +339,29 @@ typedef struct magik_aov_framebuffer_object_external* magik_aov_framebuffer_obje
 * 
 * @param [in] config_type 
 * 
-* @return magik_external_aov_buffer_t, MAGIK_SUCCESS, MAGIK_UNKNOWN_ENUM_TYPE
+* @return magik_external_aov_buffer_t
+* 
+* @warning This function may generate the following errors; MAGIK_SUCCESS, MAGIK_UNKNOWN_ENUM_TYPE
 */
 MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffer(e_magik_aov_config_types config_type);
 
 /**
 * @brief This function fetches the most up-to-date AOV buffer from the API. Magik uses a tripple buffer lock-free
-         setup. Memory transfers only happen if the AOV buffer internally tracked by Magik has changed since the 
-         last time this function was called. 
+         swap chain. Memory transfers only happen if the front AOV buffer internally tracked by Magik has changed 
+         since the last time this function was called. 
 * 
 * @param [in] manager The render manager from which you want the AOV 
 * @param [out] dcc_buffer The DCC buffer instance to which the AOVs will be copied too. 
 * 
-* @return MAGIK_SUCCESS, MAGIK_UNKNOWN_ENUM_TYPE, 
+* @return MAGIK_SUCCESS, MAGIK_UNKNOWN_ENUM_TYPE, MAGIK_ERROR_GL_BUFFER_SIZE_MISMATCH, MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED
 * 
 * @warning This function returns false if the API side AOV has not updated since the last call. In this case a transfer
            would not change the result and is thus skipped. The DCC should only call the extract functions if this function
-           returned true. Though the contents of the AOV object do not expire between calls. 
-* @warning The user is not responsible for allocating the DCC buffer ! Magik automatically allocates and reallocates the buffers
-           depending on the configuration and resolution ! The resolution is automatically updated using the active camera. 
+           returned true. Though the contents of the AOV object do not expire between calls. The user is not responsible for 
+           allocating the DCC buffer ! Magik automatically allocates and reallocates the buffers depending on the configuration 
+           and resolution ! The resolution is automatically updated using the active camera. 
+           This function will always return false if Magik workers thread is not running, for example if it takes longer than
+           usual to initalze. 
 */
 MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_framebuffer_object_external_t dcc_buffer); 
 
@@ -374,13 +382,12 @@ struct magik_aov_container_config_host_t
 /**
 * @brief Extracts the pointers to the host configured AOV buffer. 
 * 
-* @param 
+* @param [in] container Pointer to the struct into which the AOV data will be stored
+* @param [in] dcc_buffer Buffer which stores the front AOV 
 * 
-* @return 
-* 
-* @warning 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
 */
-MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief Struct which containes base types for a CUDA DCC backend. The user is responsible for casting these base types into CUDA ones !
@@ -408,9 +415,16 @@ struct magik_aov_container_config_opengl_interop_t
 };
 
 /**
+* @brief Extracts the OpenGL buffer id, cuda resources and resolution from the opaque AOV object
 * 
+* @param [in] container Pointer to the struct into which the AOV data will be stored
+* @param [in] dcc_buffer Buffer which stores the front AOV 
+* 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED, 
+* 
+* @warning 
 */
-MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief Struct which containes base types for a Vulkan DCC backend. The user is responsible for casting these base types into Vulkan ones !
@@ -428,7 +442,7 @@ MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop_extract(magik_ao
 /**
 * @brief This is mega tmp. Probably not thread save.
 */
-MAGIK_API e_magik_result_types magik_aov_resize(magik_render_manager_t manager, uint32_t x_resolution, uint32_t y_resolution);
+MAGIK_API e_magik_result_types magik_aov_resize(uint32_t x_resolution, uint32_t y_resolution);
 
 /**
 * @brief Free´s the memory associated with an AOV buffer. The user does not have to call this function

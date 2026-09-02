@@ -10,6 +10,14 @@ namespace magik::bridge
         return magik::interops::gl_init(loader);
     }
 
+    int32_t host_get_n_cuda_device()
+    {
+        int32_t n_device = 0;
+        check_cuda_errors(cudaGetDeviceCount(&n_device));
+
+        return n_device;
+    }
+
     void host_get_system_info()
     {
         int n_device = 0;
@@ -116,15 +124,18 @@ namespace magik::bridge
     void host_allocate_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource)
     {
         magik::interops::allocate_gl_buffer(x_resolution, y_resolution, channels, gl_buffer_id, cuda_resource);
+        check_magik_errors(magik_get_last_error());
     }
 
     void host_free_gl_buffer(uint32_t* gl_buffer_id, void** cuda_resource)
     {
         magik::interops::free_gl_buffer(gl_buffer_id, cuda_resource);
+        check_magik_errors(magik_get_last_error());
     }
 
     void host_map_cuda_to_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, void** cuda_resource, float* d_ptr)
     {
         magik::interops::map_cuda_to_gl_buffer(x_resolution, y_resolution, channels, cuda_resource, d_ptr);
+        check_magik_errors(magik_get_last_error());
     }
 }

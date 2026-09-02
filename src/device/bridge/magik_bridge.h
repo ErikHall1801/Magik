@@ -14,6 +14,8 @@ namespace magik::bridge
 {
     bool host_gl_init(void* (*loader)(const char*));
 
+    int32_t host_get_n_cuda_device();
+
     void host_get_system_info();
 
     float* host_allocate_device_memory(size_t size);

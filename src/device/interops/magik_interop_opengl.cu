@@ -4,16 +4,6 @@ namespace magik::interops
 {
     static bool g_gl_loaded = false;
 
-    static bool gl_ready(const char* what)
-    {
-        if(!g_gl_loaded)
-        {
-            std::cout << "Magik OpenGL entry points are not loaded, call magik_gl_init() before " << what << std::endl;
-        }
-
-        return g_gl_loaded;
-    }
-
     bool gl_init(void* (*loader)(const char*))
     {
         g_gl_loaded = gladLoadGLLoader((GLADloadproc)loader) != 0;
@@ -22,7 +12,11 @@ namespace magik::interops
 
     void get_gl_info()
     {
-        if(!gl_ready("get_gl_info")) return;
+        if(!g_gl_loaded) 
+        {
+            g_last_error = MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+            return;
+        }
 
         const GLubyte* version  = glGetString(GL_VERSION);
         if(version)
@@ -37,6 +31,12 @@ namespace magik::interops
 
     void allocate_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource)
     {
+        if(!g_gl_loaded) 
+        {
+            g_last_error = MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+            return;
+        }
+
         size_t size_of_gl_buffer = (size_t)(x_resolution*y_resolution*channels) * sizeof(float);
         uint32_t pbo_id;
         glGenBuffers(1, &pbo_id);
@@ -51,7 +51,11 @@ namespace magik::interops
 
     void free_gl_buffer(uint32_t* gl_buffer_id, void** cuda_resource)
     {
-        if(!gl_ready("free_gl_buffer")) return;
+        if(!g_gl_loaded) 
+        {
+            g_last_error = MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+            return;
+        }
 
         if(cuda_resource && *cuda_resource)
         {
@@ -70,21 +74,28 @@ namespace magik::interops
     {
         if(!*cuda_resource || !d_ptr) return;
 
+        if(!g_gl_loaded) 
+        {
+            g_last_error = MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+            return;
+        }
+
         cudaGraphicsResource_t cuda_res = static_cast<cudaGraphicsResource_t>(*cuda_resource);
         check_cuda_errors(cudaGraphicsMapResources(1, &cuda_res, 0));
 
         void* d_resource_ptr = nullptr;
         size_t size_of_resource = 0;
-
         check_cuda_errors(cudaGraphicsResourceGetMappedPointer(&d_resource_ptr, &size_of_resource, cuda_res));
 
         size_t size_of_buffer = (size_t)(x_resolution*y_resolution*channels)*sizeof(float);
+        if(size_of_buffer > size_of_resource) 
+        { 
+            g_last_error = MAGIK_ERROR_GL_BUFFER_SIZE_MISMATCH;
+        }
 
-        if(size_of_buffer > size_of_resource) { /* log + bail, don't memcpy */ }
         else check_cuda_errors(cudaMemcpy(d_resource_ptr, d_ptr, size_of_buffer, cudaMemcpyDeviceToDevice));
 
         check_cuda_errors(cudaMemcpy(d_resource_ptr, d_ptr, size_of_buffer, cudaMemcpyDeviceToDevice));
-
         check_cuda_errors(cudaGraphicsUnmapResources(1, &cuda_res, 0));
     }
 }

@@ -1,9 +1,4 @@
-/*
-* This file is no longer public and implements the core host-side API logic. 
-*/
-
 #pragma once
-
 #include "magik.h"
 #include "magik_error.h"
 #include "magik_bridge.h"
@@ -90,8 +85,7 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
         *as_char = buffer;
     }
 
-    g_last_error = MAGIK_SUCCESS;
-    return MAGIK_SUCCESS;
+    set_and_return_error(MAGIK_SUCCESS);
 }
 
 
@@ -117,6 +111,14 @@ MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft)
 
 MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_device)
 {
+    int32_t n_cuda_device = magik::bridge::host_get_n_cuda_device();
+
+    if(cuda_device > n_cuda_device)
+    {
+        g_last_error = MAGIK_INVALID_CUDA_DEVICE;
+        return nullptr;
+    }
+
     magik_render_manager* manager = new magik_render_manager();
     manager->cuda_device = cuda_device;
 
@@ -175,8 +177,8 @@ MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffe
 
         case MAGIK_AOV_CONFIG_OPENGL_INTEROP:
         {
-            buffer->data.config_open_gl_interop.gl_buffer_id = 0;
             buffer->data.config_open_gl_interop.cuda_resource = nullptr;
+            buffer->data.config_open_gl_interop.gl_buffer_id = 0;
             break;
         }
 
@@ -198,6 +200,12 @@ MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_framebu
         return false;
     }
 
+    if(!manager->is_running.load(std::memory_order_acquire))
+    {
+        g_last_error = MAGIK_SUCCESS;
+        return false;
+    }
+
     if(!magik::aov::try_swap_front_framebuffer(&manager->aov_context))
     {
         check_magik_errors(magik_get_last_error());
@@ -211,9 +219,14 @@ MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_framebu
     return true;
 }
 
-MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer)
+MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer)
 {
-    if(!container || !dcc_buffer || !dcc_buffer->data.config_host.h_albedo) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+    if(!manager || !container || !dcc_buffer || !dcc_buffer->data.config_host.h_albedo) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+
+    if(!manager->is_running.load(std::memory_order_acquire))
+    {
+        set_and_return_error(MAGIK_SUCCESS);
+    }
 
     container->h_albedo = dcc_buffer->data.config_host.h_albedo;
     container->size_of_albedo = dcc_buffer->data.config_host.host_size;
@@ -223,9 +236,14 @@ MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_aov_container
     set_and_return_error(MAGIK_SUCCESS);
 }
 
-MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer)
+MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer)
 {
-    if(!container || !dcc_buffer) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+    if(!manager || !container || !dcc_buffer) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+
+    if(!manager->is_running.load(std::memory_order_acquire))
+    {
+        set_and_return_error(MAGIK_SUCCESS);
+    }
 
     bool is_allocated = container->gl_buffer_id != 0 && container->cuda_resources != nullptr;
     bool is_correct_size = container->x_resolution == dcc_buffer->x_resolution && container->y_resolution == dcc_buffer->y_resolution;
@@ -245,7 +263,7 @@ MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_aov
     set_and_return_error(MAGIK_SUCCESS);
 }
 
-MAGIK_API e_magik_result_types magik_aov_resize(magik_render_manager_t manager, uint32_t x_resolution, uint32_t y_resolution)
+MAGIK_API e_magik_result_types magik_aov_resize(uint32_t x_resolution, uint32_t y_resolution)
 {
     if(x_resolution == 0)
     {
@@ -293,7 +311,7 @@ MAGIK_API e_magik_result_types magik_aov_destroy(magik_aov_framebuffer_object_ex
 
         case MAGIK_AOV_CONFIG_OPENGL_INTEROP:
         {
-            // DEFINE THIS !!!
+            magik::bridge::host_free_gl_buffer(&dcc_buffer->data.config_open_gl_interop.gl_buffer_id, &dcc_buffer->data.config_open_gl_interop.cuda_resource);
             break;
         }
 
