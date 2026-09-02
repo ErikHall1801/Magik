@@ -191,8 +191,9 @@ MAGIK_API e_magik_result_types magik_gl_init(magik_gl_loader_proc loader);
 * [SECTION] Info
 */
 
-/*
+/**
 * @brief Prints system info to the console
+* 
 */
 MAGIK_API void magik_get_system_Info();
 
@@ -317,7 +318,7 @@ typedef enum e_magik_aov_types
 typedef enum e_magik_aov_config_types
 {
     MAGIK_AOV_CONFIG_HOST = 0,
-    MAGIK_AOV_CONFIG_CUDA = 1,
+    MAGIK_AOV_CONFIG_CUDA = 1,              // To-be-implemented. DO NOT USE ! 
     MAGIK_AOV_CONFIG_OPENGL_INTEROP = 2,
     MAGIK_AOV_CONFIG_VULKAN_INTEROP = 3     // To-be-implemented. DO NOT USE ! 
 } e_magik_aov_transfer_types;
@@ -371,10 +372,6 @@ struct magik_aov_container_config_host_t
 };
 
 /**
-* All of these will use non-opaque structs. The user does NOT have to allocate memory here. These functions 
-  will alloc themselves. Indeed, it is recommended to not allocate because these  
-  Make sure the descriptions here make it very clear what the functions return, write into the associated struct
-  and how to cast this into the respective types. 
 * @brief Extracts the pointers to the host configured AOV buffer. 
 * 
 * @param 

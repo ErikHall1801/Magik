@@ -11,7 +11,7 @@ namespace magik::worker
 
         manager->is_running.store(true, std::memory_order_release);
 
-        set_error(MAGIK_SUCCESS);
+        set_and_return_error(MAGIK_SUCCESS);
     }
 
     void run(magik_render_manager* manager)

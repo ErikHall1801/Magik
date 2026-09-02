@@ -1,12 +1,15 @@
 #include "magik_arbitrary_output_variables.h"
 
+std::atomic<float> atomic_x_resolution = 2;
+std::atomic<float> atomic_y_resolution = 2;
+
 namespace magik::aov
 {
     e_magik_result_types initialize_framebuffer_collection(magik::aov::context* ctx)
     {
         if(!ctx)
         {
-            set_error(MAGIK_ERROR_INVALID_POINTER);
+            set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
         }
 
         size_t size_of_1_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*1)*sizeof(float);
@@ -17,7 +20,7 @@ namespace magik::aov
         {
             if(ctx->framebuffer_object_collection[i].d_albedo) 
             {
-                set_error(MAGIK_ERROR_AOV_ALLOCATED_BEFORE_INITIALIZATION);
+                set_and_return_error(MAGIK_ERROR_AOV_ALLOCATED_BEFORE_INITIALIZATION);
             }
 
             ctx->framebuffer_object_collection[i].d_albedo = magik::bridge::host_allocate_device_memory(size_of_3_float_buffer);
@@ -36,11 +39,25 @@ namespace magik::aov
         ctx->ready.store(&ctx->framebuffer_object_collection[1], std::memory_order_relaxed);
         ctx->back = &ctx->framebuffer_object_collection[2];
 
-        set_error(MAGIK_SUCCESS);
+        set_and_return_error(MAGIK_SUCCESS);
     }
 
     e_magik_result_types allocate_back_framebuffer(magik::aov::context* ctx)
     {
+        /**
+        * 
+        * @note These atomic loads and checks are TEMPORARY ! We need these to make sure 
+        *       the framebuffer is not resized to 0, which nukes CENTCOM. THERE IS NO WAY
+        *       TO GUARD AGAINST 0 byte ALLOCATION. So we MUST ensure it does not happen ! 
+        * 
+        */
+
+        ctx->x_resolution = atomic_x_resolution.load(std::memory_order_consume);
+        ctx->y_resolution = atomic_y_resolution.load(std::memory_order_consume);
+
+        if(ctx->x_resolution == 0) ctx->x_resolution = 2;
+        if(ctx->y_resolution == 0) ctx->y_resolution = 2;
+
         size_t size_of_1_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*1)*sizeof(float);
         size_t size_of_3_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*3)*sizeof(float);
         size_t size_of_N_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*ctx->back->n_spectral_bin)*sizeof(float);
@@ -56,24 +73,16 @@ namespace magik::aov
             ctx->back->n_spectral_bin = ctx->n_spectral_bin;
         }
 
-        set_error(MAGIK_SUCCESS);
+        set_and_return_error(MAGIK_SUCCESS);
     }
 
     e_magik_result_types swap_back_framebuffer(magik::aov::context* ctx)
     {
-        if(!ctx || !ctx->ready.load(std::memory_order_relaxed) || !ctx->back) set_error(MAGIK_ERROR_INVALID_POINTER);
-
-        // uint32_t c_back_id = ctx->back->debug_id;
-        // uint32_t c_ready_id = ctx->ready.load()->debug_id;
+        if(!ctx || !ctx->ready.load(std::memory_order_relaxed) || !ctx->back) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
 
         ctx->back = ctx->ready.exchange(ctx->back, std::memory_order_acq_rel);
         ctx->is_ready_updated.store(true, std::memory_order_release);
-
-        // uint32_t n_back_id = ctx->back->debug_id;
-        // uint32_t n_ready_id = ctx->ready.load()->debug_id;
-        // printf("Swapped back and ready framebuffer | Back id [ %i -> %i ] | Ready id [ %i -> %i ] \n", c_back_id, n_back_id, c_ready_id, n_ready_id);
-
-        set_error(MAGIK_SUCCESS);
+        set_and_return_error(MAGIK_SUCCESS);
     }
 
     bool try_swap_front_framebuffer(magik::aov::context* ctx)
@@ -84,9 +93,6 @@ namespace magik::aov
             return false;
         }
 
-        // uint32_t c_front_id = ctx->front->debug_id;
-        // uint32_t c_ready_id = ctx->ready.load()->debug_id;
-
         if(!ctx->is_ready_updated.exchange(false, std::memory_order_acquire)) 
         {
             g_last_error = MAGIK_SUCCESS;
@@ -95,23 +101,19 @@ namespace magik::aov
         
         ctx->front = ctx->ready.exchange(ctx->front, std::memory_order_acq_rel);
 
-        // uint32_t n_front_id = ctx->front->debug_id;
-        // uint32_t n_ready_id = ctx->ready.load()->debug_id;
-        // printf("Swapped front and ready framebuffer | Back id [ %i -> %i ] | Ready id [ %i -> %i ] \n", c_front_id, n_front_id, c_ready_id, n_ready_id);
-
         g_last_error = MAGIK_SUCCESS;
         return true;
     }
 
     e_magik_result_types memcpy_front_framebuffer_to_dcc_framebuffer(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
     {
-        if(!ctx || !dcc_buffer || !ctx->front) set_error(MAGIK_ERROR_INVALID_POINTER);
+        if(!ctx || !dcc_buffer || !ctx->front) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
 
         if( dcc_buffer->config_type != MAGIK_AOV_CONFIG_HOST && 
             dcc_buffer->config_type != MAGIK_AOV_CONFIG_CUDA && 
             dcc_buffer->config_type != MAGIK_AOV_CONFIG_OPENGL_INTEROP && 
             dcc_buffer->config_type != MAGIK_AOV_CONFIG_VULKAN_INTEROP
-        ) set_error(MAGIK_UNKNOWN_ENUM_TYPE);
+        ) set_and_return_error(MAGIK_UNKNOWN_ENUM_TYPE);
 
         switch(dcc_buffer->config_type)
         {
@@ -152,7 +154,7 @@ namespace magik::aov
                     break;
                 }
 
-                // magik::bridge::host_map_cuda_to_gl_buffer(dcc_buffer->x_resolution, dcc_buffer->y_resolution, 3, &dcc_buffer->data.config_open_gl_interop.cuda_resource, ctx->front->d_albedo);
+                magik::bridge::host_map_cuda_to_gl_buffer(dcc_buffer->x_resolution, dcc_buffer->y_resolution, 3, &dcc_buffer->data.config_open_gl_interop.cuda_resource, ctx->front->d_albedo);
                 break;
             }
 
@@ -162,7 +164,7 @@ namespace magik::aov
             }
         }
 
-        set_error(MAGIK_SUCCESS);
+        set_and_return_error(MAGIK_SUCCESS);
     }
 
     e_magik_result_types destroy_framebuffer_collection(magik::aov::context* ctx)
@@ -172,6 +174,6 @@ namespace magik::aov
             magik::bridge::host_destroy_device_memory(ctx->framebuffer_object_collection[i].d_albedo);
         }
 
-        set_error(MAGIK_SUCCESS);
+        set_and_return_error(MAGIK_SUCCESS);
     }
 };

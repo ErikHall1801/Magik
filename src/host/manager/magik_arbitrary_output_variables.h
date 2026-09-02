@@ -35,11 +35,6 @@ union backend
 
 struct magik_aov_framebuffer_object_external
 {
-    /*
-    So, now we have to define this one. 
-    Again, the idea is that this is a different frame buffer type because it is a union. 
-    */
-
     e_magik_aov_config_types config_type; 
     uint32_t x_resolution = 0;
     uint32_t y_resolution = 0;
@@ -88,3 +83,6 @@ namespace magik::aov
 
     e_magik_result_types destroy_framebuffer_collection(magik::aov::context* ctx);
 }
+
+extern std::atomic<float> atomic_x_resolution;
+extern std::atomic<float> atomic_y_resolution;

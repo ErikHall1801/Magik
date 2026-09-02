@@ -37,10 +37,11 @@ namespace magik::interops
 
     void allocate_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource)
     {
+        size_t size_of_gl_buffer = (size_t)(x_resolution*y_resolution*channels) * sizeof(float);
         uint32_t pbo_id;
         glGenBuffers(1, &pbo_id);
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_id);
-        glBufferData(GL_PIXEL_UNPACK_BUFFER, (size_t)(x_resolution*y_resolution*channels) * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, size_of_gl_buffer, nullptr, GL_DYNAMIC_DRAW);
         cudaGraphicsResource_t cuda_res;
         check_cuda_errors(cudaGraphicsGLRegisterBuffer(&cuda_res, pbo_id, cudaGraphicsRegisterFlagsNone));
 

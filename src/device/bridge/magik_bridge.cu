@@ -45,13 +45,12 @@ namespace magik::bridge
             printf("Number of multiprocessors:          %d\n", device_prop.multiProcessorCount);
             printf("\n");
         }
-
-        magik::interops::get_gl_info();
     }
 
     template<typename T> static  T* allocate_device_memory(size_t size)
     {
         T* d_ptr = nullptr;
+        if(size == 0) return nullptr;
         check_cuda_errors(cudaMalloc(&d_ptr, size));
         return d_ptr;
     }
@@ -59,6 +58,7 @@ namespace magik::bridge
     template<typename T> static  T* allocate_host_memory(size_t size)
     {
         T* h_ptr = nullptr;
+        if(size == 0) return nullptr;
         check_cuda_errors(cudaMallocHost(&h_ptr, size));
         return h_ptr;
     }
