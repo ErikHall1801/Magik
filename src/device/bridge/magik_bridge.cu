@@ -5,6 +5,11 @@
 
 namespace magik::bridge
 {
+    bool host_gl_init(void* (*loader)(const char*))
+    {
+        return magik::interops::gl_init(loader);
+    }
+
     void host_get_system_info()
     {
         int n_device = 0;
@@ -41,7 +46,7 @@ namespace magik::bridge
             printf("\n");
         }
 
-        // magik::interops::get_gl_info();
+        magik::interops::get_gl_info();
     }
 
     template<typename T> static  T* allocate_device_memory(size_t size)

@@ -2,8 +2,28 @@
 
 namespace magik::interops
 {
+    static bool g_gl_loaded = false;
+
+    static bool gl_ready(const char* what)
+    {
+        if(!g_gl_loaded)
+        {
+            std::cout << "Magik OpenGL entry points are not loaded, call magik_gl_init() before " << what << std::endl;
+        }
+
+        return g_gl_loaded;
+    }
+
+    bool gl_init(void* (*loader)(const char*))
+    {
+        g_gl_loaded = gladLoadGLLoader((GLADloadproc)loader) != 0;
+        return g_gl_loaded;
+    }
+
     void get_gl_info()
     {
+        if(!gl_ready("get_gl_info")) return;
+
         const GLubyte* version  = glGetString(GL_VERSION);
         if(version)
         {
@@ -30,6 +50,8 @@ namespace magik::interops
 
     void free_gl_buffer(uint32_t* gl_buffer_id, void** cuda_resource)
     {
+        if(!gl_ready("free_gl_buffer")) return;
+
         if(cuda_resource && *cuda_resource)
         {
             check_cuda_errors(cudaGraphicsUnregisterResource(static_cast<cudaGraphicsResource_t>(*cuda_resource)));

@@ -92,6 +92,9 @@ typedef enum e_magik_result_types
     MAGIK_ERROR_AOV_INCORRECT_EXTRACT_CALL = 900,
     MAGIK_ERROR_AOV_ALLOCATED_BEFORE_INITIALIZATION = 901,
 
+    // Interops 1000 - 1099
+    MAGIK_ERROR_GL_LOADER_FAILED = 1000,
+
     // General 10000 - 10099
     MAGIK_ERROR_UNKNOWN = 10000,
 
@@ -159,6 +162,28 @@ MAGIK_API e_magik_result_types magik_get_last_error(void);
            It is strongly recommended to set a error callback using magik_set_error_callback()
 */
 MAGIK_API void check_magik(e_magik_result_types result, char const* func, const char* const file, int const line); 
+
+
+
+/**
+* [SECTION] Interops initialization
+*/
+
+/**
+* @brief Signature of an OpenGL loader function, for example glfwGetProcAddress.
+*/
+typedef void* (*magik_gl_loader_proc)(const char* name);
+
+/**
+* @brief Loads Magiks OpenGL entry points. 
+* 
+* @param [in] loader A function which returns the address of a named OpenGL entry point.
+*
+* @warning  Magik links its own copy of the OpenGL loader, so the host application loading OpenGL for 
++           itself does not load Magiks. Call this once, with the OpenGL context current on the calling 
++           thread, before magik_get_system_Info() or any MAGIK_AOV_CONFIG_OPENGL_INTEROP framebuffer. 
+*/
+MAGIK_API e_magik_result_types magik_gl_init(magik_gl_loader_proc loader);
 
 
 

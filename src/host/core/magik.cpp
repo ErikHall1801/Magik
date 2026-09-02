@@ -35,6 +35,26 @@ MAGIK_API void check_magik(e_magik_result_types result, char const* func, const 
 }
 
 
+/**
+* [SECTION] Interop initialization
+*/
+
+MAGIK_API e_magik_result_types magik_gl_init(magik_gl_loader_proc loader)
+{
+    if(!loader)
+    {
+        set_error(MAGIK_ERROR_INVALID_POINTER);
+    }
+
+    if(!magik::bridge::host_gl_init((void* (*)(const char*))loader))
+    {
+        set_error(MAGIK_ERROR_GL_LOADER_FAILED);
+    }
+
+    set_error(MAGIK_SUCCESS);
+}
+
+
 
 /**
 * [SECTION] Info

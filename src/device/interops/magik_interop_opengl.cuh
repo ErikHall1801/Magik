@@ -6,6 +6,8 @@
 
 namespace magik::interops
 {
+    bool gl_init(void* (*loader)(const char*));
+
     void get_gl_info();
 
     void allocate_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource);
