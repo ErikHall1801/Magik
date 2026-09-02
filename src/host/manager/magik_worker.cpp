@@ -23,7 +23,7 @@ namespace magik::worker
         {
             check_magik_errors(magik::aov::allocate_back_framebuffer(&manager->aov_context));
 
-            magik::bridge::call_test_pattern_mandelbrot_kernel(manager->aov_context.back->d_albedo, manager->aov_context.back->x_resolution, manager->aov_context.back->y_resolution);
+            magik::bridge::call_test_pattern_julia_set_kernel(manager->aov_context.back->d_albedo, manager->aov_context.back->x_resolution, manager->aov_context.back->y_resolution);
 
             check_magik_errors(magik::aov::swap_back_framebuffer(&manager->aov_context));
 

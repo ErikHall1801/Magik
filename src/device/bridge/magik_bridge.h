@@ -22,9 +22,7 @@ namespace magik::bridge
 
     void host_memcpy_device_to_host(float* h_ptr, float* d_ptr, size_t size);
 
-    void call_test_pattern_gradient_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution);
-
-    void call_test_pattern_mandelbrot_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution);
+    void call_test_pattern_julia_set_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution);
 
     void set_cuda_device(uint32_t cuda_device);
 }

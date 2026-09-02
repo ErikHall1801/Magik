@@ -58,14 +58,9 @@ namespace magik::bridge
         memcpy_device_to_host<float>(h_ptr, d_ptr, size);
     }
 
-    void call_test_pattern_gradient_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution)
+    void call_test_pattern_julia_set_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution)
     {
-        magik::kernels::launch_test_pattern_gradient(d_rgba_fb, x_resolution, y_resolution, 16, 16);
-    }
-
-    void call_test_pattern_mandelbrot_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution)
-    {
-        magik::kernels::launch_test_pattern_mandelbrot(d_rgba_fb, x_resolution, y_resolution, 16, 16);
+        magik::kernels::launch_test_pattern_julia_set(d_rgba_fb, x_resolution, y_resolution, 16, 16);
     }
 
     void set_cuda_device(uint32_t cuda_device)

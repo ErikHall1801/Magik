@@ -14,21 +14,38 @@
 namespace magik::kernels
 {
     /* [SECTION] - Tests */
-    static __global__ void test_pattern_gradient(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution)
+    struct complex 
     {
-        if(!magik::utilities::is_valid_thread(x_resolution, y_resolution)) return;
+        float x = 0.0f;
+        float y = 0.0f;
+    };
 
-        uint32_t i_x = threadIdx.x + blockIdx.x * blockDim.x;
-        uint32_t i_y = threadIdx.y + blockIdx.y * blockDim.y;
-        uint32_t thread_id = magik::utilities::get_n_dimensional_thread_id(x_resolution, 4);
+    static __device__ complex add(complex a, complex b)
+    {
+        complex c;
+        c.x = a.x + b.x;
+        c.y = a.y + b.y;
+        return c;
+    };
 
-        d_rgba_fb[thread_id + 0] = static_cast<float>(i_x) / static_cast<float>(x_resolution);
-        d_rgba_fb[thread_id + 1] = static_cast<float>(i_y) / static_cast<float>(y_resolution);
-        d_rgba_fb[thread_id + 2] = 0.0f;
-        // d_rgba_fb[thread_id + 3] = 1.0f;
+    static __device__ complex sqr(complex a){
+        complex c;
+        c.x = a.x*a.x - a.y*a.y;
+        c.y = 2*a.x*a.y;
+        return c;
     }
 
-    static __global__ void test_pattern_mandelbrot(float* d_rgba_fb, uint32_t clock, const uint32_t x_resolution, const uint32_t y_resolution)
+    static __device__ complex mapPoint(int width,int height,double radius,int x,int y){
+        complex c;
+        int l = (width<height)?width:height;
+        
+        c.x = 2*radius*(x - width/2.0)/l;
+        c.y = 2*radius*(y - height/2.0)/l;
+        
+        return c;
+    }
+
+    static __global__ void test_pattern_julia_set(float* d_rgba_fb, uint32_t clock, const uint32_t x_resolution, const uint32_t y_resolution)
     {
         if(!magik::utilities::is_valid_thread(x_resolution, y_resolution)) return;
 
@@ -36,28 +53,22 @@ namespace magik::kernels
         uint32_t i_y = threadIdx.y + blockIdx.y * blockDim.y;
         uint32_t thread_id = magik::utilities::get_n_dimensional_thread_id(x_resolution, 3);
 
-        float x0 = (static_cast<float>(i_x)-static_cast<float>(x_resolution/2)) / sqrt(static_cast<float>((x_resolution*y_resolution)))*(3.3f * sinf((float)clock*0.005f));
-        float y0 = (static_cast<float>(i_y)-static_cast<float>(y_resolution/2)) / sqrt(static_cast<float>((x_resolution*y_resolution)))*(3.3f * sinf((float)clock*0.005f));
-        float x1 = 0.0f;
-        float y1 = 0.0f;
-        float x2 = 0.0f;
-        float y2 = 0.0f;
-
+        float radius = 1.5f;
         uint32_t max_iter = 32;
         uint32_t iter = 0;
+        complex z0, z1;
+        complex c = {-0.7f * sinf((float)clock * 0.001f) + sinf((float)clock*0.001f)*0.5f, 0.27015f * cosf((float)clock * 0.001f) + cosf((float)clock*0.001f)*0.5f};
 
-        for(uint32_t i = 0; i < max_iter; i++)
+        z0 = mapPoint(x_resolution, y_resolution, radius, i_x, i_y);
+
+        for(iter = 0; iter < max_iter; iter++)
         {
-            if(x2+y2 > 4.0f) break;
-
-            x2 = x1*x1;
-            y2 = y1*y1;
-            y1 = 2.0f*x1*y1+y0;
-            x1 = x2-y2+x0;
-            iter++;
+            z1 = add(sqr(z0), c);
+            if((z1.x * z1.x + z1.y * z1.y) > (radius * radius)) break;
+            z0 = z1;
         }
 
-        if(iter >= max_iter)
+        if(iter == max_iter)
         {
             d_rgba_fb[thread_id + 0] = 0.0f;
             d_rgba_fb[thread_id + 1] = 0.0f;
@@ -65,39 +76,30 @@ namespace magik::kernels
         }
         else
         {
-            float log_zn = logf(x2 + y2) / 2.0f;
+            float mod_sq = z1.x * z1.x + z1.y * z1.y;
+            
+            float log_zn = logf(mod_sq) / 2.0f;
             float nu = logf(log_zn / 0.69314718f) / 0.69314718f;
             float smooth_i = static_cast<float>(iter) + 1.0f - nu;
-            float t = smooth_i / static_cast<float>(max_iter);
+            
+            float t = smooth_i * 0.05f;
 
-            float r = 0.5f + 0.5f * cosf(6.28318f * (1.0f * t + 0.0f));
-            float g = 0.5f + 0.5f * cosf(6.28318f * (1.0f * t + 0.25f));
-            float b = 0.5f + 0.5f * cosf(6.28318f * (1.0f * t + 0.5f));
+            float r = 0.5f + 0.5f * cosf(6.28318f * (t + 0.00f));
+            float g = 0.5f + 0.5f * cosf(6.28318f * (t + 0.15f));
+            float b = 0.5f + 0.5f * cosf(6.28318f * (t + 0.20f));
 
             d_rgba_fb[thread_id + 0] = r;
             d_rgba_fb[thread_id + 1] = g;
             d_rgba_fb[thread_id + 2] = b;
         }
-
-        // d_rgba_fb[thread_id + 3] = 1.0f;
     }
 
-    void launch_test_pattern_gradient(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block)
+    void launch_test_pattern_julia_set(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block)
     {
         dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
         dim3 n_block = magik::utilities::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
 
-        test_pattern_gradient<<<n_block, threads_per_block>>>(d_rgba_fb, x_resolution, y_resolution);
-        check_cuda_errors(cudaGetLastError());
-        check_cuda_errors(cudaDeviceSynchronize());
-    }
-
-    void launch_test_pattern_mandelbrot(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block)
-    {
-        dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
-        dim3 n_block = magik::utilities::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
-
-        test_pattern_mandelbrot<<<n_block, threads_per_block>>>(d_rgba_fb, clock(), x_resolution, y_resolution);
+        test_pattern_julia_set<<<n_block, threads_per_block>>>(d_rgba_fb, clock(), x_resolution, y_resolution);
         check_cuda_errors(cudaGetLastError());
         check_cuda_errors(cudaDeviceSynchronize());
     }
