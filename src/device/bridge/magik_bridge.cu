@@ -1,9 +1,49 @@
 #include "magik_bridge.h"
 #include "magik_test_pattern.cuh"
+#include "magik_interop_opengl.cuh"
 #include "magik_library.cuh"
 
 namespace magik::bridge
 {
+    void host_get_system_info()
+    {
+        int n_device = 0;
+        check_cuda_errors(cudaGetDeviceCount(&n_device));
+
+        printf("Number of CUDA devices %d \n", n_device);
+
+        for(int i_device = 0; i_device < n_device; i_device++)
+        {
+            cudaDeviceProp device_prop;
+            check_cuda_errors(cudaGetDeviceProperties(&device_prop, i_device));
+
+            if(n_device == 0)
+            {
+                if(device_prop.major == 9999 && device_prop.minor == 9999)
+                {
+                    printf("No CUDA GPU has been detected. \n");
+                    return;
+                }
+            }
+
+            printf("\n");
+            printf("CUDA device #%d\n", i_device);
+            printf("Device name:                        %s\n", device_prop.name);
+            printf("Major revision number:              %d\n", device_prop.major);
+            printf("Minor revision number:              %d\n", device_prop.minor);
+            printf("Total global memory:                %lu\n", (unsigned long)device_prop.totalGlobalMem);
+            printf("Total shared memory per block:      %lu\n", (unsigned long)device_prop.sharedMemPerBlock);
+            printf("Total constant memory size:         %lu\n", (unsigned long)device_prop.totalConstMem);
+            printf("Warp size:                          %d\n", device_prop.warpSize);
+            printf("Maximum block dimensions:           %d x %d x %d\n", device_prop.maxThreadsDim[0], device_prop.maxThreadsDim[1], device_prop.maxThreadsDim[2]);
+            printf("Maximum grid dimensions:            %d x %d x %d\n", device_prop.maxGridSize[0], device_prop.maxGridSize[1], device_prop.maxGridSize[2]);
+            printf("Number of multiprocessors:          %d\n", device_prop.multiProcessorCount);
+            printf("\n");
+        }
+
+        // magik::interops::get_gl_info();
+    }
+
     template<typename T> static  T* allocate_device_memory(size_t size)
     {
         T* d_ptr = nullptr;
@@ -66,5 +106,20 @@ namespace magik::bridge
     void set_cuda_device(uint32_t cuda_device)
     {
         check_cuda_errors(cudaSetDevice(cuda_device));
+    }
+
+    void host_allocate_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource)
+    {
+        magik::interops::allocate_gl_buffer(x_resolution, y_resolution, channels, gl_buffer_id, cuda_resource);
+    }
+
+    void host_free_gl_buffer(uint32_t* gl_buffer_id, void** cuda_resource)
+    {
+        magik::interops::free_gl_buffer(gl_buffer_id, cuda_resource);
+    }
+
+    void host_map_cuda_to_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, void** cuda_resource, float* d_ptr)
+    {
+        magik::interops::map_cuda_to_gl_buffer(x_resolution, y_resolution, channels, cuda_resource, d_ptr);
     }
 }

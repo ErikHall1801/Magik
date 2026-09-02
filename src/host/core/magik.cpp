@@ -37,6 +37,17 @@ MAGIK_API void check_magik(e_magik_result_types result, char const* func, const 
 
 
 /**
+* [SECTION] Info
+*/
+
+MAGIK_API void magik_get_system_Info()
+{
+    magik::bridge::host_get_system_info();
+}
+
+
+
+/**
 * [SECTION] Tests
 */
 
@@ -144,6 +155,8 @@ MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffe
 
         case MAGIK_AOV_CONFIG_OPENGL_INTEROP:
         {
+            buffer->data.config_open_gl_interop.gl_buffer_id = 0;
+            buffer->data.config_open_gl_interop.cuda_resource = nullptr;
             break;
         }
 
@@ -186,6 +199,52 @@ MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_aov_container
     container->size_of_albedo = dcc_buffer->data.config_host.host_size;
     container->x_resolution = dcc_buffer->x_resolution;
     container->y_resolution = dcc_buffer->y_resolution;
+
+    set_error(MAGIK_SUCCESS);
+}
+
+MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer)
+{
+    /*
+    So like, what is the goal here ? 
+
+    The core problem is that we have to create gl resources on the DCC thread. So, this 
+    function has two responsibilities. It creates / resizes the gl buffer if need be 
+    and gives Magik the gl buffer id and resources to transfer the front buffer to. 
+
+    memcpy_front_framebuffer_to_dcc_framebuffer handles that bit. 
+
+    Thus, the container needs to maintain state. It needs to know the resolution
+    and keep track of the resources. 
+
+    We have to be careful with the resolution here... The dcc_buffer-> resolution members
+    are derived from the front buffer. So we are save here. I think ? 
+    */
+
+    if(!container || !dcc_buffer) set_error(MAGIK_ERROR_INVALID_POINTER);
+
+    bool is_allocated = container->gl_buffer_id != 0 && container->cuda_resources != nullptr;
+    bool is_correct_size = container->x_resolution == dcc_buffer->x_resolution && container->y_resolution == dcc_buffer->y_resolution;
+
+    if(!is_allocated || !is_correct_size)
+    {
+        if(!is_allocated)
+        {
+            // magik::bridge::host_allocate_gl_buffer(dcc_buffer->x_resolution, dcc_buffer->y_resolution, 3, &container->gl_buffer_id, &container->cuda_resources);
+        }
+
+        if(!is_correct_size)
+        {
+            // magik::bridge::host_free_gl_buffer(&container->gl_buffer_id, &container->cuda_resources);
+            // magik::bridge::host_allocate_gl_buffer(dcc_buffer->x_resolution, dcc_buffer->y_resolution, 3, &container->gl_buffer_id, &container->cuda_resources);
+        }
+
+        container->x_resolution = dcc_buffer->x_resolution;
+        container->y_resolution = dcc_buffer->y_resolution;
+    }
+
+    dcc_buffer->data.config_open_gl_interop.gl_buffer_id = container->gl_buffer_id;
+    dcc_buffer->data.config_open_gl_interop.cuda_resource = container->cuda_resources;
 
     set_error(MAGIK_SUCCESS);
 }

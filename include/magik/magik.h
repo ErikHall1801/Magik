@@ -2,7 +2,7 @@
 * This is the APIs public header. It uses opaque structs to hide the 
 * actual implementation logic. 
 * The core rule of this file is to keep everything opaque and C-style. 
-*/ 
+*/
 
 #ifndef MAGIK_H
 #define MAGIK_H
@@ -159,6 +159,17 @@ MAGIK_API e_magik_result_types magik_get_last_error(void);
            It is strongly recommended to set a error callback using magik_set_error_callback()
 */
 MAGIK_API void check_magik(e_magik_result_types result, char const* func, const char* const file, int const line); 
+
+
+
+/**
+* [SECTION] Info
+*/
+
+/*
+* @brief Prints system info to the console
+*/
+MAGIK_API void magik_get_system_Info();
 
 
 
@@ -360,20 +371,24 @@ struct magik_aov_container_config_cuda_t
 /**
 * 
 */
-MAGIK_API e_magik_result_types magik_aov_config_cuda_extract(magik_aov_container_config_cuda_t& container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_config_cuda_extract(magik_aov_container_config_cuda_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief Struct which containes base types for a OpenGL DCC backend. The user is responsible for casting these base types into OpenGL ones !
 */
-struct magik_aov_container_config_open_gl_interop_t
+struct magik_aov_container_config_opengl_interop_t
 {
+    uint32_t x_resolution;
+    uint32_t y_resolution;
 
+    uint32_t gl_buffer_id = 0;
+    void* cuda_resources = nullptr; // true type is cudaGraphicsResource_t
 };
 
 /**
 * 
 */
-MAGIK_API e_magik_result_types magik_aov_extract_open_gl_interop_extract(magik_aov_container_config_open_gl_interop_t& container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief Struct which containes base types for a Vulkan DCC backend. The user is responsible for casting these base types into Vulkan ones !
@@ -386,7 +401,7 @@ struct magik_aov_container_config_vulkan_interop_t
 /**
 * @brief To be implemented ! DO NOT USE ! 
 */
-MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop_extract(magik_aov_container_config_vulkan_interop_t& container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop_extract(magik_aov_container_config_vulkan_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief This is mega tmp. Probably not thread save.

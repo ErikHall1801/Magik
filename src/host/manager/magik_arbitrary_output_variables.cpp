@@ -145,6 +145,14 @@ namespace magik::aov
 
             case MAGIK_AOV_CONFIG_OPENGL_INTEROP:
             {
+                if(dcc_buffer->x_resolution != ctx->front->x_resolution || dcc_buffer->y_resolution != ctx->front->y_resolution || !dcc_buffer->data.config_open_gl_interop.cuda_resource || dcc_buffer->data.config_open_gl_interop.gl_buffer_id == 0)
+                {
+                    dcc_buffer->x_resolution = ctx->front->x_resolution;
+                    dcc_buffer->y_resolution = ctx->front->y_resolution;
+                    break;
+                }
+
+                // magik::bridge::host_map_cuda_to_gl_buffer(dcc_buffer->x_resolution, dcc_buffer->y_resolution, 3, &dcc_buffer->data.config_open_gl_interop.cuda_resource, ctx->front->d_albedo);
                 break;
             }
 

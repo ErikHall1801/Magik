@@ -6,9 +6,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 
-# Find packages
-find_package(glad CONFIG REQUIRED)
-
 # Link static libraries
 
 # Declare a shared library
@@ -55,6 +52,9 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/error
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/manager
 )
+
+# Find packages
+find_package(glad CONFIG REQUIRED)
 
 target_link_libraries(magik PRIVATE
     glad::glad
