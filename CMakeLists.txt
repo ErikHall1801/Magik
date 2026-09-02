@@ -4,11 +4,10 @@ project(Magik VERSION 0.1.0 LANGUAGES CXX C CUDA)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 
 # Find packages
-# find_package(xyz CONFIG REQUIERED) for example
+find_package(glad CONFIG REQUIRED)
 
 # Link static libraries
 
@@ -23,6 +22,9 @@ add_library(magik SHARED
     
     # CUDA Kernels
     src/device/kernels/magik_test_pattern.cu
+
+    # CUDA Interops
+    src/device/interops/magik_interop_opengl.cu
     
     # Manager
     src/host/manager/magik_arbitrary_output_variables.cpp
@@ -46,11 +48,16 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/device
         ${CMAKE_CURRENT_SOURCE_DIR}/src/device/bridge
         ${CMAKE_CURRENT_SOURCE_DIR}/src/device/kernels
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/interops
         ${CMAKE_CURRENT_SOURCE_DIR}/src/device/library
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/core
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/error
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/manager
+)
+
+target_link_libraries(magik PRIVATE
+    glad::glad
 )
 
 target_compile_definitions(magik PRIVATE MAGIK_BUILD_DLL)
