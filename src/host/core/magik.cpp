@@ -109,7 +109,7 @@ MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft)
 * [SECTION] Render manager
 */
 
-MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_device)
+MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_device, uint32_t cqs_n_reserved_chunk, bool cqs_drop_overflows)
 {
     int32_t n_cuda_device = magik::bridge::host_get_n_cuda_device();
 
@@ -121,6 +121,24 @@ MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_devic
 
     magik_render_manager* manager = new magik_render_manager();
     manager->cuda_device = cuda_device;
+
+    manager->cqs_context.n_reserved_chunk = cqs_n_reserved_chunk;
+    manager->cqs_context.drop_overflows = cqs_drop_overflows;
+
+    try
+    {
+        manager->cqs_context.front = std::make_unique<magik::cqs::buffer_object>();
+        manager->cqs_context.back = std::make_unique<magik::cqs::buffer_object>();
+
+        manager->cqs_context.front->data = std::make_unique<uint32_t[]>(cqs_n_reserved_chunk);
+        manager->cqs_context.back->data = std::make_unique<uint32_t[]>(cqs_n_reserved_chunk);
+    }
+    catch(const std::bad_alloc)
+    {
+        g_last_error = MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED;
+        delete manager;
+        return nullptr;
+    }
 
     manager->worker_thread = std::thread(magik::worker::run, manager);
 
@@ -308,33 +326,11 @@ MAGIK_API e_magik_result_types magik_aov_destroy(magik_aov_framebuffer_object_ex
 * [SECTION] Command Queue System
 */
 
-MAGIK_API e_magik_result_types magik_cqs_configure(magik_render_manager_t manager, uint32_t n_reserved_chunk)
-{
-    if(!manager) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
-
-    manager->cqs_context.n_reserved_chunk = n_reserved_chunk;
-
-    try
-    {
-        manager->cqs_context.front = std::make_unique<magik::cqs::buffer_object>();
-        manager->cqs_context.back = std::make_unique<magik::cqs::buffer_object>();
-
-        manager->cqs_context.front->data = std::make_unique<uint32_t[]>(n_reserved_chunk);
-        manager->cqs_context.back->data = std::make_unique<uint32_t[]>(n_reserved_chunk);
-    }
-    catch(const std::bad_alloc)
-    {
-        set_and_return_error(MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED);
-    }
-
-    set_and_return_error(MAGIK_SUCCESS);
-}
-
 MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t manager, const void* command)
 {
     if(!manager || !command) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
 
-    if(reinterpret_cast<uintptr_t>(command) % sizeof(e_magik_cqs_command_types) != 0) set_and_return_error(MAGIK_ERROR_PACKED_COMMAND_NOT_ALLIGNED);
+    if(reinterpret_cast<uintptr_t>(command) % sizeof(uint32_t) != 0) set_and_return_error(MAGIK_ERROR_PACKED_COMMAND_NOT_ALLIGNED);
 
     e_magik_cqs_command_types command_type;
     memcpy(&command_type, command, sizeof(e_magik_cqs_command_types)); 
@@ -345,15 +341,21 @@ MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t man
 
     if(!is_valid) set_and_return_error(MAGIK_ERROR_INVALID_COMMAND);
 
+    if(command_size % sizeof(uint32_t) != 0) set_and_return_error(MAGIK_ERROR_COMMAND_SIZE_NOT_A_MULTIPLE_OF_4);
+
     size_t command_buffer_occupancy = (size_t)(manager->cqs_context.front->n_occupied_chunk)*sizeof(uint32_t);
     size_t command_buffer_capacity = (size_t)(manager->cqs_context.n_reserved_chunk)*sizeof(uint32_t);
 
     if((command_buffer_occupancy+command_size) > command_buffer_capacity)
     {
-        #ifndef MAGIK_CQS_NO_OVERFLOW
-        { set_and_return_error(MAGIK_ERROR_COMMAND_BUFFER_OVERFLOW); }
-        #endif
-        set_and_return_error(MAGIK_SUCCESS);
+        if(manager->cqs_context.drop_overflows)
+        {
+            set_and_return_error(MAGIK_SUCCESS);
+        }
+        else
+        {
+            set_and_return_error(MAGIK_ERROR_COMMAND_BUFFER_OVERFLOW);
+        }
     }
 
     uint32_t* head_ptr = manager->cqs_context.front->data.get() + manager->cqs_context.front->n_occupied_chunk;

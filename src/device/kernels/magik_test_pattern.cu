@@ -45,7 +45,7 @@ namespace magik::kernels
         return c;
     }
 
-    static __global__ void test_pattern_julia_set(float* d_rgba_fb, uint32_t clock, float c0, float c1, float c2, const uint32_t x_resolution, const uint32_t y_resolution)
+    static __global__ void test_pattern_julia_set(float* d_rgba_fb, uint32_t clock, float c0, float c1, float c2, float real, float imag, const uint32_t x_resolution, const uint32_t y_resolution)
     {
         if(!magik::utilities::is_valid_thread(x_resolution, y_resolution)) return;
 
@@ -57,7 +57,7 @@ namespace magik::kernels
         uint32_t max_iter = 32;
         uint32_t iter = 0;
         complex z0, z1;
-        complex c = {-0.7f * sinf((float)clock * 0.001f) + sinf((float)clock*0.001f)*0.5f, 0.27015f * cosf((float)clock * 0.001f) + cosf((float)clock*0.001f)*0.5f};
+        complex c = {real, imag};
 
         z0 = mapPoint(x_resolution, y_resolution, radius, i_x, i_y);
 
@@ -94,12 +94,12 @@ namespace magik::kernels
         }
     }
 
-    void launch_test_pattern_julia_set(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block, float c0, float c1, float c2)
+    void launch_test_pattern_julia_set(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block, float c0, float c1, float c2, float real, float imag)
     {
         dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
         dim3 n_block = magik::utilities::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
 
-        test_pattern_julia_set<<<n_block, threads_per_block>>>(d_rgba_fb, clock(), c0, c1, c2, x_resolution, y_resolution);
+        test_pattern_julia_set<<<n_block, threads_per_block>>>(d_rgba_fb, clock(), c0, c1, c2, real, imag, x_resolution, y_resolution);
         check_cuda_errors(cudaGetLastError());
         check_cuda_errors(cudaDeviceSynchronize());
     }

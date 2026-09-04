@@ -73,21 +73,103 @@ namespace magik::cqs
 
     void apply_command(magik_render_manager* manager, uint32_t* playhead, buffer_object* buffer, e_magik_cqs_command_types command_type, size_t command_size)
     {
-        if(command_type == MAGIK_COMMAND_SET_RESOLUTION)
+        switch(command_type)
         {
-            magik_command_set_resolution_t cmd;
-            memcpy(&cmd, playhead, command_size);
-            manager->aov_context.x_resolution = cmd.x_resolution;
-            manager->aov_context.y_resolution = cmd.y_resolution;
-        }
+            // ##################################
+            // ### 1000-1999 Basic operations ###
+            // ##################################
+            case MAGIK_COMMAND_SET_STATE_RENDER:
+            {
+                break;
+            }
 
-        if(command_type == MAGIK_COMMAND_SET_JULIA_SET_COLOR)
-        {
-            magik_command_set_julia_set_color_t cmd;
-            memcpy(&cmd, playhead, command_size);
-            manager->render_context.c0 = cmd.c0;
-            manager->render_context.c1 = cmd.c1;
-            manager->render_context.c2 = cmd.c2;
+            case MAGIK_COMMAND_SET_STATE_PAUSE:
+            {
+                break;
+            }
+
+            case MAGIK_COMMAND_CLEAR_RENDER_BUFFER:
+            {
+                break;
+            }
+
+
+
+            // ################################
+            // ### 2000-2999 Built-in tests ###
+            // ################################
+            case MAGIK_COMMAND_PRINTF:
+            {
+                magik_command_printf_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                if(cmd.length_of_text < 512) printf("%.*s \n", cmd.length_of_text, cmd.text);
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_RESOLUTION:
+            {
+                magik_command_set_resolution_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->aov_context.x_resolution = cmd.x_resolution;
+                manager->aov_context.y_resolution = cmd.y_resolution;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_JULIA_SET_OFFSET:
+            {
+                magik_command_set_julia_set_offset_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->render_context.real = cmd.real;
+                manager->render_context.imag = cmd.imaginary;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_JULIA_SET_COLOR:
+            {
+                magik_command_set_julia_set_color_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->render_context.c0 = cmd.c0;
+                manager->render_context.c1 = cmd.c1;
+                manager->render_context.c2 = cmd.c2;
+                break;
+            }
+
+
+
+            // ##########################
+            // ### 3000-3999 Settings ###
+            // ##########################
+
+
+
+            // #######################
+            // ### 4000-4999 Scene ###
+            // #######################
+
+
+            
+            // ########################
+            // ### 5000-5999 Camera ###
+            // ########################
+
+
+
+            // #################################
+            // ### 6000-6999 Hittable Object ###
+            // #################################
+
+
+
+            // ################################
+            // ### 7000-7999 bxdf materials ###
+            // ################################ 
+
+
+
+            default:
+            {
+                break;
+            }
         }
     }
 
@@ -117,6 +199,8 @@ namespace magik::cqs
             fetch_command_info(command_type, &is_valid, &command_size);
 
             if(!is_valid || command_size == 0 || (command_size % sizeof(uint32_t) != 0)) set_and_return_error(MAGIK_ERROR_INVALID_COMMAND);
+
+            if(((playhead_offset + command_size) / sizeof(uint32_t)) > command_buffer_occupancy) set_and_return_error(MAGIK_ERROR_OUT_OF_BOUNDS_COMMAND_BUFFER_READ);
 
             apply_command(manager, (playhead + playhead_offset), buffer, command_type, command_size);
 

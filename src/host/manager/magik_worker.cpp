@@ -29,7 +29,7 @@ namespace magik::worker
 
             check_magik_errors(magik::aov::allocate_back_framebuffer(&manager->aov_context));
 
-            magik::bridge::call_test_pattern_julia_set_kernel(manager->aov_context.back->d_albedo, manager->aov_context.back->x_resolution, manager->aov_context.back->y_resolution, manager->render_context.c0, manager->render_context.c1, manager->render_context.c2);
+            magik::bridge::call_test_pattern_julia_set_kernel(manager->aov_context.back->d_albedo, manager->aov_context.back->x_resolution, manager->aov_context.back->y_resolution, manager->render_context.c0, manager->render_context.c1, manager->render_context.c2, manager->render_context.real, manager->render_context.imag);
 
             check_magik_errors(magik::aov::swap_back_framebuffer(&manager->aov_context));
 

@@ -15,6 +15,9 @@ namespace magik::render_manager
         float c1 = 0.15f;
         float c2 = 0.20f;
 
+        float real = 0.0f;
+        float imag = 0.0f;
+
         /*
         The problem here is that the render context kind of 
         has to be in the global namespace. So we can save it

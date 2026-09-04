@@ -111,9 +111,9 @@ namespace magik::bridge
         memcpy_device_to_host<float>(h_ptr, d_ptr, size);
     }
 
-    void call_test_pattern_julia_set_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution, float c0, float c1, float c2)
+    void call_test_pattern_julia_set_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution, float c0, float c1, float c2, float real, float imag)
     {
-        magik::kernels::launch_test_pattern_julia_set(d_rgba_fb, x_resolution, y_resolution, 16, 16, c0, c1, c2);
+        magik::kernels::launch_test_pattern_julia_set(d_rgba_fb, x_resolution, y_resolution, 16, 16, c0, c1, c2, real, imag);
     }
 
     void set_cuda_device(uint32_t cuda_device)

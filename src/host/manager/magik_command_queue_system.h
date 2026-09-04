@@ -3,7 +3,6 @@
 #include <memory>
 #include "magik_error.h"
 #include "magik.h"
-// #include "magik_render_manager.h"
 
 namespace magik::cqs
 {
@@ -17,6 +16,7 @@ namespace magik::cqs
     {
         std::atomic<bool> is_swap_ready = false;
         uint32_t n_reserved_chunk = 0;
+        bool drop_overflows = false;
 
         std::unique_ptr<buffer_object> front;
         std::unique_ptr<buffer_object> back;

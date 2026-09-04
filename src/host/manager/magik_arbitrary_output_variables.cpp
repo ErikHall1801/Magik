@@ -41,19 +41,8 @@ namespace magik::aov
 
     e_magik_result_types allocate_back_framebuffer(magik::aov::context* ctx)
     {
-        /**
-        * 
-        * @note These atomic loads and checks are TEMPORARY ! We need these to make sure 
-        *       the framebuffer is not resized to 0, which nukes CENTCOM. THERE IS NO WAY
-        *       TO GUARD AGAINST 0 byte ALLOCATION. So we MUST ensure it does not happen ! 
-        * 
-        */
-
-        // ctx->x_resolution = atomic_x_resolution.load(std::memory_order_consume);
-        // ctx->y_resolution = atomic_y_resolution.load(std::memory_order_consume);
-
-        if(ctx->x_resolution == 0) ctx->x_resolution = 2;
-        if(ctx->y_resolution == 0) ctx->y_resolution = 2;
+        if(ctx->x_resolution <= 0) {ctx->x_resolution = 2;}
+        if(ctx->y_resolution <= 0) {ctx->y_resolution = 2;}
 
         size_t size_of_1_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*1)*sizeof(float);
         size_t size_of_3_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*3)*sizeof(float);

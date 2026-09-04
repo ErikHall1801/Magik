@@ -59,6 +59,8 @@ typedef enum e_magik_result_types
     MAGIK_ERROR_PACKED_COMMAND_NOT_ALLIGNED = 404,
     MAGIK_ERROR_COMMAND_DROPPED = 405,
     MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED = 406,
+    MAGIK_ERROR_COMMAND_SIZE_NOT_A_MULTIPLE_OF_4 = 407,
+    MAGIK_ERROR_OUT_OF_BOUNDS_COMMAND_BUFFER_READ = 408,
 
     // General rendering 500 - 599
     MAGIK_ERROR_NEGATIVE_WAVELENGTH = 500,
@@ -262,18 +264,32 @@ MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft);
 typedef struct magik_render_manager* magik_render_manager_t;
 
 /**
-* @brief Creates a render manager bound to a specific cuda device
+* @brief Creates a render manager bound to a specific cuda device and initalizes the command queue system. 
 * 
 * @param [in] cuda_device The CUDA device with the given ID will be used for Magiks render loop. 
+* @param [in] cqs_n_reserved_chunk Number of 4 byte chunks in the command buffer.
+* @param [in] cqs_drop_overflows setting to toggle if overflowing commands are dropped. 
 * 
-* @return MAGIK_SUCCESS, MAGIK_INVALID_CUDA_DEVICE
+* Note, the number of reserved chunks is not equal to the number of commands which can be pushed to the buffer in
+* one dispatch cycle. A command is, at least, 4 bytes large. But many store additional data inside the command 
+* buffer. For instance, if 4096 chunks are allocated, the buffer can store 4096 commands of the minimum size. However
+* if commands with, say, 40 bytes of total data are pushed, the buffer can only hold 409 of them before overflowing. 
+* It is recommended to overallocate as even command buffers with tens of thousands of chunks requiere little memory. 
+* Moreover, there is no penality for overallocating when Magik consumes the buffer, as it internally tracks the number
+* of occupied chunks. 
+* 
+* The command queue system is the primary way in which the user is expected to interface with Magik. It is a one way
+* "fire and forget" system. 
+* 
+* @return MAGIK_SUCCESS, MAGIK_INVALID_CUDA_DEVICE, MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED
 * 
 * @warning  Calling this function automatically launches Magiks worker thread which will be ideling 
-            until the DCC has created a valid render context using the command queue system. All 
-            "hot loop" functions, such as magik_aov_fetch() are designed to handle with situations 
+            until the DCC has created a valid render context using the command queue system. The CQS
+            is configured in this function call as well. 
+            All "hot loop" functions, such as magik_aov_fetch() are designed to handle situations 
             where they are called before the worker thread is done initalizing. 
 */
-MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_device);
+MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_device, uint32_t cqs_n_reserved_chunk, bool cqs_drop_overflows);
 
 /**
 * @brief TEMP !!! All this does is stop the render thread and call .join(). 
@@ -284,11 +300,6 @@ MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager
 
 /**
 * [SECTION] Arbitrary Output Variables
-*/
-
-/*
- The goal now is to make the AOV handshake work between the GUI and render thread. So that we can display
- a texture without invoking CUDA. 
 */
 
 /**
@@ -362,6 +373,8 @@ MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffe
            and resolution ! The resolution is automatically updated using the active camera. 
            This function will always return false if Magik workers thread is not running, for example if it takes longer than
            usual to initalze. 
+           Calling _extract functions is not illegal even if this function returned falls. The extract functions simply convert
+           Magik´s internal representation which is already stored on the DCC to the user defined configuration. 
 */
 MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_framebuffer_object_external_t dcc_buffer); 
 
@@ -604,8 +617,8 @@ typedef struct MAGIK_ALIGN4 magik_command_printf_t
 typedef struct MAGIK_ALIGN4 magik_command_set_resolution_t
 {
     const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_RESOLUTION;
-    uint32_t x_resolution = 0;
-    uint32_t y_resolution = 0;
+    uint32_t x_resolution = 2;
+    uint32_t y_resolution = 2;
 } magik_command_set_resolution_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_julia_set_offset_t
@@ -656,23 +669,6 @@ typedef struct MAGIK_ALIGN4 magik_command_set_julia_set_color_t
 
 
 /**
-* @brief Configures the Command Queue System for one render manager
-* 
-* @param [in] manager Previously initialized Magik render manager
-* @param [in] n_reserved_chunk Number of 4 byte chunks in the command buffer
-* 
-* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED
-* 
-* @warning  The command buffer cannot be resized at runtime. The number of chunks is NOT equivilant to the number of 
-            commands the buffer can hold ! The smallest commands are exactly 4 byte large, the size of a single chunk.
-            But many commands contain data, such as floats, which are baked into the command buffer. 
-            For example, if you allocate 4096 chunks then the command buffer can hold 4096 4 byte commands (those which
-            do not expect any data). But if you only push commands that occupy 10 chunks, then the total number of commands
-            the buffer can hold before overflowing is 409. 
-*/
-MAGIK_API e_magik_result_types magik_cqs_configure(magik_render_manager_t manager, uint32_t n_reserved_chunk);
-
-/**
 * @brief Pushes a command to the command buffer.
 *  
 * @param [in] manager Previously initialized Magik render manager
@@ -682,8 +678,8 @@ MAGIK_API e_magik_result_types magik_cqs_configure(magik_render_manager_t manage
 * 
 * @warning  By default this function returns MAGIK_ERROR_COMMAND_BUFFER_OVERFLOW if the size of the most recently pushed command
             exceeds the space occupied by previous commands issued during the dispatch cycle. This behaivor can be disabled by 
-            adding "#define MAGIK_CQS_NO_OVERFLOW" before magik.h is included. With this defined, Magik will drop commands which 
-            would exceed the allocated space and not return any error codes. 
+            adding setting the "drop_overflows" bool during the configuration to true. In which case the function returns 
+            MAGIK_SUCCESS. 
 */
 MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t manager, const void* command);
 
