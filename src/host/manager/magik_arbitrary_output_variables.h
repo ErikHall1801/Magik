@@ -83,6 +83,3 @@ namespace magik::aov
 
     e_magik_result_types destroy_framebuffer_collection(magik::aov::context* ctx);
 }
-
-extern std::atomic<float> atomic_x_resolution;
-extern std::atomic<float> atomic_y_resolution;

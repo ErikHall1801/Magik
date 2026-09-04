@@ -5,11 +5,16 @@
 #include <variant>
 #include "magik.h" 
 #include "magik_arbitrary_output_variables.h" 
+#include "magik_command_queue_system.h"
 
 namespace magik::render_manager
 {
-    struct render_context
+    struct context
     {
+        float c0 = 0.0f;
+        float c1 = 0.15f;
+        float c2 = 0.20f;
+
         /*
         The problem here is that the render context kind of 
         has to be in the global namespace. So we can save it
@@ -27,9 +32,9 @@ struct magik_render_manager
     uint32_t cuda_device = 0;
 
     magik::aov::context aov_context;
+    magik::cqs::context cqs_context;
 
-    // magik::render_manager::aov_context aov;
-    // magik::render_manager::cqs_context cqs;
+    magik::render_manager::context render_context;
 
     // magik::render_manager::render_context dcc_render_context;
     // magik::render_manager::render_context api_render_context;

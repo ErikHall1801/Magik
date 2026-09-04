@@ -263,29 +263,6 @@ MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_ren
     set_and_return_error(MAGIK_SUCCESS);
 }
 
-MAGIK_API e_magik_result_types magik_aov_resize(uint32_t x_resolution, uint32_t y_resolution)
-{
-    if(x_resolution == 0)
-    {
-        atomic_x_resolution.store(2, std::memory_order_release);
-    }
-    else
-    {
-        atomic_x_resolution.store(x_resolution, std::memory_order_release);
-    }
-
-    if(y_resolution == 0)
-    {
-        atomic_y_resolution.store(2, std::memory_order_release);
-    }
-    else
-    {
-        atomic_y_resolution.store(y_resolution, std::memory_order_release);
-    }
-
-    set_and_return_error(MAGIK_SUCCESS);
-}
-
 MAGIK_API e_magik_result_types magik_aov_destroy(magik_aov_framebuffer_object_external_t dcc_buffer)
 {
     if(!dcc_buffer) set_and_return_error(MAGIK_SUCCESS);
@@ -331,3 +308,76 @@ MAGIK_API e_magik_result_types magik_aov_destroy(magik_aov_framebuffer_object_ex
 * [SECTION] Command Queue System
 */
 
+MAGIK_API e_magik_result_types magik_cqs_configure(magik_render_manager_t manager, uint32_t n_reserved_chunk)
+{
+    if(!manager) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+
+    manager->cqs_context.n_reserved_chunk = n_reserved_chunk;
+
+    try
+    {
+        manager->cqs_context.front = std::make_unique<magik::cqs::buffer_object>();
+        manager->cqs_context.back = std::make_unique<magik::cqs::buffer_object>();
+
+        manager->cqs_context.front->data = std::make_unique<uint32_t[]>(n_reserved_chunk);
+        manager->cqs_context.back->data = std::make_unique<uint32_t[]>(n_reserved_chunk);
+    }
+    catch(const std::bad_alloc)
+    {
+        set_and_return_error(MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED);
+    }
+
+    set_and_return_error(MAGIK_SUCCESS);
+}
+
+MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t manager, const void* command)
+{
+    if(!manager || !command) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+
+    if(reinterpret_cast<uintptr_t>(command) % sizeof(e_magik_cqs_command_types) != 0) set_and_return_error(MAGIK_ERROR_PACKED_COMMAND_NOT_ALLIGNED);
+
+    e_magik_cqs_command_types command_type;
+    memcpy(&command_type, command, sizeof(e_magik_cqs_command_types)); 
+    
+    bool is_valid = false;
+    size_t command_size = 0;
+    magik::cqs::fetch_command_info(command_type, &is_valid, &command_size);
+
+    if(!is_valid) set_and_return_error(MAGIK_ERROR_INVALID_COMMAND);
+
+    size_t command_buffer_occupancy = (size_t)(manager->cqs_context.front->n_occupied_chunk)*sizeof(uint32_t);
+    size_t command_buffer_capacity = (size_t)(manager->cqs_context.n_reserved_chunk)*sizeof(uint32_t);
+
+    if((command_buffer_occupancy+command_size) > command_buffer_capacity)
+    {
+        #ifndef MAGIK_CQS_NO_OVERFLOW
+        { set_and_return_error(MAGIK_ERROR_COMMAND_BUFFER_OVERFLOW); }
+        #endif
+        set_and_return_error(MAGIK_SUCCESS);
+    }
+
+    uint32_t* head_ptr = manager->cqs_context.front->data.get() + manager->cqs_context.front->n_occupied_chunk;
+    memcpy(head_ptr, command, command_size);
+    manager->cqs_context.front->n_occupied_chunk += static_cast<uint32_t>(command_size / sizeof(uint32_t));
+
+    set_and_return_error(MAGIK_SUCCESS);
+}
+
+MAGIK_API bool magik_cqs_dispatch_command_buffer(magik_render_manager_t manager)
+{
+    if(!manager) { g_last_error = MAGIK_ERROR_INVALID_POINTER; return false; }
+
+    if(manager->cqs_context.is_swap_ready.load(std::memory_order_acquire))
+    {
+        manager->cqs_context.front.swap(manager->cqs_context.back);
+        manager->cqs_context.is_swap_ready.store(false, std::memory_order_release);
+
+        g_last_error = MAGIK_SUCCESS;
+        return true;
+    }
+    else
+    {
+        g_last_error = MAGIK_SUCCESS;
+        return false;
+    }
+}

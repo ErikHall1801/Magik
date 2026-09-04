@@ -1,8 +1,5 @@
 #include "magik_arbitrary_output_variables.h"
 
-std::atomic<float> atomic_x_resolution = 2;
-std::atomic<float> atomic_y_resolution = 2;
-
 namespace magik::aov
 {
     e_magik_result_types initialize_framebuffer_collection(magik::aov::context* ctx)
@@ -52,8 +49,8 @@ namespace magik::aov
         * 
         */
 
-        ctx->x_resolution = atomic_x_resolution.load(std::memory_order_consume);
-        ctx->y_resolution = atomic_y_resolution.load(std::memory_order_consume);
+        // ctx->x_resolution = atomic_x_resolution.load(std::memory_order_consume);
+        // ctx->y_resolution = atomic_y_resolution.load(std::memory_order_consume);
 
         if(ctx->x_resolution == 0) ctx->x_resolution = 2;
         if(ctx->y_resolution == 0) ctx->y_resolution = 2;

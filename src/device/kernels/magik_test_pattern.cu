@@ -45,7 +45,7 @@ namespace magik::kernels
         return c;
     }
 
-    static __global__ void test_pattern_julia_set(float* d_rgba_fb, uint32_t clock, const uint32_t x_resolution, const uint32_t y_resolution)
+    static __global__ void test_pattern_julia_set(float* d_rgba_fb, uint32_t clock, float c0, float c1, float c2, const uint32_t x_resolution, const uint32_t y_resolution)
     {
         if(!magik::utilities::is_valid_thread(x_resolution, y_resolution)) return;
 
@@ -84,9 +84,9 @@ namespace magik::kernels
             
             float t = smooth_i * 0.05f;
 
-            float r = 0.5f + 0.5f * cosf(6.28318f * (t + 0.00f));
-            float g = 0.5f + 0.5f * cosf(6.28318f * (t + 0.15f));
-            float b = 0.5f + 0.5f * cosf(6.28318f * (t + 0.20f));
+            float r = 0.5f + 0.5f * cosf(6.28318f * (t + c0));
+            float g = 0.5f + 0.5f * cosf(6.28318f * (t + c1));
+            float b = 0.5f + 0.5f * cosf(6.28318f * (t + c2));
 
             d_rgba_fb[thread_id + 0] = r;
             d_rgba_fb[thread_id + 1] = g;
@@ -94,12 +94,12 @@ namespace magik::kernels
         }
     }
 
-    void launch_test_pattern_julia_set(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block)
+    void launch_test_pattern_julia_set(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block, float c0, float c1, float c2)
     {
         dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
         dim3 n_block = magik::utilities::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
 
-        test_pattern_julia_set<<<n_block, threads_per_block>>>(d_rgba_fb, clock(), x_resolution, y_resolution);
+        test_pattern_julia_set<<<n_block, threads_per_block>>>(d_rgba_fb, clock(), c0, c1, c2, x_resolution, y_resolution);
         check_cuda_errors(cudaGetLastError());
         check_cuda_errors(cudaDeviceSynchronize());
     }

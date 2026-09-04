@@ -25,9 +25,11 @@ namespace magik::worker
         {
             frame_start = std::chrono::steady_clock::now();
 
+            check_magik_errors(magik::cqs::consume_back_command_buffer(manager));
+
             check_magik_errors(magik::aov::allocate_back_framebuffer(&manager->aov_context));
 
-            magik::bridge::call_test_pattern_julia_set_kernel(manager->aov_context.back->d_albedo, manager->aov_context.back->x_resolution, manager->aov_context.back->y_resolution);
+            magik::bridge::call_test_pattern_julia_set_kernel(manager->aov_context.back->d_albedo, manager->aov_context.back->x_resolution, manager->aov_context.back->y_resolution, manager->render_context.c0, manager->render_context.c1, manager->render_context.c2);
 
             check_magik_errors(magik::aov::swap_back_framebuffer(&manager->aov_context));
 

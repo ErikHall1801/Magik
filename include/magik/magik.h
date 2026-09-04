@@ -54,11 +54,11 @@ typedef enum e_magik_result_types
     // Command queue system 400 - 499
     MAGIK_ERROR_INVALID_ID = 400, // Happens when the id provided to a function related to the command queue system is not valid, i.e 0 or uninitialized
     MAGIK_ERROR_PROVIDED_ID_NOT_FOUND = 401, // Happens when the id provided to a function used command queue system has not been found, for example if the asset was not added. 
-    MAGIK_ERROR_REQUESTED_ASSET_IS_NOT_A_CHILD_OF_THE_SCENE = 402,
-    MAGIK_ERROR_COMMAND_BUFFER_OVERFLOW = 403,
-    MAGIK_ERROR_INVALID_COMMAND = 404,
-    MAGIK_ERROR_PACKED_DATA_NOT_ALLIGNED = 405,
-    MAGIK_ERROR_COMMAND_DROPPED = 406,
+    MAGIK_ERROR_COMMAND_BUFFER_OVERFLOW = 402,
+    MAGIK_ERROR_INVALID_COMMAND = 403,
+    MAGIK_ERROR_PACKED_COMMAND_NOT_ALLIGNED = 404,
+    MAGIK_ERROR_COMMAND_DROPPED = 405,
+    MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED = 406,
 
     // General rendering 500 - 599
     MAGIK_ERROR_NEGATIVE_WAVELENGTH = 500,
@@ -213,11 +213,11 @@ typedef struct magik_test_rgba_frame_buffer* magik_test_rgba_frame_buffer_t;
 * @brief Two test-kernel patterns are available. The UV gradient should appear with the black corner, R = G = B = 0, 
          at the lower left side of your window. The mandelbrot is intended to test resource allocation performance. 
 */
-enum e_magik_test_kernel_pattern_types
+typedef enum e_magik_test_kernel_pattern_types
 {
     uv_gradient = 0,
     mandelbrot = 1
-};
+} e_magik_test_kernel_pattern_types;
 
 
 
@@ -335,7 +335,7 @@ typedef struct magik_aov_framebuffer_object_external* magik_aov_framebuffer_obje
 
 /**
 * @brief Configurs the DCC side AOV buffer to anticipate a "config_type" backend. The configuration can be changed
-         at runtime. 
+         at runtime. To do so destroy the buffer, then overwrite the struct with this function. 
 * 
 * @param [in] config_type 
 * 
@@ -371,13 +371,13 @@ MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_framebu
 * @warning Do not allocate the pointers in this struct ! They will be overwriten by the extract function ! This struct servers as 
            an observer. 
 */
-struct magik_aov_container_config_host_t
+typedef struct magik_aov_container_config_host_t
 {
     uint32_t x_resolution = 0;
     uint32_t y_resolution = 0;
     size_t size_of_albedo = 0; 
     float* h_albedo = nullptr; // RGB, h_ means it is a host pointer. 
-};
+} magik_aov_container_config_host_t;
 
 /**
 * @brief Extracts the pointers to the host configured AOV buffer. 
@@ -392,10 +392,10 @@ MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_render_manage
 /**
 * @brief Struct which containes base types for a CUDA DCC backend. The user is responsible for casting these base types into CUDA ones !
 */
-struct magik_aov_container_config_cuda_t
+typedef struct magik_aov_container_config_cuda_t
 {
 
-};
+} magik_aov_container_config_cuda_t;
 
 /**
 * 
@@ -405,14 +405,14 @@ MAGIK_API e_magik_result_types magik_aov_config_cuda_extract(magik_aov_container
 /**
 * @brief Struct which containes base types for a OpenGL DCC backend. The user is responsible for casting these base types into OpenGL ones !
 */
-struct magik_aov_container_config_opengl_interop_t
+typedef struct magik_aov_container_config_opengl_interop_t
 {
     uint32_t x_resolution;
     uint32_t y_resolution;
 
     uint32_t gl_buffer_id = 0;
     void* cuda_resources = nullptr; // true type is cudaGraphicsResource_t
-};
+} magik_aov_container_config_opengl_interop_t;
 
 /**
 * @brief Extracts the OpenGL buffer id, cuda resources and resolution from the opaque AOV object
@@ -429,20 +429,15 @@ MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_ren
 /**
 * @brief Struct which containes base types for a Vulkan DCC backend. The user is responsible for casting these base types into Vulkan ones !
 */
-struct magik_aov_container_config_vulkan_interop_t
+typedef struct magik_aov_container_config_vulkan_interop_t
 {
 
-};
+} magik_aov_container_config_vulkan_interop_t;
 
 /**
 * @brief To be implemented ! DO NOT USE ! 
 */
 MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop_extract(magik_aov_container_config_vulkan_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
-
-/**
-* @brief This is mega tmp. Probably not thread save.
-*/
-MAGIK_API e_magik_result_types magik_aov_resize(uint32_t x_resolution, uint32_t y_resolution);
 
 /**
 * @brief Free´s the memory associated with an AOV buffer. The user does not have to call this function
@@ -462,72 +457,251 @@ MAGIK_API e_magik_result_types magik_aov_destroy(magik_aov_framebuffer_object_ex
 * [SECTION] Command Queue System
 */
 
+#if defined(__cplusplus) && __cplusplus >= 201103L
+    #define MAGIK_ALIGN4 alignas(4)
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+    #include <stdalign.h>
+    #define MAGIK_ALIGN4 alignas(4)
+#elif defined(_MSC_VER)
+    #define MAGIK_ALIGN4 __declspec(align(4))
+#elif defined(__GNUC__) || defined(__clang__)
+    #define MAGIK_ALIGN4 __attribute__((aligned(4)))
+#else
+    #define MAGIK_ALIGN4
+#endif 
+
 /**
-* @brief The list of all commands the DCC can issue to Magik. Most command come with an associated struct which carries data. If it exists the
-         struct will follow the naming convention "command_name_data_t". For example; "magik_command_printf_data_t". These structs are not opaque
-         and the user is expected to input the data directly.  
+* @brief The list of all commands the DCC can issue to Magik. These commands cannot be used directly in the magik_cqs_push_command() 
+         function as it takes a void* to a command struct. Every command struct includes its own type. This design, as opposed to one
+         where the user inputs the descrete command enum directly, to prevent the possibility of a command type mismatch. 
 * 
-* @warning Magik is designed to be entirly controlled through the Command Queue System. For example, terminating the manager is done by issuing the
-           command "MAGIK_COMMAND_DESTRY". 
+* @warning Magik is designed to be entirly controlled through the Command Queue System. 
 */
 typedef enum e_magik_cqs_command_types
 {
-    // 1000-1999 Basic operations
-    MAGIK_COMMAND_START = 1000,
-    MAGIK_COMMAND_DESTROY = 1001,
+    // ##################################
+    // ### 1000-1999 Basic operations ###
+    // ##################################
+    /**
+    * @brief Sets the internal render flag to "Rendering"
+    * @warning This command expects no data.
+    */
+    MAGIK_COMMAND_SET_STATE_RENDER = 1000,
 
-    // 2000-2999 Built-in tests
+    /**
+    * @brief Sets the internal render flag to "Pause"
+    * @warning This command expects no data.
+    */
+    MAGIK_COMMAND_SET_STATE_PAUSE = 1001,
+
+    /**
+    * @brief Force clears the render buffer
+    * @warning This command expects no data.
+    */
+    MAGIK_COMMAND_CLEAR_RENDER_BUFFER = 1002, 
+
+
+
+    // ################################
+    // ### 2000-2999 Built-in tests ###
+    // ################################
+    /**
+    * @brief Prints a char string from the worker thread
+    * @warning This command expects the data type "magik_command_printf_data_t"
+    */
     MAGIK_COMMAND_PRINTF = 2000,
 
-    // 3000-3999 Callbacks
-    MAGIK_COMMAND_SET_ERROR_CALLBACK = 3000,
+    /**
+    * @brief Force resizes the render buffer
+    * @warning This command expects the data type "magik_command_set_resolution_data_t"
+    */
+    MAGIK_COMMAND_SET_RESOLUTION = 2001,
 
-    // 4000-4999 Settings
+    /**
+    * @brief Sets the complex offset point of the julia set kernel
+    * @warning This command expects the data type "magik_command_set_julia_set_offset_data_t"
+    */
+    MAGIK_COMMAND_SET_JULIA_SET_OFFSET = 2002,
 
-    // 5000-5999 Scene
+    /**
+    * @brief Sets the Julia set color pallet
+    * @warning This command expects the data type "magik_command_set_julia_set_color_data_t"
+    */
+    MAGIK_COMMAND_SET_JULIA_SET_COLOR = 2003,
 
-    // 6000-6999 Camera
 
-    // 7000-7999 Hittable Object
 
-    // 8000-8999 bxdf materials 
+    // ##########################
+    // ### 3000-3999 Settings ###
+    // ##########################
+
+
+
+    // #######################
+    // ### 4000-4999 Scene ###
+    // #######################
+
+
+    
+    // ########################
+    // ### 5000-5999 Camera ###
+    // ########################
+
+
+
+    // #################################
+    // ### 6000-6999 Hittable Object ###
+    // #################################
+
+
+
+    // ################################
+    // ### 7000-7999 bxdf materials ###
+    // ################################ 
 
     // Prohibited
-    MAGIK_CQS_PROHIBITED_FORCE_SIZE = 0x7FFFFFFF 
+    MAGIK_COMMAND_PROHIBITED_FORCE_SIZE = 0x7FFFFFFF 
 } e_magik_cqs_command_types;
 
 /**
-* @brief 
+* @brief Command data types. 
 * 
-* @param 
-* 
-* @return 
-* 
-* @warning
+* @warning  Attempting to modify the embedded type will result in a compilation error. The embeeded type is used by Magik to map 
+            a specific command to its execution path. Changing the embedded type will cause issues if the change is not properly
+            propagated throughout the API. 
 */
-MAGIK_API e_magik_result_types magik_cqs_configure();
+
+// ##################################
+// ### 1000-1999 Basic operations ###
+// ##################################
+typedef struct MAGIK_ALIGN4 magik_command_set_state_render_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_STATE_RENDER;
+} magik_command_set_state_render_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_state_pause_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_STATE_PAUSE;
+} magik_command_set_state_pause_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_clear_render_buffer_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_CLEAR_RENDER_BUFFER;
+} magik_command_clear_render_buffer_t;
+
+
+
+// ################################
+// ### 2000-2999 Built-in tests ###
+// ################################
+typedef struct MAGIK_ALIGN4 magik_command_printf_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_PRINTF;
+    uint32_t length_of_text = 0;
+    char text[512];
+} magik_command_printf_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_resolution_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_RESOLUTION;
+    uint32_t x_resolution = 0;
+    uint32_t y_resolution = 0;
+} magik_command_set_resolution_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_julia_set_offset_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_JULIA_SET_OFFSET;
+    float real = 0.0f;
+    float imaginary = 0.0f;
+} magik_command_set_julia_set_offset_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_julia_set_color_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_JULIA_SET_COLOR;
+    float c0 = 0.0f;
+    float c1 = 0.0f;
+    float c2 = 0.0f;
+} magik_command_set_julia_set_color_t;
+
+
+
+// ##########################
+// ### 3000-3999 Settings ###
+// ##########################
+
+
+
+// #######################
+// ### 4000-4999 Scene ###
+// #######################
+
+
+
+// ########################
+// ### 5000-5999 Camera ###
+// ########################
+
+
+
+// #################################
+// ### 6000-6999 Hittable Object ###
+// #################################
+
+
+
+// ################################
+// ### 7000-7999 bxdf materials ###
+// ################################
+
+
 
 /**
-* @brief 
+* @brief Configures the Command Queue System for one render manager
 * 
-* @param 
+* @param [in] manager Previously initialized Magik render manager
+* @param [in] n_reserved_chunk Number of 4 byte chunks in the command buffer
 * 
-* @return 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED
 * 
-* @warning
+* @warning  The command buffer cannot be resized at runtime. The number of chunks is NOT equivilant to the number of 
+            commands the buffer can hold ! The smallest commands are exactly 4 byte large, the size of a single chunk.
+            But many commands contain data, such as floats, which are baked into the command buffer. 
+            For example, if you allocate 4096 chunks then the command buffer can hold 4096 4 byte commands (those which
+            do not expect any data). But if you only push commands that occupy 10 chunks, then the total number of commands
+            the buffer can hold before overflowing is 409. 
 */
-MAGIK_API e_magik_result_types magik_cqs_push_command();
+MAGIK_API e_magik_result_types magik_cqs_configure(magik_render_manager_t manager, uint32_t n_reserved_chunk);
 
 /**
-* @brief 
+* @brief Pushes a command to the command buffer.
+*  
+* @param [in] manager Previously initialized Magik render manager
+* @param [in] command Dedicated struct which includes the command type itself.  
 * 
-* @param 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_COMMAND_BUFFER_OVERFLOW, MAGIK_ERROR_INVALID_COMMAND, MAGIK_ERROR_PACKED_COMMAND_NOT_ALLIGNED, MAGIK_ERROR_INVALID_POINTER
 * 
-* @return 
-* 
-* @warning
+* @warning  By default this function returns MAGIK_ERROR_COMMAND_BUFFER_OVERFLOW if the size of the most recently pushed command
+            exceeds the space occupied by previous commands issued during the dispatch cycle. This behaivor can be disabled by 
+            adding "#define MAGIK_CQS_NO_OVERFLOW" before magik.h is included. With this defined, Magik will drop commands which 
+            would exceed the allocated space and not return any error codes. 
 */
-MAGIK_API e_magik_result_types magik_cqs_dispatch_command_buffer();
+MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t manager, const void* command);
+
+/**
+* @brief Swaps the front and back command buffers with the worker thread. 
+* 
+* @param [in] manager Previously initialized Magik render manager
+* 
+* @return true if the dispatch was successful, false otherwise. 
+* 
+* @warning  Dispatching the command buffer can "fail". The worker thread may not have finished consuming the back buffer
+            in which case this function will not do anything. Do note, returning "false" does not mean an error occured !
+            But merely that the worker thread was not ready. 
+            The system is designed to handle this case and allow the user to continue writing to the front buffer over 
+            the next DCC cycle. So commands can accumulate over multiple cycles. If this happens the function returns 
+            false. 
+*/
+MAGIK_API bool magik_cqs_dispatch_command_buffer(magik_render_manager_t manager);
 
 
 
