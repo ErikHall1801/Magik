@@ -6,7 +6,6 @@
 #include "magik_arbitrary_output_variables.h"
 #include "magik_command_queue_system.h"
 #include "magik_worker.h"
-#include <iostream>
 
 
 

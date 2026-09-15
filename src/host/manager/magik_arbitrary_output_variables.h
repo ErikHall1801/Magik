@@ -84,7 +84,7 @@ namespace magik::aov
 
     e_magik_result_types initialize_swapchain(magik::aov::context* ctx);
 
-    e_magik_result_types allocate_render_framebuffer_object(magik::aov::context* ctx);
+    e_magik_result_types allocate_render_framebuffer_object(bool& is_dirty, magik::aov::context* ctx);
 
     e_magik_result_types memcpy_render_to_back_framebuffer_object(magik::aov::context* ctx);
 

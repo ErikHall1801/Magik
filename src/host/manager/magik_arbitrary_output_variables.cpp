@@ -16,17 +16,21 @@ namespace magik::aov
         set_and_return_error(MAGIK_SUCCESS);
     }
 
-    e_magik_result_types allocate_render_framebuffer_object(magik::aov::context* ctx)
+    e_magik_result_types allocate_render_framebuffer_object(bool& is_dirty, magik::aov::context* ctx)
     {
         if(ctx->x_resolution_target <= 0) {ctx->x_resolution_target = 2;}
         if(ctx->y_resolution_target <= 0) {ctx->y_resolution_target = 2;}
 
         size_t size_of_nth_buffer = 0;
 
+        is_dirty = false;
+
         for(auto& [key, value] : ctx->render_framebuffer_object.collection)
         {
             if((ctx->x_resolution_target != value.x_resolution) || (ctx->y_resolution_target != value.y_resolution))
             {
+                is_dirty = true;
+
                 size_of_nth_buffer = static_cast<size_t>(ctx->x_resolution_target*ctx->y_resolution_target*value.channels) * sizeof(float);
 
                 magik::bridge::host_destroy_device_memory(value.d_data);

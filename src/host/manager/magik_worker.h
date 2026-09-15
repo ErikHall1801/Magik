@@ -6,7 +6,6 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
-#include <iostream>
 
 namespace magik::worker
 {

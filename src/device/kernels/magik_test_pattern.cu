@@ -54,7 +54,7 @@ namespace magik::kernels
         uint32_t thread_id = magik::utilities::get_n_dimensional_thread_id(x_resolution, 3);
 
         float radius = 1.5f;
-        uint32_t max_iter = 32;
+        uint32_t max_iter = 256;
         uint32_t iter = 0;
         complex z0, z1;
         complex c = {real, imag};

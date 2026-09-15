@@ -25,21 +25,23 @@ namespace magik::worker
         auto frame_start = std::chrono::steady_clock::now();
         auto frame_end = std::chrono::steady_clock::now();
 
+        bool is_dirty = false;
+
         while(manager->is_running.load())
         {
             frame_start = std::chrono::steady_clock::now();
 
             check_magik_errors(magik::cqs::consume_back_command_buffer(manager));
 
-            check_magik_errors(magik::aov::allocate_render_framebuffer_object(&manager->aov_context));
+            check_magik_errors(magik::aov::allocate_render_framebuffer_object(is_dirty, &manager->aov_context));
 
-            if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
+            if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN && !is_dirty)
             {
                 check_magik_errors(magik::aov::memcpy_render_to_back_framebuffer_object(&manager->aov_context));
             }
 
-            auto tmp_element = manager->aov_context.back_framebuffer_object->collection.find("test");
-            if(tmp_element != manager->aov_context.back_framebuffer_object->collection.end())
+            auto tmp_element = manager->aov_context.render_framebuffer_object.collection.find("test");
+            if(tmp_element != manager->aov_context.render_framebuffer_object.collection.end())
             {
                 auto buffer = tmp_element->second;
                 magik::bridge::call_test_pattern_julia_set_kernel(buffer.d_data, buffer.x_resolution, buffer.y_resolution, manager->render_context.c0, manager->render_context.c1, manager->render_context.c2, manager->render_context.real, manager->render_context.imag);
