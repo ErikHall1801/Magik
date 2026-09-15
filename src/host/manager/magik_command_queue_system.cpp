@@ -104,7 +104,7 @@ namespace magik::cqs
                 std::string aov_name(cmd.name, cmd.length_of_name);
                 magik::aov::raw_buffer aov;
                 aov.channels = cmd.channels;
-                manager->aov_context.render_target.collection.emplace(aov_name, aov);
+                manager->aov_context.render_framebuffer_object.collection.emplace(aov_name, aov);
                 break;
             }
 
@@ -113,7 +113,7 @@ namespace magik::cqs
                 magik_command_remove_aov_t cmd;
                 memcpy(&cmd, playhead, command_size);
                 std::string aov_name(cmd.name, cmd.length_of_name);
-                manager->aov_context.render_target.collection.erase(aov_name);
+                manager->aov_context.render_framebuffer_object.collection.erase(aov_name);
                 break;
             }
 

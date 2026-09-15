@@ -9,21 +9,21 @@ namespace magik::aov
             set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
         }
 
-        ctx->front = &ctx->framebuffer_object_collection[0];
-        ctx->ready.store(&ctx->framebuffer_object_collection[1], std::memory_order_relaxed);
-        ctx->back = &ctx->framebuffer_object_collection[2];
+        ctx->front_framebuffer_object = &ctx->framebuffer_object_collection[0];
+        ctx->ready_framebuffer_object.store(&ctx->framebuffer_object_collection[1], std::memory_order_relaxed);
+        ctx->back_framebuffer_object = &ctx->framebuffer_object_collection[2];
 
         set_and_return_error(MAGIK_SUCCESS);
     }
 
-    e_magik_result_types allocate_render_target_framebuffer(magik::aov::context* ctx)
+    e_magik_result_types allocate_render_framebuffer_object(magik::aov::context* ctx)
     {
         if(ctx->x_resolution_target <= 0) {ctx->x_resolution_target = 2;}
         if(ctx->y_resolution_target <= 0) {ctx->y_resolution_target = 2;}
 
         size_t size_of_nth_buffer = 0;
 
-        for(auto& [key, value] : ctx->render_target.collection)
+        for(auto& [key, value] : ctx->render_framebuffer_object.collection)
         {
             if((ctx->x_resolution_target != value.x_resolution) || (ctx->y_resolution_target != value.y_resolution))
             {
@@ -40,15 +40,28 @@ namespace magik::aov
         set_and_return_error(MAGIK_SUCCESS);
     }
 
-    e_magik_result_types copy_render_target_to_back_framebuffer(magik::aov::context* ctx)
+    e_magik_result_types memcpy_render_to_back_framebuffer_object(magik::aov::context* ctx)
     {
-        for(auto& [target_key, target_value] : ctx->render_target.collection)
+        for(auto iter = ctx->back_framebuffer_object->collection.begin(); iter != ctx->back_framebuffer_object->collection.end();)
         {
-            // Adds the target key if it does not exist. 
-            ctx->back->collection.emplace(target_key, raw_buffer());
+            auto render_element = ctx->render_framebuffer_object.collection.find(iter->first);
 
-            // Fetch the raw buffer, which may or may not be allocated
-            auto& back_element = ctx->back->collection.find(target_key)->second;
+            if(render_element == ctx->render_framebuffer_object.collection.end())
+            {
+                magik::bridge::host_destroy_device_memory(iter->second.d_data);
+                iter = ctx->back_framebuffer_object->collection.erase(iter);
+            }
+            else
+            {
+                iter++;
+            }
+        }
+
+        for(auto& [target_key, target_value] : ctx->render_framebuffer_object.collection)
+        {
+            ctx->back_framebuffer_object->collection.emplace(target_key, raw_buffer());
+
+            auto& back_element = ctx->back_framebuffer_object->collection.find(target_key)->second;
 
             size_t size_of_target = static_cast<size_t>(target_value.x_resolution*target_value.y_resolution*target_value.channels)*sizeof(float);
 
@@ -62,7 +75,6 @@ namespace magik::aov
                 back_element.d_data = magik::bridge::host_allocate_device_memory(size_of_target);
             }
 
-            // Memcpy
             magik::bridge::host_memcpy_device_to_device(back_element.d_data, target_value.d_data, size_of_target);
         }
 
@@ -71,16 +83,16 @@ namespace magik::aov
 
     e_magik_result_types swap_back_framebuffer(magik::aov::context* ctx)
     {
-        if(!ctx || !ctx->ready.load(std::memory_order_relaxed) || !ctx->back) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+        if(!ctx || !ctx->ready_framebuffer_object.load(std::memory_order_relaxed) || !ctx->back_framebuffer_object) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
 
-        ctx->back = ctx->ready.exchange(ctx->back, std::memory_order_acq_rel);
+        ctx->back_framebuffer_object = ctx->ready_framebuffer_object.exchange(ctx->back_framebuffer_object, std::memory_order_acq_rel);
         ctx->is_ready_updated.store(true, std::memory_order_release);
         set_and_return_error(MAGIK_SUCCESS);
     }
 
     bool try_swap_front_framebuffer(magik::aov::context* ctx)
     {
-        if(!ctx || !ctx->ready.load(std::memory_order_relaxed) || !ctx->front)
+        if(!ctx || !ctx->ready_framebuffer_object.load(std::memory_order_relaxed) || !ctx->front_framebuffer_object)
         {
             g_last_error = MAGIK_ERROR_INVALID_POINTER;
             return false;
@@ -92,7 +104,7 @@ namespace magik::aov
             return false;
         }
         
-        ctx->front = ctx->ready.exchange(ctx->front, std::memory_order_acq_rel);
+        ctx->front_framebuffer_object = ctx->ready_framebuffer_object.exchange(ctx->front_framebuffer_object, std::memory_order_acq_rel);
 
         g_last_error = MAGIK_SUCCESS;
         return true;
@@ -102,9 +114,9 @@ namespace magik::aov
     {
         for(auto iter = dcc_buffer->collection.begin(); iter != dcc_buffer->collection.end(); )
         {
-            auto element = ctx->front->collection.find(iter->first);
+            auto element = ctx->front_framebuffer_object->collection.find(iter->first);
 
-            if(element == ctx->front->collection.end())
+            if(element == ctx->front_framebuffer_object->collection.end())
             {
                 auto buffer = iter->second;
                 magik::bridge::host_destroy_host_memory(buffer.config_host.h_data);
@@ -116,9 +128,10 @@ namespace magik::aov
             }
         }
 
-        for(const auto& [key, ctx_value] : ctx->front->collection)
+        for(const auto& [key, ctx_value] : ctx->front_framebuffer_object->collection)
         {
-            auto& dcc_value = dcc_buffer->collection[key]; // If the key is not found, it automatically creates one
+            dcc_buffer->collection.try_emplace(key); 
+            auto& dcc_value = dcc_buffer->collection.find(key)->second;
 
             size_t size_of_buffer = static_cast<size_t>(ctx_value.x_resolution*ctx_value.y_resolution*ctx_value.channels)*sizeof(float);
 
@@ -130,6 +143,7 @@ namespace magik::aov
                 dcc_value.y_resolution = ctx_value.y_resolution;
                 dcc_value.channels = ctx_value.channels;
                 dcc_value.config_host.h_data = magik::bridge::host_allocate_host_memory(size_of_buffer);
+                dcc_value.config_host.host_size = size_of_buffer;
             }
 
             magik::bridge::host_memcpy_device_to_host(dcc_value.config_host.h_data, ctx_value.d_data, size_of_buffer);
@@ -145,13 +159,11 @@ namespace magik::aov
 
     static e_magik_result_types memcpy_front_to_opengl_interop_config_dcc(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
     {
-        // Do note, in the prior iteration this function did not allocate memory. Which i assume was a simple oversight. 
-
         for(auto iter = dcc_buffer->collection.begin(); iter != dcc_buffer->collection.end(); )
         {
-            auto element = ctx->front->collection.find(iter->first);
+            auto element = ctx->front_framebuffer_object->collection.find(iter->first);
 
-            if(element == ctx->front->collection.end())
+            if(element == ctx->front_framebuffer_object->collection.end())
             {
                 auto buffer = iter->second;
                 magik::bridge::host_free_gl_buffer(&buffer.config_open_gl_interop.gl_buffer_id, &buffer.config_open_gl_interop.cuda_resource);
@@ -163,9 +175,10 @@ namespace magik::aov
             }
         }
 
-        for(const auto& [key, ctx_value] : ctx->front->collection)
+        for(const auto& [key, ctx_value] : ctx->front_framebuffer_object->collection)
         {
-            auto& dcc_value = dcc_buffer->collection[key];
+            dcc_buffer->collection.try_emplace(key); 
+            auto& dcc_value = dcc_buffer->collection.find(key)->second; 
 
             if((dcc_value.x_resolution != ctx_value.x_resolution) || (dcc_value.y_resolution != ctx_value.y_resolution) || (dcc_value.channels != ctx_value.channels) || (!dcc_value.config_open_gl_interop.cuda_resource) || (dcc_value.config_open_gl_interop.gl_buffer_id == 0))
             {
@@ -190,7 +203,7 @@ namespace magik::aov
 
     e_magik_result_types memcpy_front_framebuffer_to_dcc_framebuffer(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
     {
-        if(!ctx || !dcc_buffer || !ctx->front) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+        if(!ctx || !dcc_buffer || !ctx->front_framebuffer_object) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
 
         if( dcc_buffer->config_type != MAGIK_AOV_CONFIG_HOST && 
             dcc_buffer->config_type != MAGIK_AOV_CONFIG_CUDA && 
@@ -241,6 +254,13 @@ namespace magik::aov
 
             ctx->framebuffer_object_collection[i].collection.clear();
         }
+
+        for(const auto& [key, value] : ctx->render_framebuffer_object.collection)
+        {
+            magik::bridge::host_destroy_device_memory(value.d_data);
+        }
+
+        ctx->render_framebuffer_object.collection.clear();
 
         set_and_return_error(MAGIK_SUCCESS);
     }

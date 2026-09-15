@@ -27,13 +27,13 @@ namespace magik::worker
 
             check_magik_errors(magik::cqs::consume_back_command_buffer(manager));
 
-            check_magik_errors(magik::aov::allocate_render_target_framebuffer(&manager->aov_context));
+            check_magik_errors(magik::aov::allocate_render_framebuffer_object(&manager->aov_context));
 
-            check_magik_errors(magik::aov::copy_render_target_to_back_framebuffer(&manager->aov_context));
+            check_magik_errors(magik::aov::memcpy_render_to_back_framebuffer_object(&manager->aov_context));
 
-            auto tmp_element = manager->aov_context.back->collection.find("test");
+            auto tmp_element = manager->aov_context.back_framebuffer_object->collection.find("test");
 
-            if(tmp_element != manager->aov_context.back->collection.end())
+            if(tmp_element != manager->aov_context.back_framebuffer_object->collection.end())
             {
                 auto buffer = tmp_element->second;
                 magik::bridge::call_test_pattern_julia_set_kernel(buffer.d_data, buffer.x_resolution, buffer.y_resolution, manager->render_context.c0, manager->render_context.c1, manager->render_context.c2, manager->render_context.real, manager->render_context.imag);

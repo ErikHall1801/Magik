@@ -36,7 +36,7 @@ struct magik_aov_raw_buffer_external
     {
         void* win32_handle = nullptr;
         int fd = -1;
-        uint32_t allocation_size;
+        uint32_t allocation_size = 0;
     } config_vulkan_interop;
 };
 
@@ -69,38 +69,24 @@ namespace magik::aov
 
     struct context
     {
-        /*
-        * 
-        * Some notes; 
-        * 
-        * Alright well, we do have support for arbitrary layers now, but i would like a bit of a refactor;
-        * - framebuffer_object should contain the x_resolution. Because all raw buffers are updated at once. 
-        * - x_resolution_target etc should be ditched from the context, so they are naturally inside of 
-        * render_target
-        * - I do like that, on the dcc front, there is very little friction to all of this. 
-        * - A general refactor of the various functions. Just stylistic, the functionality will remaine the same
-        * but the code can be cleaned up. All of this really only target magik_arbitrary_output...
-        * 
-        */
+        uint32_t x_resolution_target = 2880;
+        uint32_t y_resolution_target = 2160;
 
         framebuffer_object framebuffer_object_collection[3];
 
-        framebuffer_object* front = nullptr;
-        std::atomic<framebuffer_object*> ready{nullptr};
-        framebuffer_object* back = nullptr;
-
-        uint32_t x_resolution_target = 2880;
-        uint32_t y_resolution_target = 2160;
-        framebuffer_object render_target;
+        framebuffer_object* front_framebuffer_object = nullptr;
+        std::atomic<framebuffer_object*> ready_framebuffer_object{nullptr};
+        framebuffer_object* back_framebuffer_object = nullptr;
+        framebuffer_object render_framebuffer_object;
 
         std::atomic<bool> is_ready_updated = false;
     };
 
     e_magik_result_types initialize_framebuffer_collection(magik::aov::context* ctx);
 
-    e_magik_result_types allocate_render_target_framebuffer(magik::aov::context* ctx);
+    e_magik_result_types allocate_render_framebuffer_object(magik::aov::context* ctx);
 
-    e_magik_result_types copy_render_target_to_back_framebuffer(magik::aov::context* ctx);
+    e_magik_result_types memcpy_render_to_back_framebuffer_object(magik::aov::context* ctx);
 
     e_magik_result_types swap_back_framebuffer(magik::aov::context* ctx);
 
