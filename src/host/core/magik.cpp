@@ -109,29 +109,29 @@ MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft)
 * [SECTION] Render manager
 */
 
-MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_device, uint32_t cqs_n_reserved_chunk, bool cqs_drop_overflows)
+MAGIK_API magik_render_manager_t magik_create_render_manager(magik_manager_descriptor_t descriptor)
 {
     int32_t n_cuda_device = magik::bridge::host_get_n_cuda_device();
 
-    if(cuda_device > n_cuda_device)
+    if(descriptor.cuda_device_id > n_cuda_device)
     {
         g_last_error = MAGIK_INVALID_CUDA_DEVICE;
         return nullptr;
     }
 
     magik_render_manager* manager = new magik_render_manager();
-    manager->cuda_device = cuda_device;
+    manager->cuda_device = descriptor.cuda_device_id;
 
-    manager->cqs_context.n_reserved_chunk = cqs_n_reserved_chunk;
-    manager->cqs_context.drop_overflows = cqs_drop_overflows;
+    manager->cqs_context.n_reserved_chunk = descriptor.cqs_n_reserved_chunk;
+    manager->cqs_context.drop_overflows = descriptor.cqs_drop_overflow;
 
     try
     {
         manager->cqs_context.front = std::make_unique<magik::cqs::buffer_object>();
         manager->cqs_context.back = std::make_unique<magik::cqs::buffer_object>();
 
-        manager->cqs_context.front->data = std::make_unique<uint32_t[]>(cqs_n_reserved_chunk);
-        manager->cqs_context.back->data = std::make_unique<uint32_t[]>(cqs_n_reserved_chunk);
+        manager->cqs_context.front->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
+        manager->cqs_context.back->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
     }
     catch(const std::bad_alloc)
     {
@@ -192,16 +192,19 @@ MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_framebu
         return false;
     }
 
-    if(!magik::aov::try_swap_front_framebuffer(&manager->aov_context))
+    if(manager->display_type == MAGIK_DISPLAY_HEADLESS)
     {
-        check_magik_errors(magik_get_last_error());
-        g_last_error = MAGIK_SUCCESS;
+        g_last_error = MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED;
         return false;
     }
 
-    check_magik_errors(magik::aov::memcpy_front_framebuffer_to_dcc_framebuffer(&manager->aov_context, dcc_buffer));
+    if(!magik::aov::try_swap_front_framebuffer(&manager->aov_context))
+    {
+        g_last_error = magik_get_last_error();
+        return false;
+    }
 
-    g_last_error = MAGIK_SUCCESS;
+    g_last_error = magik::aov::memcpy_front_framebuffer_to_dcc_framebuffer(&manager->aov_context, dcc_buffer);
     return true;
 }
 

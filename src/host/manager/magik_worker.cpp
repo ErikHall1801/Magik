@@ -7,7 +7,11 @@ namespace magik::worker
     static e_magik_result_types initialize(magik_render_manager* manager)
     {
         magik::bridge::set_cuda_device(manager->cuda_device);
-        magik::aov::initialize_framebuffer_collection(&manager->aov_context);
+
+        if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
+        {
+            magik::aov::initialize_swapchain(&manager->aov_context);
+        }
 
         manager->is_running.store(true, std::memory_order_release);
 
@@ -29,10 +33,12 @@ namespace magik::worker
 
             check_magik_errors(magik::aov::allocate_render_framebuffer_object(&manager->aov_context));
 
-            check_magik_errors(magik::aov::memcpy_render_to_back_framebuffer_object(&manager->aov_context));
+            if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
+            {
+                check_magik_errors(magik::aov::memcpy_render_to_back_framebuffer_object(&manager->aov_context));
+            }
 
             auto tmp_element = manager->aov_context.back_framebuffer_object->collection.find("test");
-
             if(tmp_element != manager->aov_context.back_framebuffer_object->collection.end())
             {
                 auto buffer = tmp_element->second;
@@ -44,12 +50,20 @@ namespace magik::worker
                 std::this_thread::sleep_for(100ms);
             }
 
-            check_magik_errors(magik::aov::swap_back_framebuffer(&manager->aov_context));
+            if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
+            {
+                check_magik_errors(magik::aov::swap_back_framebuffer(&manager->aov_context));
+            }
 
             frame_end = std::chrono::steady_clock::now();
             frame_time.store(std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(frame_end - frame_start).count(), std::memory_order_relaxed);
         }
 
-        check_magik_errors(magik::aov::destroy_framebuffer_collection(&manager->aov_context));
+        if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
+        {
+            check_magik_errors(magik::aov::destroy_swpachain(&manager->aov_context));
+        }
+
+        check_magik_errors(magik::aov::destroy_render_framebuffer_object(&manager->aov_context));
     }
 }

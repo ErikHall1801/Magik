@@ -88,6 +88,7 @@ typedef enum e_magik_result_types
     // Arbitrary Output Variables 900 - 999
     MAGIK_ERROR_AOV_INCORRECT_EXTRACT_CALL = 900,
     MAGIK_ERROR_AOV_ALLOCATED_BEFORE_INITIALIZATION = 901,
+    MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED = 902,
 
     // Interops 1000 - 1099
     MAGIK_ERROR_GL_LOADER_FAILED = 1000, // 
@@ -259,16 +260,33 @@ MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft);
 */
 
 /**
-* @brief Opaque stuct for Magiks render state 
+* @brief Available display modes for a Magik instance. 
+* 
+* When MAGIK_DISPLAY_SWAPCHAIN is selected Magiks worker thread will
+* automatically create a three frame swapchain. By default the swapchain contains no layers. These have to be added
+* using the command queue systems magik_command_add_aov_t command.
+* In order to access the front buffer the user has to create and configure a framebuffer using magik_configure_aov_framebuffer. 
+* Then the user has to create an AOV container matching theor chosen config, for example magik_aov_container_config_opengl_interop_t. 
+* The user can then fetch the front buffer using magik_aov_fetch and extract a specific buffer using the matching 
+* magik_aov_config_XXX_extract() function. 
+* 
+* If MAGIK_DISPLAY_HEADLESS is chosen Magik will not create a swapchain. The function magik_aov_fetch cannot be called 
+* in this mode. Instead, the user has to user magik_aov_fetch_render_framebuffer(). The extract functions, which only 
+* extract a given configuration from the framebuffer, remain valid even in headless mode. 
 */
-typedef struct magik_render_manager* magik_render_manager_t;
+typedef enum e_magik_manager_display_types
+{
+    MAGIK_DISPLAY_SWAPCHAIN = 0,
+    MAGIK_DISPLAY_HEADLESS = 1
+} e_magik_manager_display_types;
 
 /**
-* @brief Creates a render manager bound to a specific cuda device and initalizes the command queue system. 
+* @brief Descriptor for a Magik instance
 * 
-* @param [in] cuda_device The CUDA device with the given ID will be used for Magiks render loop. 
-* @param [in] cqs_n_reserved_chunk Number of 4 byte chunks in the command buffer.
-* @param [in] cqs_drop_overflows setting to toggle if overflowing commands are dropped. 
+* @param display_type The managers display configuration
+* @param cuda_device The CUDA device with the given ID will be used for Magiks render loop. 
+* @param cqs_n_reserved_chunk Number of 4 byte chunks in the command buffer.
+* @param cqs_drop_overflows setting to toggle if overflowing commands are dropped. 
 * 
 * Note, the number of reserved chunks is not equal to the number of commands which can be pushed to the buffer in
 * one dispatch cycle. A command is, at least, 4 bytes large. But many store additional data inside the command 
@@ -280,6 +298,24 @@ typedef struct magik_render_manager* magik_render_manager_t;
 * 
 * The command queue system is the primary way in which the user is expected to interface with Magik. It is a one way
 * "fire and forget" system. 
+*/
+typedef struct magik_manager_descriptor_t
+{
+    e_magik_manager_display_types display_type = MAGIK_DISPLAY_SWAPCHAIN;
+
+    uint32_t cuda_device_id = 0;
+
+    uint32_t cqs_n_reserved_chunk = 4096;
+    bool cqs_drop_overflow = false;
+} magik_manager_descriptor_t;
+
+/**
+* @brief Opaque stuct for Magiks render state 
+*/
+typedef struct magik_render_manager* magik_render_manager_t;
+
+/**
+* @brief Creates a render manager based on a descriptor. 
 * 
 * @return MAGIK_SUCCESS, MAGIK_INVALID_CUDA_DEVICE, MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED
 * 
@@ -289,7 +325,7 @@ typedef struct magik_render_manager* magik_render_manager_t;
             All "hot loop" functions, such as magik_aov_fetch() are designed to handle situations 
             where they are called before the worker thread is done initalizing. 
 */
-MAGIK_API magik_render_manager_t magik_create_render_manager(uint32_t cuda_device, uint32_t cqs_n_reserved_chunk, bool cqs_drop_overflows);
+MAGIK_API magik_render_manager_t magik_create_render_manager(magik_manager_descriptor_t descriptor);
 
 /**
 * @brief TEMP !!! All this does is stop the render thread and call .join(). 
@@ -325,6 +361,8 @@ typedef struct magik_aov_framebuffer_object_external* magik_aov_framebuffer_obje
 * @return magik_external_aov_buffer_t
 * 
 * @warning This function may generate the following errors; MAGIK_SUCCESS, MAGIK_UNKNOWN_ENUM_TYPE
+* @warning This function does not requiere a swapchain to be setup, as the external framebuffer object
+*          can equally be used as the target to extract the render framebuffer. 
 */
 MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffer(e_magik_aov_config_types config_type);
 
@@ -336,7 +374,8 @@ MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffe
 * @param [in] manager The render manager from which you want the AOV 
 * @param [out] dcc_buffer The DCC buffer instance to which the AOVs will be copied too. 
 * 
-* @return MAGIK_SUCCESS, MAGIK_UNKNOWN_ENUM_TYPE, MAGIK_ERROR_GL_BUFFER_SIZE_MISMATCH, MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED
+* @return MAGIK_SUCCESS, MAGIK_UNKNOWN_ENUM_TYPE, MAGIK_ERROR_GL_BUFFER_SIZE_MISMATCH, MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED,
+          MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED
 * 
 * @warning This function returns false if the API side AOV has not updated since the last call. In this case a transfer
            would not change the result and is thus skipped. The DCC should only call the extract functions if this function

@@ -82,7 +82,7 @@ namespace magik::aov
         std::atomic<bool> is_ready_updated = false;
     };
 
-    e_magik_result_types initialize_framebuffer_collection(magik::aov::context* ctx);
+    e_magik_result_types initialize_swapchain(magik::aov::context* ctx);
 
     e_magik_result_types allocate_render_framebuffer_object(magik::aov::context* ctx);
 
@@ -94,5 +94,7 @@ namespace magik::aov
 
     bool try_swap_front_framebuffer(magik::aov::context* ctx);
 
-    e_magik_result_types destroy_framebuffer_collection(magik::aov::context* ctx);
+    e_magik_result_types destroy_swpachain(magik::aov::context* ctx);
+
+    e_magik_result_types destroy_render_framebuffer_object(magik::aov::context* ctx);
 }

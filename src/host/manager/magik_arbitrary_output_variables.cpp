@@ -2,7 +2,7 @@
 
 namespace magik::aov
 {
-    e_magik_result_types initialize_framebuffer_collection(magik::aov::context* ctx)
+    e_magik_result_types initialize_swapchain(magik::aov::context* ctx)
     {
         if(!ctx)
         {
@@ -243,7 +243,7 @@ namespace magik::aov
         set_and_return_error(result);
     }
 
-    e_magik_result_types destroy_framebuffer_collection(magik::aov::context* ctx)
+    e_magik_result_types destroy_swpachain(magik::aov::context* ctx)
     {
         for(uint32_t i = 0; i < 3; i++)
         {
@@ -255,6 +255,11 @@ namespace magik::aov
             ctx->framebuffer_object_collection[i].collection.clear();
         }
 
+        set_and_return_error(MAGIK_SUCCESS);
+    }
+
+    e_magik_result_types destroy_render_framebuffer_object(magik::aov::context* ctx)
+    {
         for(const auto& [key, value] : ctx->render_framebuffer_object.collection)
         {
             magik::bridge::host_destroy_device_memory(value.d_data);
