@@ -98,7 +98,7 @@ namespace magik::kernels
     {
         dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
         dim3 n_block = magik::utilities::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
-
+        
         test_pattern_julia_set<<<n_block, threads_per_block>>>(d_rgba_fb, clock(), c0, c1, c2, real, imag, x_resolution, y_resolution);
         check_cuda_errors(cudaGetLastError());
         check_cuda_errors(cudaDeviceSynchronize());

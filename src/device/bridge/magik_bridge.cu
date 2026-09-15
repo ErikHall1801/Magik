@@ -73,17 +73,26 @@ namespace magik::bridge
 
     template<typename T> static void destroy_device_memory(T* ptr)
     {
+        if(!ptr) return;
         check_cuda_errors(cudaFree(ptr));
     }
 
     template<typename T> static void destroy_host_memory(T* ptr)
     {
+        if(!ptr) return;
         check_cuda_errors(cudaFreeHost(ptr));
     }
 
     template<typename T> static void memcpy_device_to_host(T* h_ptr, T* d_ptr, size_t size)
     {
+        if(!h_ptr || !d_ptr || (size == 0)) return;
         check_cuda_errors(cudaMemcpy(h_ptr, d_ptr, size, cudaMemcpyDeviceToHost));
+    }
+
+    template<typename T> static void memcpy_device_to_device(T* d_ptr_0, T* d_ptr_1, size_t size)
+    {
+        if(!d_ptr_0 || !d_ptr_1 || (size == 0)) return;
+        check_cuda_errors(cudaMemcpy(d_ptr_0, d_ptr_1, size, cudaMemcpyDeviceToHost));
     }
 
     float* host_allocate_device_memory(size_t size)
@@ -109,6 +118,11 @@ namespace magik::bridge
     void host_memcpy_device_to_host(float* h_ptr, float* d_ptr, size_t size)
     {
         memcpy_device_to_host<float>(h_ptr, d_ptr, size);
+    }
+
+    void host_memcpy_device_to_device(float* d_ptr_0, float* d_ptr_1, size_t size)
+    {
+        memcpy_device_to_device<float>(d_ptr_0, d_ptr_1, size);
     }
 
     void call_test_pattern_julia_set_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution, float c0, float c1, float c2, float real, float imag)

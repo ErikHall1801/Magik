@@ -27,9 +27,22 @@ namespace magik::worker
 
             check_magik_errors(magik::cqs::consume_back_command_buffer(manager));
 
-            check_magik_errors(magik::aov::allocate_back_framebuffer(&manager->aov_context));
+            check_magik_errors(magik::aov::allocate_render_target_framebuffer(&manager->aov_context));
 
-            magik::bridge::call_test_pattern_julia_set_kernel(manager->aov_context.back->d_albedo, manager->aov_context.back->x_resolution, manager->aov_context.back->y_resolution, manager->render_context.c0, manager->render_context.c1, manager->render_context.c2, manager->render_context.real, manager->render_context.imag);
+            check_magik_errors(magik::aov::copy_render_target_to_back_framebuffer(&manager->aov_context));
+
+            auto tmp_element = manager->aov_context.back->collection.find("test");
+
+            if(tmp_element != manager->aov_context.back->collection.end())
+            {
+                auto buffer = tmp_element->second;
+                magik::bridge::call_test_pattern_julia_set_kernel(buffer.d_data, buffer.x_resolution, buffer.y_resolution, manager->render_context.c0, manager->render_context.c1, manager->render_context.c2, manager->render_context.real, manager->render_context.imag);
+            }
+            else
+            {
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(100ms);
+            }
 
             check_magik_errors(magik::aov::swap_back_framebuffer(&manager->aov_context));
 

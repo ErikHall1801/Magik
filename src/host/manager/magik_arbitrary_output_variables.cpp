@@ -9,29 +9,6 @@ namespace magik::aov
             set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
         }
 
-        size_t size_of_1_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*1)*sizeof(float);
-        size_t size_of_3_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*3)*sizeof(float);
-        size_t size_of_N_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*ctx->n_spectral_bin)*sizeof(float);
-
-        for(uint32_t i = 0; i < 3; i++)
-        {
-            if(ctx->framebuffer_object_collection[i].d_albedo) 
-            {
-                set_and_return_error(MAGIK_ERROR_AOV_ALLOCATED_BEFORE_INITIALIZATION);
-            }
-
-            ctx->framebuffer_object_collection[i].d_albedo = magik::bridge::host_allocate_device_memory(size_of_3_float_buffer);
-            ctx->framebuffer_object_collection[i].size_of_d_albedo = size_of_3_float_buffer;
-
-            ctx->framebuffer_object_collection[i].x_resolution = ctx->x_resolution;
-            ctx->framebuffer_object_collection[i].y_resolution = ctx->y_resolution;
-            ctx->framebuffer_object_collection[i].n_spectral_bin = ctx->n_spectral_bin;
-        }
-
-        ctx->framebuffer_object_collection[0].debug_id = 0;
-        ctx->framebuffer_object_collection[1].debug_id = 1;
-        ctx->framebuffer_object_collection[2].debug_id = 2;
-
         ctx->front = &ctx->framebuffer_object_collection[0];
         ctx->ready.store(&ctx->framebuffer_object_collection[1], std::memory_order_relaxed);
         ctx->back = &ctx->framebuffer_object_collection[2];
@@ -39,24 +16,54 @@ namespace magik::aov
         set_and_return_error(MAGIK_SUCCESS);
     }
 
-    e_magik_result_types allocate_back_framebuffer(magik::aov::context* ctx)
+    e_magik_result_types allocate_render_target_framebuffer(magik::aov::context* ctx)
     {
-        if(ctx->x_resolution <= 0) {ctx->x_resolution = 2;}
-        if(ctx->y_resolution <= 0) {ctx->y_resolution = 2;}
+        if(ctx->x_resolution_target <= 0) {ctx->x_resolution_target = 2;}
+        if(ctx->y_resolution_target <= 0) {ctx->y_resolution_target = 2;}
 
-        size_t size_of_1_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*1)*sizeof(float);
-        size_t size_of_3_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*3)*sizeof(float);
-        size_t size_of_N_float_buffer = static_cast<size_t>(ctx->x_resolution*ctx->y_resolution*ctx->back->n_spectral_bin)*sizeof(float);
+        size_t size_of_nth_buffer = 0;
 
-        if(ctx->back->size_of_d_albedo != size_of_3_float_buffer)
+        for(auto& [key, value] : ctx->render_target.collection)
         {
-            magik::bridge::host_destroy_device_memory(ctx->back->d_albedo);
-            ctx->back->d_albedo = magik::bridge::host_allocate_device_memory(size_of_3_float_buffer);
-            ctx->back->size_of_d_albedo = size_of_3_float_buffer;
+            if((ctx->x_resolution_target != value.x_resolution) || (ctx->y_resolution_target != value.y_resolution))
+            {
+                size_of_nth_buffer = static_cast<size_t>(ctx->x_resolution_target*ctx->y_resolution_target*value.channels) * sizeof(float);
 
-            ctx->back->x_resolution = ctx->x_resolution;
-            ctx->back->y_resolution = ctx->y_resolution;
-            ctx->back->n_spectral_bin = ctx->n_spectral_bin;
+                magik::bridge::host_destroy_device_memory(value.d_data);
+
+                value.x_resolution = ctx->x_resolution_target;
+                value.y_resolution = ctx->y_resolution_target;
+                value.d_data = magik::bridge::host_allocate_device_memory(size_of_nth_buffer);
+            }
+        }
+
+        set_and_return_error(MAGIK_SUCCESS);
+    }
+
+    e_magik_result_types copy_render_target_to_back_framebuffer(magik::aov::context* ctx)
+    {
+        for(auto& [target_key, target_value] : ctx->render_target.collection)
+        {
+            // Adds the target key if it does not exist. 
+            ctx->back->collection.emplace(target_key, raw_buffer());
+
+            // Fetch the raw buffer, which may or may not be allocated
+            auto& back_element = ctx->back->collection.find(target_key)->second;
+
+            size_t size_of_target = static_cast<size_t>(target_value.x_resolution*target_value.y_resolution*target_value.channels)*sizeof(float);
+
+            if((back_element.x_resolution != target_value.x_resolution) || (back_element.y_resolution != target_value.y_resolution) || (back_element.channels != target_value.channels) || !back_element.d_data)
+            {
+                magik::bridge::host_destroy_device_memory(back_element.d_data);
+
+                back_element.x_resolution = target_value.x_resolution;
+                back_element.y_resolution = target_value.y_resolution;
+                back_element.channels = target_value.channels;
+                back_element.d_data = magik::bridge::host_allocate_device_memory(size_of_target);
+            }
+
+            // Memcpy
+            magik::bridge::host_memcpy_device_to_device(back_element.d_data, target_value.d_data, size_of_target);
         }
 
         set_and_return_error(MAGIK_SUCCESS);
@@ -91,6 +98,96 @@ namespace magik::aov
         return true;
     }
 
+    static e_magik_result_types memcpy_front_to_host_config_dcc(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
+    {
+        for(auto iter = dcc_buffer->collection.begin(); iter != dcc_buffer->collection.end(); )
+        {
+            auto element = ctx->front->collection.find(iter->first);
+
+            if(element == ctx->front->collection.end())
+            {
+                auto buffer = iter->second;
+                magik::bridge::host_destroy_host_memory(buffer.config_host.h_data);
+                iter = dcc_buffer->collection.erase(iter);
+            }
+            else
+            {
+                iter++;
+            }
+        }
+
+        for(const auto& [key, ctx_value] : ctx->front->collection)
+        {
+            auto& dcc_value = dcc_buffer->collection[key]; // If the key is not found, it automatically creates one
+
+            size_t size_of_buffer = static_cast<size_t>(ctx_value.x_resolution*ctx_value.y_resolution*ctx_value.channels)*sizeof(float);
+
+            if((!dcc_value.config_host.h_data) || (dcc_value.x_resolution != ctx_value.x_resolution) || (dcc_value.y_resolution != ctx_value.y_resolution) || (dcc_value.channels != ctx_value.channels))
+            {
+                magik::bridge::host_destroy_host_memory(dcc_value.config_host.h_data);
+
+                dcc_value.x_resolution = ctx_value.x_resolution;
+                dcc_value.y_resolution = ctx_value.y_resolution;
+                dcc_value.channels = ctx_value.channels;
+                dcc_value.config_host.h_data = magik::bridge::host_allocate_host_memory(size_of_buffer);
+            }
+
+            magik::bridge::host_memcpy_device_to_host(dcc_value.config_host.h_data, ctx_value.d_data, size_of_buffer);
+        }
+
+        set_and_return_error(MAGIK_SUCCESS);
+    };
+
+    static e_magik_result_types memcpy_front_to_cuda_config_dcc(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
+    {
+        set_and_return_error(MAGIK_SUCCESS);
+    };
+
+    static e_magik_result_types memcpy_front_to_opengl_interop_config_dcc(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
+    {
+        // Do note, in the prior iteration this function did not allocate memory. Which i assume was a simple oversight. 
+
+        for(auto iter = dcc_buffer->collection.begin(); iter != dcc_buffer->collection.end(); )
+        {
+            auto element = ctx->front->collection.find(iter->first);
+
+            if(element == ctx->front->collection.end())
+            {
+                auto buffer = iter->second;
+                magik::bridge::host_free_gl_buffer(&buffer.config_open_gl_interop.gl_buffer_id, &buffer.config_open_gl_interop.cuda_resource);
+                iter = dcc_buffer->collection.erase(iter);
+            }
+            else
+            {
+                iter++;
+            }
+        }
+
+        for(const auto& [key, ctx_value] : ctx->front->collection)
+        {
+            auto& dcc_value = dcc_buffer->collection[key];
+
+            if((dcc_value.x_resolution != ctx_value.x_resolution) || (dcc_value.y_resolution != ctx_value.y_resolution) || (dcc_value.channels != ctx_value.channels) || (!dcc_value.config_open_gl_interop.cuda_resource) || (dcc_value.config_open_gl_interop.gl_buffer_id == 0))
+            {
+                dcc_value.x_resolution = ctx_value.x_resolution;
+                dcc_value.y_resolution = ctx_value.y_resolution;
+                dcc_value.channels = ctx_value.channels;
+
+                magik::bridge::host_free_gl_buffer(&dcc_value.config_open_gl_interop.gl_buffer_id, &dcc_value.config_open_gl_interop.cuda_resource);
+                magik::bridge::host_allocate_gl_buffer(dcc_value.x_resolution, dcc_value.y_resolution, dcc_value.channels, &dcc_value.config_open_gl_interop.gl_buffer_id, &dcc_value.config_open_gl_interop.cuda_resource);
+            }
+
+            magik::bridge::host_map_cuda_to_gl_buffer(dcc_value.x_resolution, dcc_value.y_resolution, dcc_value.channels, &dcc_value.config_open_gl_interop.cuda_resource, ctx_value.d_data);
+        }
+
+        set_and_return_error(MAGIK_SUCCESS);
+    };
+
+    static e_magik_result_types memcpy_front_to_vulkan_interop_config_dcc(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
+    {
+        set_and_return_error(MAGIK_SUCCESS);
+    };
+
     e_magik_result_types memcpy_front_framebuffer_to_dcc_framebuffer(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
     {
         if(!ctx || !dcc_buffer || !ctx->front) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
@@ -101,63 +198,48 @@ namespace magik::aov
             dcc_buffer->config_type != MAGIK_AOV_CONFIG_VULKAN_INTEROP
         ) set_and_return_error(MAGIK_UNKNOWN_ENUM_TYPE);
 
+        e_magik_result_types result = MAGIK_SUCCESS;
+
         switch(dcc_buffer->config_type)
         {
             case MAGIK_AOV_CONFIG_HOST:
             {
-                if(!dcc_buffer->data.config_host.h_albedo)
-                {
-                    dcc_buffer->x_resolution = ctx->front->x_resolution;
-                    dcc_buffer->y_resolution = ctx->front->y_resolution;
-                    dcc_buffer->data.config_host.host_size = static_cast<size_t>(dcc_buffer->x_resolution*dcc_buffer->y_resolution*3)*sizeof(float);
-                    dcc_buffer->data.config_host.h_albedo = magik::bridge::host_allocate_host_memory(dcc_buffer->data.config_host.host_size);
-                }
-
-                if(dcc_buffer->x_resolution != ctx->front->x_resolution || dcc_buffer->y_resolution != ctx->front->y_resolution || dcc_buffer->data.config_host.host_size != ctx->front->size_of_d_albedo)
-                {
-                    dcc_buffer->x_resolution = ctx->front->x_resolution;
-                    dcc_buffer->y_resolution = ctx->front->y_resolution;
-                    dcc_buffer->data.config_host.host_size = static_cast<size_t>(dcc_buffer->x_resolution*dcc_buffer->y_resolution*3)*sizeof(float);
-                    magik::bridge::host_destroy_host_memory(dcc_buffer->data.config_host.h_albedo);
-                    dcc_buffer->data.config_host.h_albedo = magik::bridge::host_allocate_host_memory(dcc_buffer->data.config_host.host_size);
-                }
-
-                magik::bridge::host_memcpy_device_to_host(dcc_buffer->data.config_host.h_albedo, ctx->front->d_albedo, dcc_buffer->data.config_host.host_size);
+                result = memcpy_front_to_host_config_dcc(ctx, dcc_buffer);
                 break;
             }
 
             case MAGIK_AOV_CONFIG_CUDA:
             {
+                result = memcpy_front_to_cuda_config_dcc(ctx, dcc_buffer);
                 break;
             }
 
             case MAGIK_AOV_CONFIG_OPENGL_INTEROP:
             {
-                if(dcc_buffer->x_resolution != ctx->front->x_resolution || dcc_buffer->y_resolution != ctx->front->y_resolution || !dcc_buffer->data.config_open_gl_interop.cuda_resource || dcc_buffer->data.config_open_gl_interop.gl_buffer_id == 0)
-                {
-                    dcc_buffer->x_resolution = ctx->front->x_resolution;
-                    dcc_buffer->y_resolution = ctx->front->y_resolution;
-                    break;
-                }
-
-                magik::bridge::host_map_cuda_to_gl_buffer(dcc_buffer->x_resolution, dcc_buffer->y_resolution, 3, &dcc_buffer->data.config_open_gl_interop.cuda_resource, ctx->front->d_albedo);
+                result = memcpy_front_to_opengl_interop_config_dcc(ctx, dcc_buffer);
                 break;
             }
 
             case MAGIK_AOV_CONFIG_VULKAN_INTEROP:
             {
+                result = memcpy_front_to_vulkan_interop_config_dcc(ctx, dcc_buffer);
                 break;
             }
         }
 
-        set_and_return_error(MAGIK_SUCCESS);
+        set_and_return_error(result);
     }
 
     e_magik_result_types destroy_framebuffer_collection(magik::aov::context* ctx)
     {
         for(uint32_t i = 0; i < 3; i++)
         {
-            magik::bridge::host_destroy_device_memory(ctx->framebuffer_object_collection[i].d_albedo);
+            for(const auto& [key, ctx_value] : ctx->framebuffer_object_collection[i].collection)
+            {
+                magik::bridge::host_destroy_device_memory(ctx_value.d_data);
+            }
+
+            ctx->framebuffer_object_collection[i].collection.clear();
         }
 
         set_and_return_error(MAGIK_SUCCESS);

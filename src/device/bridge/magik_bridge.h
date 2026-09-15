@@ -28,6 +28,8 @@ namespace magik::bridge
 
     void host_memcpy_device_to_host(float* h_ptr, float* d_ptr, size_t size);
 
+    void host_memcpy_device_to_device(float* d_ptr_0, float* d_ptr_1, size_t size);
+
     void call_test_pattern_julia_set_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution, float c0, float c1, float c2, float real, float imag);
 
     void set_cuda_device(uint32_t cuda_device);

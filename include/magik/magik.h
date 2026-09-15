@@ -302,34 +302,6 @@ MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager
 * [SECTION] Arbitrary Output Variables
 */
 
-/**
-* @brief All AOV types Magik supports. 
-*/
-typedef enum e_magik_aov_types
-{
-    MAGIK_BEAUTY = 0,
-    MAGIK_REFLECTANCE = 1,
-    MAGIK_ALBEDO = 2,
-    MAGIK_SPECULAR_GLOBAL = 3,
-    MAGIK_SPECULAR_DIRECT = 4,
-    MAGIK_SPECULAR_INDIRECT = 5,
-    MAGIK_DIFFUSE_GLOBAL = 6,
-    MAGIK_DIFFUSE_DIRECT = 7,
-    MAGIK_DIFFUSE_INDIRECT = 8,
-    MAGIK_REFLECTION = 9,
-    MAGIK_REFRACTION = 10,
-    MAGIK_ILLUMINANT = 11,
-    MAGIK_NORMAL = 12,
-    MAGIK_POSITION = 13,
-    MAGIK_VELOCITY = 14,
-    MAGIK_ALPHA = 15,
-    MAGIK_OBJECT_ID = 16,
-    MAGIK_DEPTH = 17,
-    MAGIK_DISTORTION_CHART = 18,
-
-    MAGIK_AOV_PROHIBITED_FORCE_SIZE = 0x7FFFFFFF
-} e_magik_aov_types;
-
 typedef enum e_magik_aov_config_types
 {
     MAGIK_AOV_CONFIG_HOST = 0,
@@ -388,8 +360,9 @@ typedef struct magik_aov_container_config_host_t
 {
     uint32_t x_resolution = 0;
     uint32_t y_resolution = 0;
-    size_t size_of_albedo = 0; 
-    float* h_albedo = nullptr; // RGB, h_ means it is a host pointer. 
+    uint32_t channels = 0;
+    size_t size_of_data = 0;
+    float* h_data = nullptr; // RGB, h_ means it is a host pointer. 
 } magik_aov_container_config_host_t;
 
 /**
@@ -397,10 +370,11 @@ typedef struct magik_aov_container_config_host_t
 * 
 * @param [in] container Pointer to the struct into which the AOV data will be stored
 * @param [in] dcc_buffer Buffer which stores the front AOV 
+* @param [in] name The name of the AOV to be extracted
 * 
 * @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
 */
-MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name);
 
 /**
 * @brief Struct which containes base types for a CUDA DCC backend. The user is responsible for casting these base types into CUDA ones !
@@ -420,9 +394,9 @@ MAGIK_API e_magik_result_types magik_aov_config_cuda_extract(magik_aov_container
 */
 typedef struct magik_aov_container_config_opengl_interop_t
 {
-    uint32_t x_resolution;
-    uint32_t y_resolution;
-
+    uint32_t x_resolution = 0;
+    uint32_t y_resolution = 0;
+    uint32_t channels = 0;
     uint32_t gl_buffer_id = 0;
     void* cuda_resources = nullptr; // true type is cudaGraphicsResource_t
 } magik_aov_container_config_opengl_interop_t;
@@ -432,12 +406,13 @@ typedef struct magik_aov_container_config_opengl_interop_t
 * 
 * @param [in] container Pointer to the struct into which the AOV data will be stored
 * @param [in] dcc_buffer Buffer which stores the front AOV 
+* @param [in] name The name of the AOV to be extracted
 * 
 * @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED, 
 * 
 * @warning 
 */
-MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name);
 
 /**
 * @brief Struct which containes base types for a Vulkan DCC backend. The user is responsible for casting these base types into Vulkan ones !
@@ -497,22 +472,28 @@ typedef enum e_magik_cqs_command_types
     // ##################################
     /**
     * @brief Sets the internal render flag to "Rendering"
-    * @warning This command expects no data.
     */
     MAGIK_COMMAND_SET_STATE_RENDER = 1000,
 
     /**
     * @brief Sets the internal render flag to "Pause"
-    * @warning This command expects no data.
     */
     MAGIK_COMMAND_SET_STATE_PAUSE = 1001,
 
     /**
     * @brief Force clears the render buffer
-    * @warning This command expects no data.
     */
     MAGIK_COMMAND_CLEAR_RENDER_BUFFER = 1002, 
 
+    /**
+    * @brief Add new AOV
+    */
+    MAGIK_COMMAND_ADD_AOV = 1003,
+
+    /**
+    * @brief Delete AOV
+    */
+    MAGIK_COMMAND_REMOVE_AOV = 1004,
 
 
     // ################################
@@ -520,25 +501,21 @@ typedef enum e_magik_cqs_command_types
     // ################################
     /**
     * @brief Prints a char string from the worker thread
-    * @warning This command expects the data type "magik_command_printf_data_t"
     */
     MAGIK_COMMAND_PRINTF = 2000,
 
     /**
     * @brief Force resizes the render buffer
-    * @warning This command expects the data type "magik_command_set_resolution_data_t"
     */
     MAGIK_COMMAND_SET_RESOLUTION = 2001,
 
     /**
     * @brief Sets the complex offset point of the julia set kernel
-    * @warning This command expects the data type "magik_command_set_julia_set_offset_data_t"
     */
     MAGIK_COMMAND_SET_JULIA_SET_OFFSET = 2002,
 
     /**
     * @brief Sets the Julia set color pallet
-    * @warning This command expects the data type "magik_command_set_julia_set_color_data_t"
     */
     MAGIK_COMMAND_SET_JULIA_SET_COLOR = 2003,
 
@@ -601,6 +578,21 @@ typedef struct MAGIK_ALIGN4 magik_command_clear_render_buffer_t
 {
     const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_CLEAR_RENDER_BUFFER;
 } magik_command_clear_render_buffer_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_add_aov_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_ADD_AOV;
+    uint32_t length_of_name = 0;
+    char name[512];
+    uint32_t channels = 0;
+} magik_command_add_aov_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_remove_aov_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_REMOVE_AOV;
+    uint32_t length_of_name = 0;
+    char name[512];
+} magik_command_remove_aov_t;
 
 
 

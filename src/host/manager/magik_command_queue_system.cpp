@@ -19,6 +19,10 @@ namespace magik::cqs
 
             case MAGIK_COMMAND_CLEAR_RENDER_BUFFER: { is_valid_ = true; size_ = sizeof(magik_command_clear_render_buffer_t); break; }
 
+            case MAGIK_COMMAND_ADD_AOV: { is_valid_ = true; size_ = sizeof(magik_command_add_aov_t); break; }
+
+            case MAGIK_COMMAND_REMOVE_AOV: { is_valid_ = true; size_ = sizeof(magik_command_remove_aov_t); break; }
+
 
 
             // ################################
@@ -93,6 +97,26 @@ namespace magik::cqs
                 break;
             }
 
+            case MAGIK_COMMAND_ADD_AOV:
+            {
+                magik_command_add_aov_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                std::string aov_name(cmd.name, cmd.length_of_name);
+                magik::aov::raw_buffer aov;
+                aov.channels = cmd.channels;
+                manager->aov_context.render_target.collection.emplace(aov_name, aov);
+                break;
+            }
+
+            case MAGIK_COMMAND_REMOVE_AOV:
+            {
+                magik_command_remove_aov_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                std::string aov_name(cmd.name, cmd.length_of_name);
+                manager->aov_context.render_target.collection.erase(aov_name);
+                break;
+            }
+
 
 
             // ################################
@@ -110,8 +134,8 @@ namespace magik::cqs
             {
                 magik_command_set_resolution_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->aov_context.x_resolution = cmd.x_resolution;
-                manager->aov_context.y_resolution = cmd.y_resolution;
+                manager->aov_context.x_resolution_target = cmd.x_resolution;
+                manager->aov_context.y_resolution_target = cmd.y_resolution;
                 break;
             }
 
