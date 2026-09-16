@@ -9,6 +9,7 @@
 
 #pragma once
 #include <stdint.h>
+#include <cstddef>
 
 namespace magik::bridge
 {
