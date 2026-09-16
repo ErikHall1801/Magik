@@ -19,3 +19,5 @@
     // Include
     #include "magik_utilities.cuh"
     #include "magik_math.cuh"
+    #include "magik_error.h"
+    #include "magik.h"

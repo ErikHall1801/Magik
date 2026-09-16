@@ -1,0 +1,15 @@
+#pragma once 
+#include "magik.h"
+#include "magik_render_manager.h" 
+#include "magik_bridge.h"
+#include "magik_arbitrary_output_variables.h"
+#include <chrono>
+#include <thread>
+#include <atomic>
+
+namespace magik::worker
+{
+    void run(magik_render_manager* manager);
+}
+
+extern std::atomic<double> frame_time;

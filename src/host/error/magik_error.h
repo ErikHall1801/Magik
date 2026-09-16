@@ -14,19 +14,24 @@
     #define MAGIK_INLINE inline
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define set_and_return_error(val) { g_last_error = val; return val; }
 
 /**
 * [SECTION] Error handling & result types
 */
 
-void magik_set_error_callback_internal(magik_error_callback callback, void* user_data);
+namespace magik::error
+{
+    void set_error_callback_internal(magik_error_callback callback, void* user_data);
 
-e_magik_result_types magik_get_last_error_internal(void);
+    e_magik_result_types get_last_error_internal(void);
 
-void check_magik_internal(e_magik_result_types result, char const* func, const char* const file, int const line);
+    void check_error_internal(e_magik_result_types result, char const* func, const char* const file, int const line);
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern thread_local e_magik_result_types g_last_error;
 

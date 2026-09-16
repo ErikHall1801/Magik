@@ -1,0 +1,77 @@
+#include "magik_worker.h"
+
+std::atomic<double> frame_time = 0.0;
+
+namespace magik::worker
+{
+    static e_magik_result_types initialize(magik_render_manager* manager)
+    {
+        magik::bridge::set_cuda_device(manager->cuda_device);
+
+        if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
+        {
+            magik::aov::initialize_swapchain(&manager->aov_context);
+        }
+
+        manager->is_running.store(true, std::memory_order_release);
+
+        set_and_return_error(MAGIK_SUCCESS);
+    }
+
+    void run(magik_render_manager* manager)
+    {
+        check_magik_errors(initialize(manager));
+
+        auto frame_start = std::chrono::steady_clock::now();
+        auto frame_end = std::chrono::steady_clock::now();
+
+        bool is_dirty = false;
+
+        while(manager->is_running.load())
+        {
+            // Host work
+            frame_start = std::chrono::steady_clock::now();
+
+            check_magik_errors(magik::cqs::consume_back_command_buffer(manager));
+
+            check_magik_errors(magik::aov::allocate_render_framebuffer_object(is_dirty, &manager->aov_context));
+
+            if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN && !is_dirty)
+            {
+                check_magik_errors(magik::aov::memcpy_render_to_back_framebuffer_object(&manager->aov_context));
+            }
+
+            if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
+            {
+                check_magik_errors(magik::aov::swap_back_framebuffer(&manager->aov_context));
+            }
+
+
+
+            // GPU work
+            auto tmp_element = manager->aov_context.render_framebuffer_object.collection.find("test");
+            if(tmp_element != manager->aov_context.render_framebuffer_object.collection.end())
+            {
+                auto buffer = tmp_element->second;
+                magik::bridge::call_test_pattern_julia_set_kernel(manager->cuda_stream, buffer.d_data, buffer.x_resolution, buffer.y_resolution, manager->render_context.c0, manager->render_context.c1, manager->render_context.c2, manager->render_context.real, manager->render_context.imag);
+            }
+            else
+            {
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(100ms);
+            }
+
+            magik::bridge::host_cuda_semaphore(&manager->cuda_stream);
+
+            frame_end = std::chrono::steady_clock::now();
+            frame_time.store(std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(frame_end - frame_start).count(), std::memory_order_relaxed);
+        }
+
+        if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
+        {
+            check_magik_errors(magik::aov::destroy_swpachain(&manager->aov_context));
+        }
+
+        check_magik_errors(magik::aov::destroy_render_framebuffer_object(&manager->aov_context));
+    }
+}
