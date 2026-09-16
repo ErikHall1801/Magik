@@ -200,28 +200,6 @@ MAGIK_API void magik_get_system_Info();
 
 
 /**
-* [SECTION] Tests
-*/
-
-/**
-* @brief Example of an opaque pointer & struct. More specifically, this defines an opaque alias to a pointer of an internal struct. 
-* Where magik_rgba_test_frame_buffer is internal and magik_rgba_test_frame_buffer_t is the alias. 
-*/
-typedef struct magik_test_rgba_frame_buffer* magik_test_rgba_frame_buffer_t;
-
-/**
-* @brief Two test-kernel patterns are available. The UV gradient should appear with the black corner, R = G = B = 0, at the lower left 
-* side of your window. The mandelbrot is intended to test resource allocation performance. 
-*/
-typedef enum e_magik_test_kernel_pattern_types
-{
-    uv_gradient = 0,
-    mandelbrot = 1
-} e_magik_test_kernel_pattern_types;
-
-
-
-/**
 * [SECTION] Version checking
 */
 
