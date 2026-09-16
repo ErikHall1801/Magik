@@ -112,14 +112,26 @@ MAGIK_API magik_render_manager_t magik_create_render_manager(magik_manager_descr
 {
     int32_t n_cuda_device = magik::bridge::host_get_n_cuda_device();
 
-    if(descriptor.cuda_device_id > n_cuda_device)
+    if(descriptor.user_device_id >= n_cuda_device)
     {
         g_last_error = MAGIK_INVALID_CUDA_DEVICE;
         return nullptr;
     }
 
     magik_render_manager* manager = new magik_render_manager();
-    manager->cuda_device = descriptor.cuda_device_id;
+    
+    manager->cuda_device = descriptor.user_device_id;
+
+    if(descriptor.user_stream == nullptr)
+    {
+        manager->owns_stream = true;
+        magik::bridge::host_create_cuda_stream(&manager->cuda_stream);
+    }
+    else
+    {
+        manager->owns_stream = false;
+        manager->cuda_stream = descriptor.user_stream;
+    }
 
     manager->cqs_context.n_reserved_chunk = descriptor.cqs_n_reserved_chunk;
     manager->cqs_context.drop_overflows = descriptor.cqs_drop_overflow;
@@ -149,6 +161,12 @@ MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager
 {
     manager->is_running.store(false, std::memory_order_release);
     manager->worker_thread.join();
+
+    if(manager->owns_stream)
+    {
+        magik::bridge::host_destroy_cuda_stream(&manager->cuda_stream);
+    }
+
     delete manager;
 
     set_and_return_error(MAGIK_SUCCESS);

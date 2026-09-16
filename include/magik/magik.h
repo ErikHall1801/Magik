@@ -281,7 +281,10 @@ typedef enum e_magik_manager_display_types
 * @brief Descriptor for a Magik instance
 * 
 * @param display_type The managers display configuration
-* @param cuda_device The CUDA device with the given ID will be used for Magiks render loop. 
+* @param user_device_id The CUDA device with the given ID will be used for Magiks render loop. 
+* @param user_stream The CUDA stream used by Magik. If this field is left as null Magik will initalize a non-blocking stream internally.
+* Which is destroyed when the manager terminates. If the field is populated Magik will treat the stream as borrowed and the DCC is 
+* responsible for managing it. 
 * @param cqs_n_reserved_chunk Number of 4 byte chunks in the command buffer.
 * @param cqs_drop_overflows setting to toggle if overflowing commands are dropped. 
 * 
@@ -299,7 +302,8 @@ typedef struct magik_manager_descriptor_t
 {
     e_magik_manager_display_types display_type = MAGIK_DISPLAY_SWAPCHAIN;
 
-    uint32_t cuda_device_id = 0;
+    uint32_t user_device_id = 0;
+    void* user_stream = nullptr;
 
     uint32_t cqs_n_reserved_chunk = 4096;
     bool cqs_drop_overflow = false;

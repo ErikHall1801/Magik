@@ -34,6 +34,9 @@ struct magik_render_manager
     std::thread worker_thread;
 
     e_magik_manager_display_types display_type = MAGIK_DISPLAY_SWAPCHAIN;
+
+    void* cuda_stream = nullptr;
+    bool owns_stream = false;
     uint32_t cuda_device = 0;
 
     magik::aov::context aov_context;

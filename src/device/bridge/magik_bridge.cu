@@ -125,9 +125,9 @@ namespace magik::bridge
         memcpy_device_to_device<float>(d_ptr_0, d_ptr_1, size);
     }
 
-    void call_test_pattern_julia_set_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution, float c0, float c1, float c2, float real, float imag)
+    void call_test_pattern_julia_set_kernel(void* user_stream, float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution, float c0, float c1, float c2, float real, float imag)
     {
-        magik::kernels::launch_test_pattern_julia_set(d_rgba_fb, x_resolution, y_resolution, 16, 16, c0, c1, c2, real, imag);
+        magik::kernels::launch_test_pattern_julia_set(user_stream, d_rgba_fb, x_resolution, y_resolution, 16, 16, c0, c1, c2, real, imag);
     }
 
     void set_cuda_device(uint32_t cuda_device)
@@ -151,5 +151,33 @@ namespace magik::bridge
     {
         magik::interops::map_cuda_to_gl_buffer(x_resolution, y_resolution, channels, cuda_resource, d_ptr);
         check_magik_errors(magik_get_last_error());
+    }
+
+    void host_create_cuda_stream(void** user_stream)
+    {
+        cudaStream_t d_stream;
+        check_cuda_errors(cudaStreamCreateWithFlags(&d_stream, cudaStreamNonBlocking));
+        *user_stream = static_cast<void*>(d_stream);
+    }
+
+    void host_destroy_cuda_stream(void** user_stream)
+    {
+        check_cuda_errors(cudaStreamDestroy(static_cast<cudaStream_t>(*user_stream)));
+    }
+
+    void host_cuda_semaphore(void** user_stream)
+    {
+        /*
+        * 
+        * So the idea, as far as i understand it, is that the stream syncs kernel launches. 
+        * If kernels A and B are launched in order using the same stream, they will execute
+        * in that order. But we dont need to invoke the cudaDeviceSync function each time 
+        * the kernel is launched. Instead we can rapid fire all of them at once, then put 
+        * the semaphore at the end of the worker thread to make sure there are no race 
+        * conditions. 
+        * 
+        */
+
+        check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
     }
 }

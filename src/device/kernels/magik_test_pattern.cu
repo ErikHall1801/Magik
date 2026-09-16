@@ -94,13 +94,12 @@ namespace magik::kernels
         }
     }
 
-    void launch_test_pattern_julia_set(float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block, float c0, float c1, float c2, float real, float imag)
+    void launch_test_pattern_julia_set(void* user_stream, float* d_rgba_fb, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t x_threads_per_block, const uint32_t y_threads_per_block, float c0, float c1, float c2, float real, float imag)
     {
         dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
         dim3 n_block = magik::utilities::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
         
-        test_pattern_julia_set<<<n_block, threads_per_block>>>(d_rgba_fb, clock(), c0, c1, c2, real, imag, x_resolution, y_resolution);
+        test_pattern_julia_set<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(user_stream)>>>(d_rgba_fb, clock(), c0, c1, c2, real, imag, x_resolution, y_resolution);
         check_cuda_errors(cudaGetLastError());
-        check_cuda_errors(cudaDeviceSynchronize());
     }
 }

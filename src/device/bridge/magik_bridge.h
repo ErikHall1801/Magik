@@ -30,7 +30,7 @@ namespace magik::bridge
 
     void host_memcpy_device_to_device(float* d_ptr_0, float* d_ptr_1, size_t size);
 
-    void call_test_pattern_julia_set_kernel(float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution, float c0, float c1, float c2, float real, float imag);
+    void call_test_pattern_julia_set_kernel(void* user_stream, float* d_rgba_fb, uint32_t x_resolution, uint32_t y_resolution, float c0, float c1, float c2, float real, float imag);
 
     void set_cuda_device(uint32_t cuda_device);
 
@@ -39,4 +39,10 @@ namespace magik::bridge
     void host_free_gl_buffer(uint32_t* gl_buffer_id, void** cuda_resource);
 
     void host_map_cuda_to_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, void** cuda_resource, float* d_ptr);
+
+    void host_create_cuda_stream(void** user_stream);
+
+    void host_destroy_cuda_stream(void** user_stream);
+
+    void host_cuda_semaphore(void** user_stream);
 }
