@@ -387,7 +387,7 @@ typedef struct magik_aov_framebuffer_object_external* magik_aov_framebuffer_obje
 * @warning This function does not requiere a swapchain to be setup, as the external framebuffer object can equally be used as the target 
 * to extract the render framebuffer. 
 */
-MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffer(e_magik_aov_config_types config_type);
+MAGIK_API e_magik_result_types magik_configure_aov_framebuffer(magik_aov_framebuffer_object_external_t* framebuffer, e_magik_aov_config_types config_type);
 
 /**
 * @brief This function fetches the most up-to-date AOV buffer from the API. Magik uses a tripple buffer lock-free swap chain. Memory 
@@ -408,7 +408,7 @@ MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffe
 * Calling _extract functions is not illegal even if this function returned falls. The extract functions simply convert Magik´s internal 
 * representation which is already stored on the DCC to the user defined configuration. 
 */
-MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_framebuffer_object_external_t dcc_buffer); 
+MAGIK_API e_magik_result_types magik_aov_fetch(magik_render_manager_t manager, bool* is_new_fetch, magik_aov_framebuffer_object_external_t dcc_buffer); 
 
 /**
 * @brief Struct where the matching extract function will store pointers to the AOV memory to. 
@@ -751,7 +751,7 @@ MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t man
 * The system is designed to handle this case and allow the user to continue writing to the front buffer over the next DCC cycle. So 
 * commands can accumulate over multiple cycles. If this happens the function returns false. 
 */
-MAGIK_API bool magik_cqs_dispatch_command_buffer(magik_render_manager_t manager);
+MAGIK_API e_magik_result_types magik_cqs_dispatch_command_buffer(magik_render_manager_t manager, bool* is_dispatched);
 
 
 

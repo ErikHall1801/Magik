@@ -230,51 +230,50 @@ MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager* ma
 * [SECTION] Arbitrary Output Variables
 */
 
-MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffer(e_magik_aov_config_types config_type)
+MAGIK_API e_magik_result_types magik_configure_aov_framebuffer(magik_aov_framebuffer_object_external_t* framebuffer, e_magik_aov_config_types config_type)
 {
     magik_aov_framebuffer_object_external* buffer = new magik_aov_framebuffer_object_external();
     
     if(config_type != MAGIK_AOV_CONFIG_HOST && config_type != MAGIK_AOV_CONFIG_CUDA && config_type != MAGIK_AOV_CONFIG_OPENGL_INTEROP && config_type != MAGIK_AOV_CONFIG_VULKAN_INTEROP)
     {
-        set_g_last_error(MAGIK_UNKNOWN_ENUM_TYPE);
+        set_and_return_error(MAGIK_UNKNOWN_ENUM_TYPE);
         delete buffer;
-        return nullptr;
     }
 
     buffer->config_type = config_type;
 
-    set_g_last_error(MAGIK_SUCCESS);
-    return buffer;
+    *framebuffer = buffer;
+    set_and_return_error(MAGIK_SUCCESS);
 }
 
-MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_framebuffer_object_external_t dcc_buffer)
+MAGIK_API e_magik_result_types magik_aov_fetch(magik_render_manager_t manager, bool* is_new_fetch, magik_aov_framebuffer_object_external_t dcc_buffer)
 {
     if(!manager || !dcc_buffer)
     {
-        set_g_last_error(MAGIK_ERROR_INVALID_POINTER);
-        return false;
+        *is_new_fetch = false;
+        set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
     }
 
     if(!manager->is_running.load(std::memory_order_acquire))
     {
-        set_g_last_error(MAGIK_SUCCESS);
-        return false;
+        *is_new_fetch = false;
+        set_and_return_error(MAGIK_SUCCESS);
     }
 
     if(manager->display_type == MAGIK_DISPLAY_HEADLESS)
     {
-        set_g_last_error(MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED);
-        return false;
+        *is_new_fetch = false;
+        set_and_return_error(MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED);
     }
 
     if(!magik::aov::try_swap_front_framebuffer(&manager->aov_context))
     {
-        set_g_last_error(magik_get_last_error());
-        return false;
+        *is_new_fetch = false;
+        set_and_return_error(magik_get_last_error());
     }
 
-    set_g_last_error(magik::aov::memcpy_front_framebuffer_to_dcc_framebuffer(&manager->aov_context, dcc_buffer));
-    return true;
+    *is_new_fetch = true;
+    set_and_return_error(magik::aov::memcpy_front_framebuffer_to_dcc_framebuffer(&manager->aov_context, dcc_buffer));
 }
 
 MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name)
@@ -426,21 +425,25 @@ MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t man
     set_and_return_error(MAGIK_SUCCESS);
 }
 
-MAGIK_API bool magik_cqs_dispatch_command_buffer(magik_render_manager_t manager)
+MAGIK_API e_magik_result_types magik_cqs_dispatch_command_buffer(magik_render_manager_t manager, bool* is_dispatched)
 {
-    if(!manager) { set_g_last_error(MAGIK_ERROR_INVALID_POINTER); return false; }
+    if(!manager) 
+    {
+        *is_dispatched = false;
+        set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+    }
 
     if(manager->cqs_context.is_swap_ready.load(std::memory_order_acquire))
     {
         manager->cqs_context.front.swap(manager->cqs_context.back);
         manager->cqs_context.is_swap_ready.store(false, std::memory_order_release);
 
-        set_g_last_error(MAGIK_SUCCESS);
-        return true;
+        *is_dispatched = true;
+        set_and_return_error(MAGIK_SUCCESS);
     }
     else
     {
-        set_g_last_error(MAGIK_SUCCESS);
-        return false;
+        *is_dispatched = false;
+        set_and_return_error(MAGIK_SUCCESS);
     }
 }
