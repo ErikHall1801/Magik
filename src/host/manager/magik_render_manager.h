@@ -43,6 +43,10 @@ struct magik_render_manager
     magik::aov::context aov_context;
     magik::cqs::context cqs_context;
 
+    host_mem_reserve_function user_host_mem_reserve_func = nullptr;
+    host_mem_commit_function user_host_mem_commit_func = nullptr;
+    host_mem_decommit_function user_host_mem_decommit_func = nullptr;
+    host_mem_release_function user_host_mem_release_func = nullptr;
     magik::host_memory::host_mem_arena* host_arena;
 
     // This is tmp

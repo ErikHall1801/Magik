@@ -109,6 +109,12 @@ MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft)
 
 
 /**
+* [SECTION] Memory
+*/
+
+
+
+/**
 * [SECTION] Render manager
 */
 
@@ -155,6 +161,11 @@ MAGIK_API magik_render_manager_t magik_create_render_manager(magik_manager_descr
         return nullptr;
     }
 
+    manager->user_host_mem_reserve_func = descriptor.host_reserve_func;
+    manager->user_host_mem_commit_func = descriptor.host_commit_func;
+    manager->user_host_mem_decommit_func = descriptor.host_decommit_func;
+    manager->user_host_mem_release_func = descriptor.host_release_func;
+
     manager->worker_thread = std::thread(magik::worker::run, manager);
 
     set_g_last_error(MAGIK_SUCCESS);
@@ -172,6 +183,45 @@ MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager
     }
 
     delete manager;
+
+    set_and_return_error(MAGIK_SUCCESS);
+}
+
+MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager* manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type)
+{
+    if(!manager || !size_reserve || !size_commit) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+
+    if(!manager->is_running.load(std::memory_order_acquire))
+    {
+        *size_reserve = 0;
+        *size_commit = 0;
+        set_and_return_error(MAGIK_SUCCESS);
+    }
+
+    switch(type)
+    {
+        case MAGIK_MEMORY_HOST:
+        {
+            *size_reserve = host_mem_reserve.load(std::memory_order_acquire);
+            *size_commit = host_mem_commit.load(std::memory_order_acquire);
+            break;
+        }
+
+        case MAGIK_MEMORY_DEVICE:
+        {
+            break;
+        }
+
+        case MAGIK_MEMORY_UNIFIED:
+        {
+            break;
+        }
+
+        default:
+        {
+            set_and_return_error(MAGIK_UNKNOWN_ENUM_TYPE);
+        }
+    }
 
     set_and_return_error(MAGIK_SUCCESS);
 }
@@ -395,49 +445,4 @@ MAGIK_API bool magik_cqs_dispatch_command_buffer(magik_render_manager_t manager)
         set_g_last_error(MAGIK_SUCCESS);
         return false;
     }
-}
-
-
-
-/**
-* [SECTION] Memory telemetry
-*/
-
-MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager* manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type)
-{
-    if(!manager || !size_reserve || !size_commit) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
-
-    if(!manager->is_running.load(std::memory_order_acquire))
-    {
-        *size_reserve = 0;
-        *size_commit = 0;
-        set_and_return_error(MAGIK_SUCCESS);
-    }
-
-    switch(type)
-    {
-        case MAGIK_MEMORY_HOST:
-        {
-            *size_reserve = host_mem_reserve.load(std::memory_order_acquire);
-            *size_commit = host_mem_commit.load(std::memory_order_acquire);
-            break;
-        }
-
-        case MAGIK_MEMORY_DEVICE:
-        {
-            break;
-        }
-
-        case MAGIK_MEMORY_UNIFIED:
-        {
-            break;
-        }
-
-        default:
-        {
-            set_and_return_error(MAGIK_UNKNOWN_ENUM_TYPE);
-        }
-    }
-
-    set_and_return_error(MAGIK_SUCCESS);
 }

@@ -233,6 +233,32 @@ MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft);
 
 
 /**
+* [SECTION] Memory
+*/
+
+/**
+* 
+*/
+typedef enum
+{
+    MAGIK_MEMORY_HOST = 0,
+    MAGIK_MEMORY_DEVICE = 1,
+    MAGIK_MEMORY_UNIFIED = 2
+} e_magik_memory_types;
+
+// typedef void (*magik_error_callback)(e_magik_result_types result, const char* func, const char* file, int line, void* user_data);
+
+typedef void* (*host_mem_reserve_function)(uint64_t size);
+
+typedef bool (*host_mem_commit_function)(void* ptr, uint64_t size);
+
+typedef bool (*host_mem_decommit_function)(void* ptr, uint64_t size);
+
+typedef bool (*host_mem_release_function)(void* ptr, uint64_t size);
+
+
+
+/**
 * [SECTION] Render manager
 */
 
@@ -286,6 +312,12 @@ typedef struct magik_manager_descriptor_t
 
     uint32_t cqs_n_reserved_chunk = 4096;
     bool cqs_drop_overflow = false;
+
+    host_mem_reserve_function host_reserve_func = nullptr;
+    host_mem_commit_function host_commit_func = nullptr;
+    host_mem_decommit_function host_decommit_func = nullptr;
+    host_mem_release_function host_release_func = nullptr;
+
 } magik_manager_descriptor_t;
 
 /**
@@ -308,6 +340,21 @@ MAGIK_API magik_render_manager_t magik_create_render_manager(magik_manager_descr
 * @brief TEMP !!! All this does is stop the render thread and call .join(). 
 */
 MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager_t mananger);
+
+/**
+* @brief Writes the current number of reserved and committed bits of typed memory into the provided pointers
+* 
+* @param [in] manager Initialized manager
+* @param [in] size_reserve The size of virtual memory reserved
+* @param [in] size_commit The size of physical memory committed
+* @param [in] type The memory type being fetched
+* 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_UNKNOWN_ENUM_TYPE
+* 
+* @warning This function returns MAGIK_SUCCESS if the worker thread is not running yet and writes 0 to the output. 
+*/
+MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager* manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type); 
+
 
 
 
@@ -705,36 +752,6 @@ MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t man
 * commands can accumulate over multiple cycles. If this happens the function returns false. 
 */
 MAGIK_API bool magik_cqs_dispatch_command_buffer(magik_render_manager_t manager);
-
-
-
-/**
-* [SECTION] Memory telemetry
-*/
-
-/**
-* 
-*/
-typedef enum
-{
-    MAGIK_MEMORY_HOST = 0,
-    MAGIK_MEMORY_DEVICE = 1,
-    MAGIK_MEMORY_UNIFIED = 2
-} e_magik_memory_types;
-
-/**
-* @brief Writes the current number of reserved and committed bits of typed memory into the provided pointers
-* 
-* @param [in] manager Initialized manager
-* @param [in] size_reserve The size of virtual memory reserved
-* @param [in] size_commit The size of physical memory committed
-* @param [in] type The memory type being fetched
-* 
-* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_UNKNOWN_ENUM_TYPE
-* 
-* @warning This function returns MAGIK_SUCCESS if the worker thread is not running yet and writes 0 to the output. 
-*/
-MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager* manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type); 
 
 
 

@@ -13,25 +13,56 @@ namespace magik::host_memory
             return sys_info.dwPageSize;
         }
 
-        static void* platform_mem_reserve(uint64_t size)
+        static void* platform_mem_reserve(host_mem_reserve_function user_host_mem_reserve_func, uint64_t size)
         {
-            return VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_READWRITE);
+            if(user_host_mem_reserve_func)
+            {
+                return user_host_mem_reserve_func(size);
+            }
+            else
+            {
+                return VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_READWRITE);
+            }
         }
 
-        static bool platform_mem_commit(void* ptr, uint64_t size)
+        static bool platform_mem_commit(host_mem_commit_function user_host_mem_commit_func, void* ptr, uint64_t size)
         {
-            void* ret = VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE);
+            void* ret;
+
+            if(user_host_mem_commit_func)
+            {
+                ret = (void*)user_host_mem_commit_func(ptr, size);
+            }
+            else
+            {
+                ret = VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE);
+            }
+
             return ret != NULL;
         }
 
-        static bool platform_mem_decommit(void* ptr, uint64_t size)
+        static bool platform_mem_decommit(host_mem_decommit_function user_host_mem_decommit_func, void* ptr, uint64_t size)
         {
-            return VirtualFree(ptr, size, PAGE_READWRITE);
+            if(user_host_mem_decommit_func)
+            {
+                return user_host_mem_decommit_func(ptr, size);
+            }
+            else
+            {
+                return VirtualFree(ptr, size, PAGE_READWRITE);
+            }
         }
 
-        static bool platform_mem_release(void* ptr, uint64_t size)
+        static bool platform_mem_release(host_mem_release_function user_host_mem_release_func, void* ptr, uint64_t size)
         {
-            return VirtualFree(ptr, size, MEM_RELEASE);
+            if(user_host_mem_release_func)
+            {
+                return user_host_mem_release_func(ptr, size);
+            }
+            else
+            {
+                return VirtualFree(ptr, size, MEM_RELEASE);
+            }
         }
     #elif defined(__linux__)
         static uint32_t platform_get_pagesize(void)
@@ -39,48 +70,86 @@ namespace magik::host_memory
             return (uint32_t)sysconf(_SC_PAGESIZE);
         }
 
-        static void* platform_mem_reserve(uint64_t size)
+        static void* platform_mem_reserve(host_mem_reserve_function user_host_mem_reserve_func, uint64_t size)
         {
-            void* out = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            void* out;
+
+            if(user_host_mem_reserve_func)
+            {
+                out = user_host_mem_reserve_func(size);
+            }
+            else
+            {
+                out = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            }
+
             if (out == MAP_FAILED) {
                 return NULL;
             }
             return out;
         }
 
-        static bool platform_mem_commit(void* ptr, uint64_t size)
+        static bool platform_mem_commit(host_mem_commit_function user_host_mem_commit_func, void* ptr, uint64_t size)
         {
-            int32_t ret = mprotect(ptr, size, PROT_READ | PROT_WRITE);
+            int32_t ret;
+
+            if()
+            {
+                ret = (int32_t)(user_host_mem_commit_func(ptr, size));
+            }
+            else
+            {
+                ret = mprotect(ptr, size, PROT_READ | PROT_WRITE);
+            }
+
             return ret == 0;
         }
 
-        static bool platform_mem_decommit(void* ptr, uint64_t size)
+        static bool platform_mem_decommit(host_mem_decommit_function user_host_mem_decommit_func, void* ptr, uint64_t size)
         {
-            int32_t ret = mprotect(ptr, size, PROT_NONE);
+            int32_t ret;
+
+            if()
+            {
+                ret = (int32_t)(user_host_mem_decommit_func(ptr, size));
+            }
+            else
+            {
+                ret = mprotect(ptr, size, PROT_NONE);
+            }
+
             if (ret != 0) return false;
             ret = madvise(ptr, size, MADV_DONTNEED);
             return ret == 0;
         }
 
-        static bool platform_mem_release(void* ptr, uint64_t size)
+        static bool platform_mem_release(host_mem_release_function user_host_mem_release_func, void* ptr, uint64_t size)
         {
-            int32_t ret = munmap(ptr, size);
+            int32_t ret;
+
+            if()
+            {
+                ret = user_host_mem_release_func(ptr, size);
+            }
+            else
+            {
+                ret = munmap(ptr, size);
+            }
+
             return ret == 0;
         }
     #endif
 
-    host_mem_arena* arena_create(uint64_t reserve_size, uint64_t commit_size)
+    host_mem_arena* arena_create(host_mem_reserve_function user_host_mem_reserve_func, host_mem_commit_function user_host_mem_commit_func, uint64_t reserve_size, uint64_t commit_size)
     {
-        // TO-DO: Use user defined allocator matching the type
-
         uint32_t page_size = platform_get_pagesize();
 
         reserve_size = ALIGN_UP_POW2(reserve_size, page_size);
         commit_size = ALIGN_UP_POW2(commit_size, page_size);
 
-        host_mem_arena* arena = (host_mem_arena*)platform_mem_reserve(reserve_size);
+        host_mem_arena* arena = (host_mem_arena*)platform_mem_reserve(user_host_mem_reserve_func, reserve_size);
 
-        if(!platform_mem_commit(arena, commit_size))
+        if(!platform_mem_commit(user_host_mem_commit_func, arena, commit_size))
         {
             return nullptr;
         }
@@ -96,13 +165,13 @@ namespace magik::host_memory
         return arena;
     }
 
-    void arena_destroy(host_mem_arena* host_arena)
+    void arena_destroy(host_mem_release_function user_host_mem_release_func, host_mem_arena* host_arena)
     {
         // TO-DO; Use user defined free function matching the type
-        platform_mem_release(host_arena, host_arena->reserve_size);
+        platform_mem_release(user_host_mem_release_func, host_arena, host_arena->reserve_size);
     }
 
-    void* arena_push(host_mem_arena* host_arena, uint64_t size, bool non_zero)
+    void* arena_push(host_mem_commit_function user_host_mem_commit_func, host_mem_arena* host_arena, uint64_t size, bool non_zero)
     {
         uint64_t pos_aligned = ALIGN_UP_POW2(host_arena->pos, ARENA_ALIGN);
         uint64_t new_pos = pos_aligned + size;
@@ -123,7 +192,7 @@ namespace magik::host_memory
             uint8_t* mem = (uint8_t*)host_arena + host_arena->commit_pos;
             uint64_t commit_size = new_commit_pos - host_arena->commit_pos;
 
-            if(!platform_mem_commit(mem, commit_size))
+            if(!platform_mem_commit(user_host_mem_commit_func,mem, commit_size))
             {
                 return nullptr;
             }
