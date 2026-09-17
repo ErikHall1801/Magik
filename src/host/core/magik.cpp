@@ -118,58 +118,56 @@ MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft)
 * [SECTION] Render manager
 */
 
-MAGIK_API magik_render_manager_t magik_create_render_manager(magik_manager_descriptor_t descriptor)
+MAGIK_API e_magik_result_types magik_create_render_manager(magik_render_manager_t* manager, magik_manager_descriptor_t descriptor)
 {
     int32_t n_cuda_device = magik::bridge::host_get_n_cuda_device();
 
     if(descriptor.user_device_id >= n_cuda_device)
     {
-        set_g_last_error(MAGIK_INVALID_CUDA_DEVICE);
-        return nullptr;
+        set_and_return_error(MAGIK_INVALID_CUDA_DEVICE);
     }
 
-    magik_render_manager* manager = new magik_render_manager();
+    magik_render_manager* new_manager = new magik_render_manager();
     
-    manager->cuda_device = descriptor.user_device_id;
+    new_manager->cuda_device = descriptor.user_device_id;
 
     if(descriptor.user_stream == nullptr)
     {
-        manager->owns_stream = true;
-        magik::bridge::host_create_cuda_stream(&manager->cuda_stream);
+        new_manager->owns_stream = true;
+        magik::bridge::host_create_cuda_stream(&new_manager->cuda_stream);
     }
     else
     {
-        manager->owns_stream = false;
-        manager->cuda_stream = descriptor.user_stream;
+        new_manager->owns_stream = false;
+        new_manager->cuda_stream = descriptor.user_stream;
     }
 
-    manager->cqs_context.n_reserved_chunk = descriptor.cqs_n_reserved_chunk;
-    manager->cqs_context.drop_overflows = descriptor.cqs_drop_overflow;
+    new_manager->cqs_context.n_reserved_chunk = descriptor.cqs_n_reserved_chunk;
+    new_manager->cqs_context.drop_overflows = descriptor.cqs_drop_overflow;
 
     try
     {
-        manager->cqs_context.front = std::make_unique<magik::cqs::buffer_object>();
-        manager->cqs_context.back = std::make_unique<magik::cqs::buffer_object>();
+        new_manager->cqs_context.front = std::make_unique<magik::cqs::buffer_object>();
+        new_manager->cqs_context.back = std::make_unique<magik::cqs::buffer_object>();
 
-        manager->cqs_context.front->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
-        manager->cqs_context.back->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
+        new_manager->cqs_context.front->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
+        new_manager->cqs_context.back->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
     }
     catch(const std::bad_alloc)
     {
-        set_g_last_error(MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED);
-        delete manager;
-        return nullptr;
+        delete new_manager;
+        set_and_return_error(MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED);
     }
 
-    manager->user_host_mem_reserve_func = descriptor.host_reserve_func;
-    manager->user_host_mem_commit_func = descriptor.host_commit_func;
-    manager->user_host_mem_decommit_func = descriptor.host_decommit_func;
-    manager->user_host_mem_release_func = descriptor.host_release_func;
+    new_manager->user_host_mem_reserve_func = descriptor.host_reserve_func;
+    new_manager->user_host_mem_commit_func = descriptor.host_commit_func;
+    new_manager->user_host_mem_decommit_func = descriptor.host_decommit_func;
+    new_manager->user_host_mem_release_func = descriptor.host_release_func;
 
-    manager->worker_thread = std::thread(magik::worker::run, manager);
+    new_manager->worker_thread = std::thread(magik::worker::run, new_manager);
 
-    set_g_last_error(MAGIK_SUCCESS);
-    return manager;
+    *manager = new_manager;
+    set_and_return_error(MAGIK_SUCCESS);
 }
 
 MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager_t manager)

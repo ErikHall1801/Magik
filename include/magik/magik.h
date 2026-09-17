@@ -334,7 +334,7 @@ typedef struct magik_render_manager* magik_render_manager_t;
 * render context using the command queue system. The CQS is configured in this function call as well. All "hot loop" functions, such 
 * as magik_aov_fetch() are designed to handle situations where they are called before the worker thread is done initalizing. 
 */
-MAGIK_API magik_render_manager_t magik_create_render_manager(magik_manager_descriptor_t descriptor);
+MAGIK_API e_magik_result_types magik_create_render_manager(magik_render_manager_t* manager, magik_manager_descriptor_t descriptor);
 
 /**
 * @brief TEMP !!! All this does is stop the render thread and call .join(). 
