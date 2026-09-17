@@ -13,6 +13,8 @@ namespace magik::worker
             magik::aov::initialize_swapchain(&manager->aov_context);
         }
 
+        manager->host_arena = magik::host_memory::arena_create(GiB(1), MiB(64));
+
         manager->is_running.store(true, std::memory_order_release);
 
         set_and_return_error(MAGIK_SUCCESS);
@@ -73,5 +75,7 @@ namespace magik::worker
         }
 
         check_magik_errors(magik::aov::destroy_render_framebuffer_object(&manager->aov_context));
+
+        magik::host_memory::arena_destroy(manager->host_arena);
     }
 }

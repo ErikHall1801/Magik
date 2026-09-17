@@ -9,6 +9,7 @@
 #include "magik_arbitrary_output_variables.h"
 #include "magik_command_queue_system.h"
 #include "magik_worker.h"
+#include "magik_host_memory.h"
 
 
 
@@ -394,4 +395,49 @@ MAGIK_API bool magik_cqs_dispatch_command_buffer(magik_render_manager_t manager)
         g_last_error = MAGIK_SUCCESS;
         return false;
     }
+}
+
+
+
+/**
+* [SECTION] Memory telemetry
+*/
+
+MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager* manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type)
+{
+    if(!manager || !size_reserve || !size_commit) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+
+    if(!manager->is_running.load(std::memory_order_acquire))
+    {
+        *size_reserve = 0;
+        *size_commit = 0;
+        set_and_return_error(MAGIK_SUCCESS);
+    }
+
+    switch(type)
+    {
+        case MAGIK_MEMORY_HOST:
+        {
+            *size_reserve = host_mem_reserve.load(std::memory_order_acquire);
+            *size_commit = host_mem_commit.load(std::memory_order_acquire);
+            break;
+        }
+
+        case MAGIK_MEMORY_DEVICE:
+        {
+            break;
+        }
+
+        case MAGIK_MEMORY_UNIFIED:
+        {
+            break;
+        }
+
+        default:
+        {
+            set_and_return_error(MAGIK_UNKNOWN_ENUM_TYPE);
+        }
+    }
+
+    set_and_return_error(MAGIK_SUCCESS);
 }

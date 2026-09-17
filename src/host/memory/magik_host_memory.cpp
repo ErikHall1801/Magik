@@ -1,5 +1,8 @@
 #include "magik_host_memory.h"
 
+std::atomic<uint64_t> host_mem_commit = {0};
+std::atomic<uint64_t> host_mem_reserve = {0};
+
 namespace magik::host_memory
 {
     #if defined(_WIN32)
@@ -87,6 +90,9 @@ namespace magik::host_memory
         arena->pos = AREAN_BASE_POS;
         arena->commit_pos = commit_size;
 
+        host_mem_commit.fetch_add(commit_size);
+        host_mem_reserve.fetch_add(reserve_size);
+
         return arena;
     }
 
@@ -122,6 +128,7 @@ namespace magik::host_memory
                 return nullptr;
             }
 
+            host_mem_commit.fetch_add(commit_size);
             host_arena->commit_pos = new_commit_pos;
         }
 

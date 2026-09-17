@@ -707,6 +707,36 @@ MAGIK_API bool magik_cqs_dispatch_command_buffer(magik_render_manager_t manager)
 
 
 
+/**
+* [SECTION] Memory telemetry
+*/
+
+/**
+* 
+*/
+typedef enum
+{
+    MAGIK_MEMORY_HOST = 0,
+    MAGIK_MEMORY_DEVICE = 1,
+    MAGIK_MEMORY_UNIFIED = 2
+} e_magik_memory_types;
+
+/**
+* @brief Writes the current number of reserved and committed bits of typed memory into the provided pointers
+* 
+* @param [in] manager Initialized manager
+* @param [in] size_reserve The size of virtual memory reserved
+* @param [in] size_commit The size of physical memory committed
+* @param [in] type The memory type being fetched
+* 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_UNKNOWN_ENUM_TYPE
+* 
+* @warning This function returns MAGIK_SUCCESS if the worker thread is not running yet and writes 0 to the output. 
+*/
+MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager* manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type); 
+
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <memory>
+#include <atomic>
 
 #if defined(_WIN32)
     #include <windows.h>
@@ -9,6 +10,10 @@
     #include <unistd.h>
     #include <sys/mman.h>
 #endif
+
+#define KiB(n) ((uint64_t)(n) << 10)
+#define MiB(n) ((uint64_t)(n) << 20)
+#define GiB(n) ((uint64_t)(n) << 30)
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -20,8 +25,8 @@ namespace magik::host_memory
 {
     struct host_mem_arena
     {
-        uint64_t reserve_size;
-        uint64_t commit_size;
+        uint64_t reserve_size; // This does not change once the arena has been created. 
+        uint64_t commit_size; // But this is also not changing ? 
 
         uint64_t pos; // Where the actual memory is 
         uint64_t commit_pos; // Where the committed memory is 
@@ -39,3 +44,6 @@ namespace magik::host_memory
 
     void arena_clear(host_mem_arena* host_arena); 
 }
+
+extern std::atomic<uint64_t> host_mem_commit;
+extern std::atomic<uint64_t> host_mem_reserve;

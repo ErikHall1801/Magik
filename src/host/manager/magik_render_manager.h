@@ -6,6 +6,7 @@
 #include "magik.h" 
 #include "magik_arbitrary_output_variables.h" 
 #include "magik_command_queue_system.h"
+#include "magik_host_memory.h"
 
 namespace magik::render_manager
 {
@@ -42,8 +43,10 @@ struct magik_render_manager
     magik::aov::context aov_context;
     magik::cqs::context cqs_context;
 
-    magik::render_manager::context render_context;
+    magik::host_memory::host_mem_arena* host_arena;
 
+    // This is tmp
+    magik::render_manager::context render_context;
     // magik::render_manager::render_context dcc_render_context;
     // magik::render_manager::render_context api_render_context;
     // std::unique_ptr<magik::render_manager::render_context> dcc_render_context_history;
