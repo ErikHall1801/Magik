@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <memory>
 #include <atomic>
+#include <cstring>
 
 #if defined(_WIN32)
     #include <windows.h>

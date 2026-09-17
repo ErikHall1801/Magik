@@ -50,6 +50,7 @@ typedef enum e_magik_result_types
 
     // Device 300 - 399
     MAGIK_ERROR_DEVICE_OUT_OF_MEMORY = 200,
+    MAGIK_ERROR_DEVICE_ALLOCATION_FAILED = 201,
 
     // Command queue system 400 - 499
     MAGIK_ERROR_INVALID_ID = 400, // Happens when the id provided to a function related to the command queue system is not valid, i.e 0 or uninitialized

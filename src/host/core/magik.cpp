@@ -118,7 +118,7 @@ MAGIK_API magik_render_manager_t magik_create_render_manager(magik_manager_descr
 
     if(descriptor.user_device_id >= n_cuda_device)
     {
-        g_last_error = MAGIK_INVALID_CUDA_DEVICE;
+        set_g_last_error(MAGIK_INVALID_CUDA_DEVICE);
         return nullptr;
     }
 
@@ -150,14 +150,14 @@ MAGIK_API magik_render_manager_t magik_create_render_manager(magik_manager_descr
     }
     catch(const std::bad_alloc)
     {
-        g_last_error = MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED;
+        set_g_last_error(MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED);
         delete manager;
         return nullptr;
     }
 
     manager->worker_thread = std::thread(magik::worker::run, manager);
 
-    g_last_error = MAGIK_SUCCESS;
+    set_g_last_error(MAGIK_SUCCESS);
     return manager;
 }
 
@@ -188,14 +188,14 @@ MAGIK_API magik_aov_framebuffer_object_external_t magik_configure_aov_framebuffe
     
     if(config_type != MAGIK_AOV_CONFIG_HOST && config_type != MAGIK_AOV_CONFIG_CUDA && config_type != MAGIK_AOV_CONFIG_OPENGL_INTEROP && config_type != MAGIK_AOV_CONFIG_VULKAN_INTEROP)
     {
-        g_last_error = MAGIK_UNKNOWN_ENUM_TYPE;
+        set_g_last_error(MAGIK_UNKNOWN_ENUM_TYPE);
         delete buffer;
         return nullptr;
     }
 
     buffer->config_type = config_type;
 
-    g_last_error = MAGIK_SUCCESS;
+    set_g_last_error(MAGIK_SUCCESS);
     return buffer;
 }
 
@@ -203,29 +203,29 @@ MAGIK_API bool magik_aov_fetch(magik_render_manager_t manager, magik_aov_framebu
 {
     if(!manager || !dcc_buffer)
     {
-        g_last_error = MAGIK_ERROR_INVALID_POINTER;
+        set_g_last_error(MAGIK_ERROR_INVALID_POINTER);
         return false;
     }
 
     if(!manager->is_running.load(std::memory_order_acquire))
     {
-        g_last_error = MAGIK_SUCCESS;
+        set_g_last_error(MAGIK_SUCCESS);
         return false;
     }
 
     if(manager->display_type == MAGIK_DISPLAY_HEADLESS)
     {
-        g_last_error = MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED;
+        set_g_last_error(MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED);
         return false;
     }
 
     if(!magik::aov::try_swap_front_framebuffer(&manager->aov_context))
     {
-        g_last_error = magik_get_last_error();
+        set_g_last_error(magik_get_last_error());
         return false;
     }
 
-    g_last_error = magik::aov::memcpy_front_framebuffer_to_dcc_framebuffer(&manager->aov_context, dcc_buffer);
+    set_g_last_error(magik::aov::memcpy_front_framebuffer_to_dcc_framebuffer(&manager->aov_context, dcc_buffer));
     return true;
 }
 
@@ -380,19 +380,19 @@ MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t man
 
 MAGIK_API bool magik_cqs_dispatch_command_buffer(magik_render_manager_t manager)
 {
-    if(!manager) { g_last_error = MAGIK_ERROR_INVALID_POINTER; return false; }
+    if(!manager) { set_g_last_error(MAGIK_ERROR_INVALID_POINTER); return false; }
 
     if(manager->cqs_context.is_swap_ready.load(std::memory_order_acquire))
     {
         manager->cqs_context.front.swap(manager->cqs_context.back);
         manager->cqs_context.is_swap_ready.store(false, std::memory_order_release);
 
-        g_last_error = MAGIK_SUCCESS;
+        set_g_last_error(MAGIK_SUCCESS);
         return true;
     }
     else
     {
-        g_last_error = MAGIK_SUCCESS;
+        set_g_last_error(MAGIK_SUCCESS);
         return false;
     }
 }

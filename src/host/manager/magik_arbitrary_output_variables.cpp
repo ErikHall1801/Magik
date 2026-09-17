@@ -98,19 +98,19 @@ namespace magik::aov
     {
         if(!ctx || !ctx->ready_framebuffer_object.load(std::memory_order_relaxed) || !ctx->front_framebuffer_object)
         {
-            g_last_error = MAGIK_ERROR_INVALID_POINTER;
+            set_g_last_error(MAGIK_ERROR_INVALID_POINTER);
             return false;
         }
 
         if(!ctx->is_ready_updated.exchange(false, std::memory_order_acquire)) 
         {
-            g_last_error = MAGIK_SUCCESS;
+            set_g_last_error(MAGIK_SUCCESS);
             return false;
         }
         
         ctx->front_framebuffer_object = ctx->ready_framebuffer_object.exchange(ctx->front_framebuffer_object, std::memory_order_acq_rel);
 
-        g_last_error = MAGIK_SUCCESS;
+        set_g_last_error(MAGIK_SUCCESS);
         return true;
     }
 

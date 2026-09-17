@@ -36,7 +36,7 @@ namespace magik::host_memory
     #elif defined(__linux__)
         static uint32_t platform_get_pagesize(void)
         {
-            return (u32)sysconf(_SC_PAGESIZE);
+            return (uint32_t)sysconf(_SC_PAGESIZE);
         }
 
         static void* platform_mem_reserve(uint64_t size)
@@ -50,13 +50,13 @@ namespace magik::host_memory
 
         static bool platform_mem_commit(void* ptr, uint64_t size)
         {
-            i32 ret = mprotect(ptr, size, PROT_READ | PROT_WRITE);
+            int32_t ret = mprotect(ptr, size, PROT_READ | PROT_WRITE);
             return ret == 0;
         }
 
         static bool platform_mem_decommit(void* ptr, uint64_t size)
         {
-            i32 ret = mprotect(ptr, size, PROT_NONE);
+            int32_t ret = mprotect(ptr, size, PROT_NONE);
             if (ret != 0) return false;
             ret = madvise(ptr, size, MADV_DONTNEED);
             return ret == 0;
@@ -64,7 +64,7 @@ namespace magik::host_memory
 
         static bool platform_mem_release(void* ptr, uint64_t size)
         {
-            i32 ret = munmap(ptr, size);
+            int32_t ret = munmap(ptr, size);
             return ret == 0;
         }
     #endif
@@ -148,6 +148,8 @@ namespace magik::host_memory
     {
         size = MIN(size, host_arena->pos - AREAN_BASE_POS);
         host_arena->pos -= size;
+        host_mem_reserve.fetch_sub(size);
+        host_mem_commit.fetch_sub(size);
     }
 
     void arean_pop_to(host_mem_arena* host_arena, uint64_t pos)

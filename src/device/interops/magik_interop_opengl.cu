@@ -14,7 +14,7 @@ namespace magik::interops
     {
         if(!g_gl_loaded) 
         {
-            g_last_error = MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+            set_g_last_error(MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED);
             return;
         }
 
@@ -33,7 +33,7 @@ namespace magik::interops
     {
         if(!g_gl_loaded) 
         {
-            g_last_error = MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+            set_g_last_error(MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED);
             return;
         }
 
@@ -53,7 +53,7 @@ namespace magik::interops
     {
         if(!g_gl_loaded) 
         {
-            g_last_error = MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+            set_g_last_error(MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED);
             return;
         }
 
@@ -76,7 +76,7 @@ namespace magik::interops
 
         if(!g_gl_loaded) 
         {
-            g_last_error = MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+            set_g_last_error(MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED);
             return;
         }
 
@@ -90,7 +90,7 @@ namespace magik::interops
         size_t size_of_buffer = (size_t)(x_resolution*y_resolution*channels)*sizeof(float);
         if(size_of_buffer > size_of_resource) 
         { 
-            g_last_error = MAGIK_ERROR_GL_BUFFER_SIZE_MISMATCH;
+            set_g_last_error(MAGIK_ERROR_GL_BUFFER_SIZE_MISMATCH);
         }
 
         else check_cuda_errors(cudaMemcpy(d_resource_ptr, d_ptr, size_of_buffer, cudaMemcpyDeviceToDevice));

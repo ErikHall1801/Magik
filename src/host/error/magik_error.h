@@ -15,6 +15,7 @@
 #endif
 
 #define set_and_return_error(val) { g_last_error = val; return val; }
+#define set_g_last_error(val) { if(g_last_error == MAGIK_SUCCESS) { g_last_error = val; } }
 
 /**
 * [SECTION] Error handling & result types
