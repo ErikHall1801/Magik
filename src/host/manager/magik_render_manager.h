@@ -34,6 +34,8 @@ struct magik_render_manager
     std::atomic<bool> is_running = false;
     std::thread worker_thread;
 
+    e_magik_result_types last_error_type = MAGIK_SUCCESS;
+
     e_magik_manager_display_types display_type = MAGIK_DISPLAY_SWAPCHAIN;
 
     void* cuda_stream = nullptr;
