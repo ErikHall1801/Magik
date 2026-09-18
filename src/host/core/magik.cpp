@@ -186,8 +186,8 @@ MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager_t m
     {
         case MAGIK_MEMORY_HOST:
         {
-            *size_reserve = host_mem_reserve.load(std::memory_order_acquire);
-            *size_commit = host_mem_commit.load(std::memory_order_acquire);
+            *size_reserve = manager->host_mem_reserve.load(std::memory_order_acquire);
+            *size_commit = manager->host_mem_commit.load(std::memory_order_acquire);
             break;
         }
 

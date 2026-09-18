@@ -16,7 +16,7 @@ namespace magik::worker
             }
         }
 
-        MAGIK_TRY_CATCH(_r, magik::host_memory::arena_create(&manager->host_arena, GiB(1), MiB(64), nullptr, nullptr))
+        MAGIK_TRY_CATCH(_r, magik::host_memory::arena_create(manager, &manager->host_arena, GiB(1), MiB(64), nullptr, nullptr))
         {
             return _r;
         }
@@ -117,6 +117,6 @@ namespace magik::worker
             manager->atomic_last_error_type.compare_exchange_strong(expected, _r);
         }
 
-        magik::host_memory::arena_destroy(manager->host_arena, manager->user_host_mem_release_func);
+        magik::host_memory::arena_destroy(manager, manager->host_arena, manager->user_host_mem_release_func);
     }
 }

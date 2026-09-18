@@ -51,6 +51,9 @@ struct magik_render_manager
     host_mem_release_function user_host_mem_release_func = nullptr;
     magik::host_memory::host_mem_arena* host_arena;
 
+    std::atomic<uint64_t> host_mem_reserve {0};
+    std::atomic<uint64_t> host_mem_commit {0};
+
     // This is tmp
     magik::render_manager::context render_context;
     // magik::render_manager::render_context dcc_render_context;

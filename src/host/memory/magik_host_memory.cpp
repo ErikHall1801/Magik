@@ -1,7 +1,5 @@
 #include "magik_host_memory.h"
-
-std::atomic<uint64_t> host_mem_commit = {0};
-std::atomic<uint64_t> host_mem_reserve = {0};
+#include "magik_render_manager.h"
 
 namespace magik::host_memory
 {
@@ -140,7 +138,7 @@ namespace magik::host_memory
         }
     #endif
 
-    e_magik_result_types arena_create(host_mem_arena** arena, uint64_t reserve_size, uint64_t commit_size, host_mem_reserve_function user_host_mem_reserve_func, host_mem_commit_function user_host_mem_commit_func)
+    e_magik_result_types arena_create(magik_render_manager* manager, host_mem_arena** arena, uint64_t reserve_size, uint64_t commit_size, host_mem_reserve_function user_host_mem_reserve_func, host_mem_commit_function user_host_mem_commit_func)
     {
         uint32_t page_size = platform_get_pagesize();
 
@@ -160,19 +158,21 @@ namespace magik::host_memory
         new_arena->pos = AREAN_BASE_POS;
         new_arena->commit_pos = commit_size;
 
-        host_mem_commit.fetch_add(commit_size);
-        host_mem_reserve.fetch_add(reserve_size);
+        manager->host_mem_commit.fetch_add(commit_size);
+        manager->host_mem_reserve.fetch_add(reserve_size);
 
         *arena = new_arena;
         return MAGIK_SUCCESS;
     }
 
-    void arena_destroy(host_mem_arena* host_arena, host_mem_release_function user_host_mem_release_func)
+    void arena_destroy(magik_render_manager* manager, host_mem_arena* host_arena, host_mem_release_function user_host_mem_release_func)
     {
+        manager->host_mem_reserve.fetch_sub(host_arena->reserve_size);
+        manager->host_mem_commit.fetch_sub(host_arena->commit_size);
         platform_mem_release(user_host_mem_release_func, host_arena, host_arena->reserve_size);
     }
 
-    e_magik_result_types arena_push(host_mem_arena* host_arena, void** dst_ptr, uint64_t size, host_mem_commit_function user_host_mem_commit_func, bool non_zero)
+    e_magik_result_types arena_push(magik_render_manager* manager, host_mem_arena* host_arena, void** dst_ptr, uint64_t size, host_mem_commit_function user_host_mem_commit_func, bool non_zero)
     {
         uint64_t pos_aligned = ALIGN_UP_POW2(host_arena->pos, ARENA_ALIGN);
         uint64_t new_pos = pos_aligned + size;
@@ -199,7 +199,7 @@ namespace magik::host_memory
                 return MAGIK_ERROR_HOST_MEMORY_ALLOCATION_FAILED;
             }
 
-            host_mem_commit.fetch_add(commit_size);
+            manager->host_mem_commit.fetch_add(commit_size);
             host_arena->commit_pos = new_commit_pos;
         }
 
@@ -216,22 +216,22 @@ namespace magik::host_memory
         return MAGIK_SUCCESS;
     }
 
-    void arena_pop(host_mem_arena* host_arena, uint64_t size)
+    void arena_pop(magik_render_manager* manager, host_mem_arena* host_arena, uint64_t size)
     {
         size = MIN(size, host_arena->pos - AREAN_BASE_POS);
         host_arena->pos -= size;
-        host_mem_reserve.fetch_sub(size);
-        host_mem_commit.fetch_sub(size);
+        manager->host_mem_reserve.fetch_sub(size);
+        manager->host_mem_commit.fetch_sub(size);
     }
 
-    void arean_pop_to(host_mem_arena* host_arena, uint64_t pos)
+    void arean_pop_to(magik_render_manager* manager, host_mem_arena* host_arena, uint64_t pos)
     {
         uint64_t size = pos < host_arena->pos ? host_arena->pos - pos : 0;
-        arena_pop(host_arena, size);
+        arena_pop(manager, host_arena, size);
     }
 
-    void arena_clear(host_mem_arena* host_arena)
+    void arena_clear(magik_render_manager* manager, host_mem_arena* host_arena)
     {
-        arean_pop_to(host_arena, AREAN_BASE_POS);
+        arean_pop_to(manager, host_arena, AREAN_BASE_POS);
     }
 }
