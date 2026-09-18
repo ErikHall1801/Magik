@@ -197,6 +197,68 @@ namespace magik::cqs
         }
     }
 
+    e_magik_result_types push_command(magik_render_manager_t manager, const void* command)
+    {
+        if(!manager || !command) return MAGIK_ERROR_INVALID_POINTER;
+
+        if(reinterpret_cast<uintptr_t>(command) % sizeof(uint32_t) != 0) return MAGIK_ERROR_PACKED_COMMAND_NOT_ALLIGNED;
+
+        e_magik_cqs_command_types command_type;
+        memcpy(&command_type, command, sizeof(e_magik_cqs_command_types)); 
+        
+        bool is_valid = false;
+        size_t command_size = 0;
+        magik::cqs::fetch_command_info(command_type, &is_valid, &command_size);
+
+        if(!is_valid) return MAGIK_ERROR_INVALID_COMMAND;
+
+        if(command_size % sizeof(uint32_t) != 0) return MAGIK_ERROR_COMMAND_SIZE_NOT_A_MULTIPLE_OF_4;
+
+        size_t command_buffer_occupancy = (size_t)(manager->cqs_context.front->n_occupied_chunk)*sizeof(uint32_t);
+        size_t command_buffer_capacity = (size_t)(manager->cqs_context.n_reserved_chunk)*sizeof(uint32_t);
+
+        if((command_buffer_occupancy+command_size) > command_buffer_capacity)
+        {
+            if(manager->cqs_context.drop_overflows)
+            {
+                return MAGIK_SUCCESS;
+            }
+            else
+            {
+                return MAGIK_ERROR_COMMAND_BUFFER_OVERFLOW;
+            }
+        }
+
+        uint32_t* head_ptr = manager->cqs_context.front->data.get() + manager->cqs_context.front->n_occupied_chunk;
+        memcpy(head_ptr, command, command_size);
+        manager->cqs_context.front->n_occupied_chunk += static_cast<uint32_t>(command_size / sizeof(uint32_t));
+
+        return MAGIK_SUCCESS;
+    }
+
+    e_magik_result_types dispatch_command_buffer(magik_render_manager_t manager, bool* is_dispatched)
+    {
+        if(!manager) 
+        {
+            *is_dispatched = false;
+            return MAGIK_ERROR_INVALID_POINTER;
+        }
+
+        if(manager->cqs_context.is_swap_ready.load(std::memory_order_acquire))
+        {
+            manager->cqs_context.front.swap(manager->cqs_context.back);
+            manager->cqs_context.is_swap_ready.store(false, std::memory_order_release);
+
+            *is_dispatched = true;
+            return MAGIK_SUCCESS;
+        }
+        else
+        {
+            *is_dispatched = false;
+            return MAGIK_SUCCESS;
+        }
+    }
+
     e_magik_result_types consume_command_buffer(magik_render_manager_t manager, buffer_object* buffer)
     {
         /*
