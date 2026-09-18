@@ -137,18 +137,6 @@ typedef void (*magik_error_callback)(e_magik_result_types result, const char* fu
 MAGIK_API void magik_set_error_callback(magik_error_callback callback, void* user_data);
 
 /**
-* @brief Gets the last magik error. This is useful in circumstances where a Magik function call is wrapped inside another 
-* function which may not be able to return the error. You can nest this function inside the check_magik_error macro to get the 
-* usual behavior. 
-*
-* @return Last error
-* 
-* @warning While the function is thread safe it can only return the last error and is not intrinsically aware to distinguish where 
-* an error happen. The error log will use the location check_magik_error ! 
-*/
-MAGIK_API e_magik_result_types magik_get_last_error(void);
-
-/**
 * @brief This is the default error checking function which the macro "check_magik_errors" uses. 
 * 
 * @param [in] result The result of a function which returns e_magik_result_types. In case an API function does not return this type,

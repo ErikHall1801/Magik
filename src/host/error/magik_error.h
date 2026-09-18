@@ -14,10 +14,6 @@
 * [SECTION] Error handling & result types
 */
 
-// DEPRICATED
-#define set_and_return_error(val) { g_last_error = val; return val; }
-#define set_g_last_error(val) { if(g_last_error == MAGIK_SUCCESS) { g_last_error = val; } }
-
 /*
 * 
 * These try/catch/propagate blocks are for the internal API use
@@ -66,16 +62,12 @@ namespace magik::error
     */
     void set_error_callback_internal(magik_error_callback callback, void* user_data);
 
-    e_magik_result_types get_last_error_internal(void);
-
     void check_error_internal(e_magik_result_types result, char const* func, const char* const file, int const line);
 }
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-extern thread_local e_magik_result_types g_last_error;
 
 #ifdef __cplusplus
 }

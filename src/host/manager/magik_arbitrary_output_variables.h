@@ -92,7 +92,7 @@ namespace magik::aov
 
     e_magik_result_types memcpy_front_framebuffer_to_dcc_framebuffer(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer);
 
-    bool try_swap_front_framebuffer(magik::aov::context* ctx);
+    e_magik_result_types try_swap_front_framebuffer(magik::aov::context* ctx, bool* is_swapped);
 
     e_magik_result_types destroy_swpachain(magik::aov::context* ctx);
 

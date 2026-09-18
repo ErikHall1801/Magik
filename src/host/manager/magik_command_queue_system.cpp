@@ -206,7 +206,7 @@ namespace magik::cqs
         * And, once it exists, pass in the correct render graph. 
         */
 
-        if(!manager) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+        if(!manager) return MAGIK_ERROR_INVALID_POINTER;
 
         size_t command_buffer_occupancy = (size_t)(buffer->n_occupied_chunk);
         uint32_t* playhead = buffer->data.get();
@@ -222,9 +222,9 @@ namespace magik::cqs
 
             fetch_command_info(command_type, &is_valid, &command_size);
 
-            if(!is_valid || command_size == 0 || (command_size % sizeof(uint32_t) != 0)) set_and_return_error(MAGIK_ERROR_INVALID_COMMAND);
+            if(!is_valid || command_size == 0 || (command_size % sizeof(uint32_t) != 0)) return MAGIK_ERROR_INVALID_COMMAND;
 
-            if(((playhead_offset + command_size) / sizeof(uint32_t)) > command_buffer_occupancy) set_and_return_error(MAGIK_ERROR_OUT_OF_BOUNDS_COMMAND_BUFFER_READ);
+            if(((playhead_offset + command_size) / sizeof(uint32_t)) > command_buffer_occupancy) return MAGIK_ERROR_OUT_OF_BOUNDS_COMMAND_BUFFER_READ;
 
             apply_command(manager, (playhead + playhead_offset), buffer, command_type, command_size);
 
@@ -232,13 +232,13 @@ namespace magik::cqs
         }
 
         buffer->n_occupied_chunk = 0;
-        set_and_return_error(MAGIK_SUCCESS);
+        return MAGIK_SUCCESS;
     }
 
     e_magik_result_types consume_back_command_buffer(magik_render_manager_t manager)
     {
         e_magik_result_types error = consume_command_buffer(manager, manager->cqs_context.back.get());
         manager->cqs_context.is_swap_ready.store(true, std::memory_order_release);
-        set_and_return_error(error);
+        return error;
     }
 }

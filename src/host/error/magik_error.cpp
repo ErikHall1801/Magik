@@ -9,8 +9,6 @@ static magik_error_callback g_error_callback = nullptr;
 
 static void* g_error_user_data = nullptr;
 
-thread_local e_magik_result_types g_last_error = MAGIK_SUCCESS;
-
 #ifdef __cplusplus
 }
 #endif
@@ -21,11 +19,6 @@ namespace magik::error
     {
         g_error_callback = callback;
         g_error_user_data = user_data;
-    }
-
-    e_magik_result_types get_last_error_internal(void)
-    {
-        return g_last_error;
     }
 
     void check_error_internal(e_magik_result_types result, char const* func, const char* const file, int const line)

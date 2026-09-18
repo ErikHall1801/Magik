@@ -10,6 +10,7 @@
 #pragma once
 #include <stdint.h>
 #include <cstddef>
+#include "magik_error.h"
 
 namespace magik::bridge
 {
@@ -35,11 +36,11 @@ namespace magik::bridge
 
     void set_cuda_device(uint32_t cuda_device);
 
-    void host_allocate_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource);
+    e_magik_result_types host_allocate_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource);
 
-    void host_free_gl_buffer(uint32_t* gl_buffer_id, void** cuda_resource);
+    e_magik_result_types host_free_gl_buffer(uint32_t* gl_buffer_id, void** cuda_resource);
 
-    void host_map_cuda_to_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, void** cuda_resource, float* d_ptr);
+    e_magik_result_types host_map_cuda_to_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, void** cuda_resource, float* d_ptr);
 
     void host_create_cuda_stream(void** user_stream);
 

@@ -135,22 +135,19 @@ namespace magik::bridge
         check_cuda_errors(cudaSetDevice(cuda_device));
     }
 
-    void host_allocate_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource)
+    e_magik_result_types host_allocate_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource)
     {
-        magik::interops::allocate_gl_buffer(x_resolution, y_resolution, channels, gl_buffer_id, cuda_resource);
-        check_magik_errors(magik_get_last_error());
+        return magik::interops::allocate_gl_buffer(x_resolution, y_resolution, channels, gl_buffer_id, cuda_resource);
     }
 
-    void host_free_gl_buffer(uint32_t* gl_buffer_id, void** cuda_resource)
+    e_magik_result_types host_free_gl_buffer(uint32_t* gl_buffer_id, void** cuda_resource)
     {
-        magik::interops::free_gl_buffer(gl_buffer_id, cuda_resource);
-        check_magik_errors(magik_get_last_error());
+        return magik::interops::free_gl_buffer(gl_buffer_id, cuda_resource);
     }
 
-    void host_map_cuda_to_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, void** cuda_resource, float* d_ptr)
+    e_magik_result_types host_map_cuda_to_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, void** cuda_resource, float* d_ptr)
     {
-        magik::interops::map_cuda_to_gl_buffer(x_resolution, y_resolution, channels, cuda_resource, d_ptr);
-        check_magik_errors(magik_get_last_error());
+        return magik::interops::map_cuda_to_gl_buffer(x_resolution, y_resolution, channels, cuda_resource, d_ptr);
     }
 
     void host_create_cuda_stream(void** user_stream)

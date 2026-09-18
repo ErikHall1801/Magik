@@ -6,14 +6,14 @@ namespace magik::aov
     {
         if(!ctx)
         {
-            set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+            return MAGIK_ERROR_INVALID_POINTER;
         }
 
         ctx->front_framebuffer_object = &ctx->framebuffer_object_collection[0];
         ctx->ready_framebuffer_object.store(&ctx->framebuffer_object_collection[1], std::memory_order_relaxed);
         ctx->back_framebuffer_object = &ctx->framebuffer_object_collection[2];
 
-        set_and_return_error(MAGIK_SUCCESS);
+        return MAGIK_SUCCESS;
     }
 
     e_magik_result_types allocate_render_framebuffer_object(bool& is_dirty, magik::aov::context* ctx)
@@ -41,7 +41,7 @@ namespace magik::aov
             }
         }
 
-        set_and_return_error(MAGIK_SUCCESS);
+        return MAGIK_SUCCESS;
     }
 
     e_magik_result_types memcpy_render_to_back_framebuffer_object(magik::aov::context* ctx)
@@ -82,36 +82,36 @@ namespace magik::aov
             magik::bridge::host_memcpy_device_to_device(back_element.d_data, target_value.d_data, size_of_target);
         }
 
-        set_and_return_error(MAGIK_SUCCESS);
+        return MAGIK_SUCCESS;
     }
 
     e_magik_result_types swap_back_framebuffer(magik::aov::context* ctx)
     {
-        if(!ctx || !ctx->ready_framebuffer_object.load(std::memory_order_relaxed) || !ctx->back_framebuffer_object) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+        if(!ctx || !ctx->ready_framebuffer_object.load(std::memory_order_relaxed) || !ctx->back_framebuffer_object) return MAGIK_ERROR_INVALID_POINTER;
 
         ctx->back_framebuffer_object = ctx->ready_framebuffer_object.exchange(ctx->back_framebuffer_object, std::memory_order_acq_rel);
         ctx->is_ready_updated.store(true, std::memory_order_release);
-        set_and_return_error(MAGIK_SUCCESS);
+        return MAGIK_SUCCESS;
     }
 
-    bool try_swap_front_framebuffer(magik::aov::context* ctx)
+    e_magik_result_types try_swap_front_framebuffer(magik::aov::context* ctx, bool* is_swapped)
     {
         if(!ctx || !ctx->ready_framebuffer_object.load(std::memory_order_relaxed) || !ctx->front_framebuffer_object)
         {
-            set_g_last_error(MAGIK_ERROR_INVALID_POINTER);
-            return false;
+            *is_swapped = false;
+            return MAGIK_ERROR_INVALID_POINTER;
         }
 
         if(!ctx->is_ready_updated.exchange(false, std::memory_order_acquire)) 
         {
-            set_g_last_error(MAGIK_SUCCESS);
-            return false;
+            *is_swapped = false;
+            return MAGIK_SUCCESS;
         }
         
         ctx->front_framebuffer_object = ctx->ready_framebuffer_object.exchange(ctx->front_framebuffer_object, std::memory_order_acq_rel);
 
-        set_g_last_error(MAGIK_SUCCESS);
-        return true;
+        *is_swapped = true;
+        return MAGIK_SUCCESS;
     }
 
     static e_magik_result_types memcpy_front_to_host_config_dcc(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
@@ -153,16 +153,18 @@ namespace magik::aov
             magik::bridge::host_memcpy_device_to_host(dcc_value.config_host.h_data, ctx_value.d_data, size_of_buffer);
         }
 
-        set_and_return_error(MAGIK_SUCCESS);
+        return MAGIK_SUCCESS;
     };
 
     static e_magik_result_types memcpy_front_to_cuda_config_dcc(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
     {
-        set_and_return_error(MAGIK_SUCCESS);
+        return MAGIK_SUCCESS;
     };
 
     static e_magik_result_types memcpy_front_to_opengl_interop_config_dcc(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
     {
+        e_magik_result_types _r = MAGIK_SUCCESS;
+
         for(auto iter = dcc_buffer->collection.begin(); iter != dcc_buffer->collection.end(); )
         {
             auto element = ctx->front_framebuffer_object->collection.find(iter->first);
@@ -170,7 +172,7 @@ namespace magik::aov
             if(element == ctx->front_framebuffer_object->collection.end())
             {
                 auto buffer = iter->second;
-                magik::bridge::host_free_gl_buffer(&buffer.config_open_gl_interop.gl_buffer_id, &buffer.config_open_gl_interop.cuda_resource);
+                _r = magik::bridge::host_free_gl_buffer(&buffer.config_open_gl_interop.gl_buffer_id, &buffer.config_open_gl_interop.cuda_resource);
                 iter = dcc_buffer->collection.erase(iter);
             }
             else
@@ -190,30 +192,30 @@ namespace magik::aov
                 dcc_value.y_resolution = ctx_value.y_resolution;
                 dcc_value.channels = ctx_value.channels;
 
-                magik::bridge::host_free_gl_buffer(&dcc_value.config_open_gl_interop.gl_buffer_id, &dcc_value.config_open_gl_interop.cuda_resource);
-                magik::bridge::host_allocate_gl_buffer(dcc_value.x_resolution, dcc_value.y_resolution, dcc_value.channels, &dcc_value.config_open_gl_interop.gl_buffer_id, &dcc_value.config_open_gl_interop.cuda_resource);
+                _r = magik::bridge::host_free_gl_buffer(&dcc_value.config_open_gl_interop.gl_buffer_id, &dcc_value.config_open_gl_interop.cuda_resource);
+                _r = magik::bridge::host_allocate_gl_buffer(dcc_value.x_resolution, dcc_value.y_resolution, dcc_value.channels, &dcc_value.config_open_gl_interop.gl_buffer_id, &dcc_value.config_open_gl_interop.cuda_resource);
             }
 
             magik::bridge::host_map_cuda_to_gl_buffer(dcc_value.x_resolution, dcc_value.y_resolution, dcc_value.channels, &dcc_value.config_open_gl_interop.cuda_resource, ctx_value.d_data);
         }
 
-        set_and_return_error(MAGIK_SUCCESS);
+        return _r;
     };
 
     static e_magik_result_types memcpy_front_to_vulkan_interop_config_dcc(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
     {
-        set_and_return_error(MAGIK_SUCCESS);
+        return MAGIK_SUCCESS;
     };
 
     e_magik_result_types memcpy_front_framebuffer_to_dcc_framebuffer(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer)
     {
-        if(!ctx || !dcc_buffer || !ctx->front_framebuffer_object) set_and_return_error(MAGIK_ERROR_INVALID_POINTER);
+        if(!ctx || !dcc_buffer || !ctx->front_framebuffer_object) return MAGIK_ERROR_INVALID_POINTER;
 
         if( dcc_buffer->config_type != MAGIK_AOV_CONFIG_HOST && 
             dcc_buffer->config_type != MAGIK_AOV_CONFIG_CUDA && 
             dcc_buffer->config_type != MAGIK_AOV_CONFIG_OPENGL_INTEROP && 
             dcc_buffer->config_type != MAGIK_AOV_CONFIG_VULKAN_INTEROP
-        ) set_and_return_error(MAGIK_UNKNOWN_ENUM_TYPE);
+        ) return MAGIK_UNKNOWN_ENUM_TYPE;
 
         e_magik_result_types result = MAGIK_SUCCESS;
 
@@ -244,7 +246,7 @@ namespace magik::aov
             }
         }
 
-        set_and_return_error(result);
+        return result;
     }
 
     e_magik_result_types destroy_swpachain(magik::aov::context* ctx)
@@ -259,7 +261,7 @@ namespace magik::aov
             ctx->framebuffer_object_collection[i].collection.clear();
         }
 
-        set_and_return_error(MAGIK_SUCCESS);
+        return MAGIK_SUCCESS;
     }
 
     e_magik_result_types destroy_render_framebuffer_object(magik::aov::context* ctx)
@@ -271,6 +273,6 @@ namespace magik::aov
 
         ctx->render_framebuffer_object.collection.clear();
 
-        set_and_return_error(MAGIK_SUCCESS);
+        return MAGIK_SUCCESS;
     }
 };
