@@ -82,6 +82,16 @@ namespace magik::aov
         std::atomic<bool> is_ready_updated = false;
     };
 
+    e_magik_result_types configure_framebuffer_object(magik_aov_framebuffer_object_external_t* framebuffer, e_magik_aov_config_types config_type);
+
+    e_magik_result_types fetch(magik_render_manager_t manager, bool* is_new_fetch, magik_aov_framebuffer_object_external_t framebuffer_object);
+
+    e_magik_result_types extract_config_host(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t framebuffer_object, const char* name);
+
+    e_magik_result_types extract_config_opengl_interop(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t framebuffer_object, const char* name);
+
+    e_magik_result_types destroy_framebuffer_object(magik_aov_framebuffer_object_external_t framebuffer_object);
+
     e_magik_result_types initialize_swapchain(magik::aov::context* ctx);
 
     e_magik_result_types allocate_render_framebuffer_object(bool& is_dirty, magik::aov::context* ctx);
@@ -90,7 +100,7 @@ namespace magik::aov
 
     e_magik_result_types swap_back_framebuffer(magik::aov::context* ctx);
 
-    e_magik_result_types memcpy_front_framebuffer_to_dcc_framebuffer(magik::aov::context* ctx, magik_aov_framebuffer_object_external* dcc_buffer);
+    e_magik_result_types memcpy_front_framebuffer_to_dcc_framebuffer(magik::aov::context* ctx, magik_aov_framebuffer_object_external* framebuffer_object);
 
     e_magik_result_types try_swap_front_framebuffer(magik::aov::context* ctx, bool* is_swapped);
 

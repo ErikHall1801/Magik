@@ -322,12 +322,12 @@ typedef struct magik_render_manager* magik_render_manager_t;
 * render context using the command queue system. The CQS is configured in this function call as well. All "hot loop" functions, such 
 * as magik_aov_fetch() are designed to handle situations where they are called before the worker thread is done initalizing. 
 */
-MAGIK_API e_magik_result_types magik_create_render_manager(magik_render_manager_t* manager, magik_manager_descriptor_t descriptor);
+MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_t* manager, magik_manager_descriptor_t descriptor);
 
 /**
 * @brief TEMP !!! All this does is stop the render thread and call .join(). 
 */
-MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager_t mananger);
+MAGIK_API e_magik_result_types magik_render_manager_destroy(magik_render_manager_t mananger);
 
 /**
 * @brief Writes the current number of reserved and committed bits of typed memory into the provided pointers
@@ -356,7 +356,7 @@ MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager_t m
 * device how often they want to do so.
 * Do note, the DCC owns the manager. So when the API crashes, the last error is persistent in the manager.  
 */
-MAGIK_API e_magik_result_types magik_fetch_manager_error(magik_render_manager_t manager);
+MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_manager_t manager);
 
 
 
@@ -390,7 +390,7 @@ typedef struct magik_aov_framebuffer_object_external* magik_aov_framebuffer_obje
 * @warning This function does not requiere a swapchain to be setup, as the external framebuffer object can equally be used as the target 
 * to extract the render framebuffer. 
 */
-MAGIK_API e_magik_result_types magik_configure_aov_framebuffer(magik_aov_framebuffer_object_external_t* framebuffer, e_magik_aov_config_types config_type);
+MAGIK_API e_magik_result_types magik_aov_configure_framebuffer_object(magik_aov_framebuffer_object_external_t* framebuffer, e_magik_aov_config_types config_type);
 
 /**
 * @brief This function fetches the most up-to-date AOV buffer from the API. Magik uses a tripple buffer lock-free swap chain. Memory 
@@ -437,7 +437,7 @@ typedef struct magik_aov_container_config_host_t
 * 
 * @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
 */
-MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name);
+MAGIK_API e_magik_result_types magik_aov_extract_config_host(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name);
 
 /**
 * @brief Struct which containes base types for a CUDA DCC backend. The user is responsible for casting these base types into CUDA ones 
@@ -451,7 +451,7 @@ typedef struct magik_aov_container_config_cuda_t
 /**
 * 
 */
-MAGIK_API e_magik_result_types magik_aov_config_cuda_extract(magik_aov_container_config_cuda_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_extract_config_cuda(magik_aov_container_config_cuda_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief Struct which containes base types for a OpenGL DCC backend. The user is responsible for casting these base types into OpenGL
@@ -477,7 +477,7 @@ typedef struct magik_aov_container_config_opengl_interop_t
 * 
 * @warning 
 */
-MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name);
+MAGIK_API e_magik_result_types magik_aov_extract_config_opengl_interop(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name);
 
 /**
 * @brief Struct which containes base types for a Vulkan DCC backend. The user is responsible for casting these base types into 
@@ -491,7 +491,7 @@ typedef struct magik_aov_container_config_vulkan_interop_t
 /**
 * @brief To be implemented ! DO NOT USE ! 
 */
-MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop_extract(magik_aov_container_config_vulkan_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop(magik_aov_container_config_vulkan_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
 
 /**
 * @brief Free´s the memory associated with an AOV buffer. The user does not have to call this function each time the configuration 
@@ -503,7 +503,7 @@ MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop_extract(magik_ao
 * 
 * @warning 
 */
-MAGIK_API e_magik_result_types magik_aov_destroy(magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_aov_destroy_framebuffer_object(magik_aov_framebuffer_object_external_t dcc_buffer);
 
 
 

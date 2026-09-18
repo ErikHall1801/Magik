@@ -113,7 +113,7 @@ MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft)
 * [SECTION] Render manager
 */
 
-MAGIK_API e_magik_result_types magik_create_render_manager(magik_render_manager_t* manager, magik_manager_descriptor_t descriptor)
+MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_t* manager, magik_manager_descriptor_t descriptor)
 {
     int32_t n_cuda_device = magik::bridge::host_get_n_cuda_device();
 
@@ -140,19 +140,11 @@ MAGIK_API e_magik_result_types magik_create_render_manager(magik_render_manager_
     new_manager->cqs_context.n_reserved_chunk = descriptor.cqs_n_reserved_chunk;
     new_manager->cqs_context.drop_overflows = descriptor.cqs_drop_overflow;
 
-    try
-    {
-        new_manager->cqs_context.front = std::make_unique<magik::cqs::buffer_object>();
-        new_manager->cqs_context.back = std::make_unique<magik::cqs::buffer_object>();
+    new_manager->cqs_context.front = std::make_unique<magik::cqs::buffer_object>();
+    new_manager->cqs_context.back = std::make_unique<magik::cqs::buffer_object>();
 
-        new_manager->cqs_context.front->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
-        new_manager->cqs_context.back->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
-    }
-    catch(const std::bad_alloc)
-    {
-        delete new_manager;
-        return MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED;
-    }
+    new_manager->cqs_context.front->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
+    new_manager->cqs_context.back->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
 
     new_manager->user_host_mem_reserve_func = descriptor.host_reserve_func;
     new_manager->user_host_mem_commit_func = descriptor.host_commit_func;
@@ -165,7 +157,7 @@ MAGIK_API e_magik_result_types magik_create_render_manager(magik_render_manager_
     return MAGIK_SUCCESS;
 }
 
-MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager_t manager)
+MAGIK_API e_magik_result_types magik_render_manager_destroy(magik_render_manager_t manager)
 {
     manager->is_running.store(false, std::memory_order_release);
     manager->worker_thread.join();
@@ -218,7 +210,7 @@ MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager_t m
     return MAGIK_SUCCESS;
 }
 
-MAGIK_API e_magik_result_types magik_fetch_manager_error(magik_render_manager_t manager)
+MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_manager_t manager)
 {
     return manager->atomic_last_error_type.load(std::memory_order_acquire);
 }
@@ -229,158 +221,29 @@ MAGIK_API e_magik_result_types magik_fetch_manager_error(magik_render_manager_t 
 * [SECTION] Arbitrary Output Variables
 */
 
-MAGIK_API e_magik_result_types magik_configure_aov_framebuffer(magik_aov_framebuffer_object_external_t* framebuffer, e_magik_aov_config_types config_type)
+MAGIK_API e_magik_result_types magik_aov_configure_framebuffer_object(magik_aov_framebuffer_object_external_t* framebuffer_object, e_magik_aov_config_types config_type)
 {
-    magik_aov_framebuffer_object_external* buffer = new magik_aov_framebuffer_object_external();
-    
-    if(config_type != MAGIK_AOV_CONFIG_HOST && config_type != MAGIK_AOV_CONFIG_CUDA && config_type != MAGIK_AOV_CONFIG_OPENGL_INTEROP && config_type != MAGIK_AOV_CONFIG_VULKAN_INTEROP)
-    {
-        return MAGIK_UNKNOWN_ENUM_TYPE;
-        delete buffer;
-    }
-
-    buffer->config_type = config_type;
-
-    *framebuffer = buffer;
-    return MAGIK_SUCCESS;
+    return magik::aov::configure_framebuffer_object(framebuffer_object, config_type);
 }
 
-MAGIK_API e_magik_result_types magik_aov_fetch(magik_render_manager_t manager, bool* is_new_fetch, magik_aov_framebuffer_object_external_t dcc_buffer)
+MAGIK_API e_magik_result_types magik_aov_fetch(magik_render_manager_t manager, bool* is_new_fetch, magik_aov_framebuffer_object_external_t framebuffer_object)
 {
-    if(!manager || !dcc_buffer)
-    {
-        *is_new_fetch = false;
-        return MAGIK_ERROR_INVALID_POINTER;
-    }
-
-    if(!manager->is_running.load(std::memory_order_acquire))
-    {
-        *is_new_fetch = false;
-        return MAGIK_SUCCESS;
-    }
-
-    if(manager->display_type == MAGIK_DISPLAY_HEADLESS)
-    {
-        *is_new_fetch = false;
-        return MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED;
-    }
-
-    bool is_swapped = false;
-    auto _r = magik::aov::try_swap_front_framebuffer(&manager->aov_context, &is_swapped);
-    if(!is_swapped)
-    {
-        *is_new_fetch = false;
-        return _r;
-    }
-
-    *is_new_fetch = true;
-    return magik::aov::memcpy_front_framebuffer_to_dcc_framebuffer(&manager->aov_context, dcc_buffer);
+    return magik::aov::fetch(manager, is_new_fetch, framebuffer_object);
 }
 
-MAGIK_API e_magik_result_types magik_aov_config_host_extract(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name)
+MAGIK_API e_magik_result_types magik_aov_extract_config_host(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t framebuffer_object, const char* name)
 {
-    if(!manager || !container || !dcc_buffer) return MAGIK_ERROR_INVALID_POINTER;
-
-    if(!manager->is_running.load(std::memory_order_acquire))
-    {
-        return MAGIK_SUCCESS;
-    }
-
-    if(dcc_buffer->config_type != MAGIK_AOV_CONFIG_HOST)
-    {
-        return MAGIK_ERROR_AOV_INCORRECT_EXTRACT_CALL;
-    }
-
-    auto element = dcc_buffer->collection.find(name);
-
-    if(element == dcc_buffer->collection.end())
-    {
-        return MAGIK_SUCCESS;
-    }
-
-    container->x_resolution = element->second.x_resolution;
-    container->y_resolution = element->second.y_resolution;
-    container->channels = element->second.channels;
-    container->size_of_data = element->second.config_host.host_size;
-    container->h_data = element->second.config_host.h_data;
-
-    return MAGIK_SUCCESS;
+    return magik::aov::extract_config_host(manager, container, framebuffer_object, name);
 }
 
-MAGIK_API e_magik_result_types magik_aov_config_opengl_interop_extract(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name)
+MAGIK_API e_magik_result_types magik_aov_extract_config_opengl_interop(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t framebuffer_object, const char* name)
 {
-    if(!manager || !container || !dcc_buffer) return MAGIK_ERROR_INVALID_POINTER;
-
-    if(!manager->is_running.load(std::memory_order_acquire))
-    {
-        return MAGIK_SUCCESS;
-    }
-
-    if(dcc_buffer->config_type != MAGIK_AOV_CONFIG_OPENGL_INTEROP)
-    {
-        return MAGIK_ERROR_AOV_INCORRECT_EXTRACT_CALL;
-    }
-
-    auto element = dcc_buffer->collection.find(name);
-
-    if(element == dcc_buffer->collection.end())
-    {
-        return MAGIK_SUCCESS;
-    }
-
-    container->x_resolution = element->second.x_resolution;
-    container->y_resolution = element->second.y_resolution;
-    container->channels = element->second.channels;
-    container->gl_buffer_id = element->second.config_open_gl_interop.gl_buffer_id;
-    container->cuda_resources = element->second.config_open_gl_interop.cuda_resource;
-
-    return MAGIK_SUCCESS;
+    return magik::aov::extract_config_opengl_interop(manager, container, framebuffer_object, name);
 }
 
-MAGIK_API e_magik_result_types magik_aov_destroy(magik_aov_framebuffer_object_external_t dcc_buffer)
+MAGIK_API e_magik_result_types magik_aov_destroy_framebuffer_object(magik_aov_framebuffer_object_external_t framebuffer_object)
 {
-    if(!dcc_buffer) return MAGIK_SUCCESS;
-
-    if(dcc_buffer->config_type != MAGIK_AOV_CONFIG_HOST && dcc_buffer->config_type != MAGIK_AOV_CONFIG_CUDA && dcc_buffer->config_type != MAGIK_AOV_CONFIG_OPENGL_INTEROP && dcc_buffer->config_type != MAGIK_AOV_CONFIG_VULKAN_INTEROP)
-    {
-        return MAGIK_UNKNOWN_ENUM_TYPE;
-    }
-
-    e_magik_result_types _r = MAGIK_SUCCESS;
-
-    for(auto& [key, value] : dcc_buffer->collection)
-    {
-        switch(dcc_buffer->config_type)
-        {
-            case MAGIK_AOV_CONFIG_HOST:
-            {
-                magik::bridge::host_destroy_host_memory(value.config_host.h_data);
-                break;
-            }
-
-            case MAGIK_AOV_CONFIG_CUDA:
-            {
-                magik::bridge::host_destroy_device_memory(value.config_cuda.d_data);
-                break;
-            }
-
-            case MAGIK_AOV_CONFIG_OPENGL_INTEROP:
-            {
-                _r = magik::bridge::host_free_gl_buffer(&value.config_open_gl_interop.gl_buffer_id, &value.config_open_gl_interop.cuda_resource);
-                break;
-            }
-
-            case MAGIK_AOV_CONFIG_VULKAN_INTEROP:
-            {
-                break;
-            }
-        }
-    }
-
-    dcc_buffer->collection.clear();
-
-    delete dcc_buffer;
-    return _r;
+    return magik::aov::destroy_framebuffer_object(framebuffer_object);
 }
 
 
