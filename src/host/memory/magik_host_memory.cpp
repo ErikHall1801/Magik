@@ -140,46 +140,47 @@ namespace magik::host_memory
         }
     #endif
 
-    host_mem_arena* arena_create(host_mem_reserve_function user_host_mem_reserve_func, host_mem_commit_function user_host_mem_commit_func, uint64_t reserve_size, uint64_t commit_size)
+    e_magik_result_types arena_create(host_mem_arena** arena, uint64_t reserve_size, uint64_t commit_size, host_mem_reserve_function user_host_mem_reserve_func, host_mem_commit_function user_host_mem_commit_func)
     {
         uint32_t page_size = platform_get_pagesize();
 
         reserve_size = ALIGN_UP_POW2(reserve_size, page_size);
         commit_size = ALIGN_UP_POW2(commit_size, page_size);
 
-        host_mem_arena* arena = (host_mem_arena*)platform_mem_reserve(user_host_mem_reserve_func, reserve_size);
+        host_mem_arena* new_arena = (host_mem_arena*)platform_mem_reserve(user_host_mem_reserve_func, reserve_size);
 
-        if(!platform_mem_commit(user_host_mem_commit_func, arena, commit_size))
+        if(!platform_mem_commit(user_host_mem_commit_func, new_arena, commit_size))
         {
-            return nullptr;
+            *arena = nullptr;
+            return MAGIK_ERROR_HOST_MEMORY_ALLOCATION_FAILED;
         }
 
-        arena->reserve_size = reserve_size;
-        arena->commit_size = commit_size;
-        arena->pos = AREAN_BASE_POS;
-        arena->commit_pos = commit_size;
+        new_arena->reserve_size = reserve_size;
+        new_arena->commit_size = commit_size;
+        new_arena->pos = AREAN_BASE_POS;
+        new_arena->commit_pos = commit_size;
 
         host_mem_commit.fetch_add(commit_size);
         host_mem_reserve.fetch_add(reserve_size);
 
-        return arena;
+        *arena = new_arena;
+        return MAGIK_SUCCESS;
     }
 
-    void arena_destroy(host_mem_release_function user_host_mem_release_func, host_mem_arena* host_arena)
+    void arena_destroy(host_mem_arena* host_arena, host_mem_release_function user_host_mem_release_func)
     {
-        // TO-DO; Use user defined free function matching the type
         platform_mem_release(user_host_mem_release_func, host_arena, host_arena->reserve_size);
     }
 
-    void* arena_push(host_mem_commit_function user_host_mem_commit_func, host_mem_arena* host_arena, uint64_t size, bool non_zero)
+    e_magik_result_types arena_push(host_mem_arena* host_arena, void** dst_ptr, uint64_t size, host_mem_commit_function user_host_mem_commit_func, bool non_zero)
     {
         uint64_t pos_aligned = ALIGN_UP_POW2(host_arena->pos, ARENA_ALIGN);
         uint64_t new_pos = pos_aligned + size;
 
         if(new_pos > host_arena->reserve_size)
         {
-            // To-Do; Allocate a new sub-arena, so it dynamically resizes. 
-            return nullptr;
+            *dst_ptr = nullptr;
+            return MAGIK_ERROR_HOST_OUT_OF_MEMORY;
         }
 
         if(new_pos > host_arena->commit_pos)
@@ -194,7 +195,8 @@ namespace magik::host_memory
 
             if(!platform_mem_commit(user_host_mem_commit_func,mem, commit_size))
             {
-                return nullptr;
+                *dst_ptr = nullptr;
+                return MAGIK_ERROR_HOST_MEMORY_ALLOCATION_FAILED;
             }
 
             host_mem_commit.fetch_add(commit_size);
@@ -210,7 +212,8 @@ namespace magik::host_memory
             memset(out, 0, size);
         }
 
-        return out;
+        *dst_ptr = out;
+        return MAGIK_SUCCESS;
     }
 
     void arena_pop(host_mem_arena* host_arena, uint64_t size)

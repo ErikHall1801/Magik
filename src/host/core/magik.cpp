@@ -179,7 +179,7 @@ MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager
     return MAGIK_SUCCESS;
 }
 
-MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager* manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type)
+MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager_t manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type)
 {
     if(!manager || !size_reserve || !size_commit) return MAGIK_ERROR_INVALID_POINTER;
 
@@ -216,6 +216,11 @@ MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager* ma
     }
 
     return MAGIK_SUCCESS;
+}
+
+MAGIK_API e_magik_result_types magik_fetch_manager_error(magik_render_manager_t manager)
+{
+    return manager->atomic_last_error_type.load(std::memory_order_acquire);
 }
 
 

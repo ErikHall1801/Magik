@@ -12,12 +12,15 @@ namespace magik::worker
         {
             MAGIK_TRY_CATCH(_r, magik::aov::initialize_swapchain(&manager->aov_context))
             {
-                MAGIK_SET_ERROR_ORDERED(manager->last_error_type, _r);
                 return _r;
             }
         }
 
-        manager->host_arena = magik::host_memory::arena_create(manager->user_host_mem_reserve_func, manager->user_host_mem_commit_func, GiB(1), MiB(64));
+        MAGIK_TRY_CATCH(_r, magik::host_memory::arena_create(&manager->host_arena, GiB(1), MiB(64), nullptr, nullptr))
+        {
+            return _r;
+        }
+
         manager->is_running.store(true, std::memory_order_release);
 
         return MAGIK_SUCCESS;
@@ -66,10 +69,12 @@ namespace magik::worker
 
     void run(magik_render_manager* manager)
     {
+        e_magik_result_types expected = MAGIK_SUCCESS;
+
         MAGIK_TRY_CATCH(_r, initialize(manager))
         {
             manager->is_running.store(false, std::memory_order_release);
-            manager->last_error_type = _r;
+            manager->atomic_last_error_type.compare_exchange_strong(expected, _r);
         }
 
         auto frame_start = std::chrono::steady_clock::now();
@@ -84,14 +89,14 @@ namespace magik::worker
             MAGIK_TRY_CATCH(_r, host_work(manager))
             {
                 manager->is_running.store(false, std::memory_order_release);
-                manager->last_error_type = _r;
+                manager->atomic_last_error_type.compare_exchange_strong(expected, _r);
                 break;
             }
 
             MAGIK_TRY_CATCH(_r, device_work(manager))
             {
                 manager->is_running.store(false, std::memory_order_release);
-                manager->last_error_type = _r;
+                manager->atomic_last_error_type.compare_exchange_strong(expected, _r);
                 break;
             }
 
@@ -103,15 +108,15 @@ namespace magik::worker
         {
             MAGIK_TRY_CATCH(_r, magik::aov::destroy_swpachain(&manager->aov_context))
             {
-                manager->last_error_type = _r;
+                manager->atomic_last_error_type.compare_exchange_strong(expected, _r);
             }
         }
 
         MAGIK_TRY_CATCH(_r, magik::aov::destroy_render_framebuffer_object(&manager->aov_context))
         {
-            manager->last_error_type = _r;
+            manager->atomic_last_error_type.compare_exchange_strong(expected, _r);
         }
 
-        magik::host_memory::arena_destroy(manager->user_host_mem_release_func, manager->host_arena);
+        magik::host_memory::arena_destroy(manager->host_arena, manager->user_host_mem_release_func);
     }
 }

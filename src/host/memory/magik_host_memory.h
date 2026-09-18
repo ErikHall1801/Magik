@@ -1,5 +1,6 @@
 #pragma once
 #include "magik.h"
+#include "magik_error.h"
 #include <stdint.h>
 #include <memory>
 #include <atomic>
@@ -34,11 +35,11 @@ namespace magik::host_memory
         uint64_t commit_pos; // Where the committed memory is 
     };
 
-    host_mem_arena* arena_create(host_mem_reserve_function user_host_mem_reserve_func, host_mem_commit_function user_host_mem_commit_func, uint64_t reserve_size, uint64_t commit_size);
+    e_magik_result_types arena_create(host_mem_arena** arena, uint64_t reserve_size, uint64_t commit_size, host_mem_reserve_function user_host_mem_reserve_func, host_mem_commit_function user_host_mem_commit_func);
 
-    void arena_destroy(host_mem_release_function user_host_mem_release_func, host_mem_arena* host_arena);
+    void arena_destroy(host_mem_arena* host_arena, host_mem_release_function user_host_mem_release_func);
 
-    void* arena_push(host_mem_commit_function user_host_mem_commit_func, host_mem_arena* host_arena, uint64_t size, bool non_zero);
+    e_magik_result_types arena_push(host_mem_arena* host_arena, void** dst_ptr, uint64_t size, host_mem_commit_function user_host_mem_commit_func, bool non_zero);
 
     void arena_pop(host_mem_arena* host_arena, uint64_t size);
 

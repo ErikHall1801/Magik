@@ -341,7 +341,22 @@ MAGIK_API e_magik_result_types magik_destroy_render_manager(magik_render_manager
 * 
 * @warning This function returns MAGIK_SUCCESS if the worker thread is not running yet and writes 0 to the output. 
 */
-MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager* manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type); 
+MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager_t manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type); 
+
+/**
+* @brief Returns the last error recorded by the manager
+* 
+* @param [in] manager Initalized manager
+* 
+* @related Last error
+* 
+* @warning This function is intended for async runtime errors. Most API functions provided in the API have an immediate effect as they run 
+* on the DCC thread. But most of Magiks logic runs on an independent worker thread which may run into issues after the DCC made a function 
+* call due to the async nature. These errors are caught by the manager and can be occasionally fetched by the DCC. It is up to the user to 
+* device how often they want to do so.
+* Do note, the DCC owns the manager. So when the API crashes, the last error is persistent in the manager.  
+*/
+MAGIK_API e_magik_result_types magik_fetch_manager_error(magik_render_manager_t manager);
 
 
 

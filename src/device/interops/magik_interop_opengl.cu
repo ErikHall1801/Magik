@@ -26,6 +26,8 @@ namespace magik::interops
         {
             std::cout << "Failed to get OpenGL Version" << std::endl;
         }
+
+        return MAGIK_SUCCESS;
     }
 
     e_magik_result_types allocate_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource)
@@ -45,6 +47,8 @@ namespace magik::interops
 
         *gl_buffer_id = pbo_id;
         *cuda_resource = (void*)cuda_res;
+
+        return MAGIK_SUCCESS;
     }
 
     e_magik_result_types free_gl_buffer(uint32_t* gl_buffer_id, void** cuda_resource)
@@ -65,6 +69,8 @@ namespace magik::interops
             glDeleteBuffers(1, gl_buffer_id);
             *gl_buffer_id = 0;
         }
+
+        return MAGIK_SUCCESS;
     }
 
     e_magik_result_types map_cuda_to_gl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, void** cuda_resource, float* d_ptr)
@@ -93,5 +99,7 @@ namespace magik::interops
 
         check_cuda_errors(cudaMemcpy(d_resource_ptr, d_ptr, size_of_buffer, cudaMemcpyDeviceToDevice));
         check_cuda_errors(cudaGraphicsUnmapResources(1, &cuda_res, 0));
+
+        return MAGIK_SUCCESS;
     }
 }
