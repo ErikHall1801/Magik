@@ -1,6 +1,5 @@
 #pragma once
 #include "magik.h"
-#include <initializer_list>
 
 #ifdef __CUDACC__
     #define MAGIK_HD __host__ __device__ 
@@ -13,44 +12,6 @@
 /**
 * [SECTION] Error handling & result types
 */
-
-/*
-* 
-* These try/catch/propagate blocks are for the internal API use
-* 
-*/
-inline bool magik_error_matches(e_magik_result_types error, std::initializer_list<e_magik_result_types> filters)
-{
-    if(error == MAGIK_SUCCESS) return false;
-
-    if(filters.size() == 0) return true; // Catch all
-    
-    for(auto f : filters)
-    {
-        if(f == error) return true;
-    }
-
-    return false;
-}
-
-#define MAGIK_PROPAGATE(expr) \
-    do { \
-        e_magik_result_types _magik_p = (expr); \
-        if (_magik_p != MAGIK_SUCCESS) { \
-            return _magik_p; \
-        } \
-    } while (0)
-
-#define MAGIK_RETURN(val) \
-    do { \
-        return (val); \
-    } while (0)
-
-#define MAGIK_TRY_CATCH(var, expr, ...) \
-    if (e_magik_result_types var = (expr); magik_error_matches(var, {__VA_ARGS__}))
-
-#define MAGIK_SET_ERROR_ORDERED(c_err, n_err) \
-    if(c_err == MAGIK_SUCCESS){c_err = n_err;}
 
 namespace magik::error
 {

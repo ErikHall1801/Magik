@@ -28,21 +28,6 @@ namespace magik::host_memory
 {
     struct host_mem_arena
     {
-        /*
-        What is the idea here ? Well, if one block is full the arena allocats a new one. 
-        And all blocks are in a linked list for easy destruction. This seems pretty simple. 
-        All we change is what the reserve_size means. It is the per block size. 
-
-        But ok, how does this work ? Because what if we allocate one object that is larger 
-        than a block. Because the blocks are not continious ? 
-        Well, we do not allocate across blocks. So if a request is larger than one block, 
-        we simply make a special block just for that allocation, ignoring the default 
-        block size. 
-
-        This is needed because as the DCC adds models or whatever we might need to store 
-        more data. 
-        */
-
         uint64_t reserve_size; // This does not change once the arena has been created. 
         uint64_t commit_size; // But this is also not changing ? 
 
