@@ -12,6 +12,8 @@
 
 // CUDA 
 #include <cuda_runtime.h>
+#include <curand_kernel.h>
+#include "curand.h"
 
 // Error macro 
 
