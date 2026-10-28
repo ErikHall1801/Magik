@@ -7,25 +7,32 @@
 #include "magik_arbitrary_output_variables.h" 
 #include "magik_command_queue_system.h"
 #include "magik_host_memory.h"
+#include "magik_optics.h"
 
+// Rename this to just "manager"
 namespace magik::render_manager
 {
     struct context
     {
-        float c0 = 0.0f;
-        float c1 = 0.15f;
-        float c2 = 0.20f;
-
-        float real = 0.0f;
-        float imag = 0.0f;
+        magik::optics::camera tmp_camera;
 
         /*
-        The problem here is that the render context kind of 
-        has to be in the global namespace. So we can save it
-        later. 
-        But, this right here is the correct place for it. So
-        what do we do ? 
+        We can, for the moment, just hard code the two pieces 
+        of geometry to get on with things. 
         */
+        float box_min_x = -10.0f;
+        float box_min_y = 0.0f;
+        float box_min_z = -10.0f;
+        float box_max_x = 10.0f;
+        float box_max_y = 20.0f;
+        float box_max_z = 10.0f;
+
+        float light_min_x = -4.0f;
+        float light_min_y = 19.0f;
+        float light_min_z = -4.0f;
+        float light_max_x = 4.0f;
+        float light_max_y = 21.0f;
+        float light_max_z = 4.0f;
     };
 }
 

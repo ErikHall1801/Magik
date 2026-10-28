@@ -575,16 +575,6 @@ typedef enum e_magik_cqs_command_types
     */
     MAGIK_COMMAND_SET_RESOLUTION = 2001,
 
-    /**
-    * @brief Sets the complex offset point of the julia set kernel
-    */
-    MAGIK_COMMAND_SET_JULIA_SET_OFFSET = 2002,
-
-    /**
-    * @brief Sets the Julia set color pallet
-    */
-    MAGIK_COMMAND_SET_JULIA_SET_COLOR = 2003,
-
 
 
     // ##########################
@@ -602,6 +592,20 @@ typedef enum e_magik_cqs_command_types
     // ########################
     // ### 5000-5999 Camera ###
     // ########################
+    /**
+    * @brief Set the active camera id
+    */
+    MAGIK_COMMAND_SET_ACTIVE_CAMERA = 5000,
+
+    /**
+    * @brief Set the position of a camera
+    */
+    MAGIK_COMMAND_SET_CAMERA_POSITION = 5001,
+
+    /**
+    * @brief Set the pitch, yaw and roll of a camera
+    */
+    MAGIK_COMMAND_SET_CAMERA_ORIENTATION = 5002,
 
 
 
@@ -679,21 +683,6 @@ typedef struct MAGIK_ALIGN4 magik_command_set_resolution_t
     uint32_t y_resolution = 2;
 } magik_command_set_resolution_t;
 
-typedef struct MAGIK_ALIGN4 magik_command_set_julia_set_offset_t
-{
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_JULIA_SET_OFFSET;
-    float real = 0.0f;
-    float imaginary = 0.0f;
-} magik_command_set_julia_set_offset_t;
-
-typedef struct MAGIK_ALIGN4 magik_command_set_julia_set_color_t
-{
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_JULIA_SET_COLOR;
-    float c0 = 0.0f;
-    float c1 = 0.0f;
-    float c2 = 0.0f;
-} magik_command_set_julia_set_color_t;
-
 
 
 // ##########################
@@ -711,6 +700,29 @@ typedef struct MAGIK_ALIGN4 magik_command_set_julia_set_color_t
 // ########################
 // ### 5000-5999 Camera ###
 // ########################
+typedef struct MAGIK_ALIGN4 magik_command_set_active_camera_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_ACTIVE_CAMERA;
+    uint32_t id = 0;
+} magik_command_set_active_camera_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_camera_position_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_POSITION;
+    uint32_t id = 0;
+    float position_x = 0.0f;
+    float position_y = 0.0f;
+    float position_z = 0.0f;
+} magik_command_set_camera_position_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_camera_orientation_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_ORIENTATION;
+    uint32_t id = 0;
+    float rotation_x = 0.0f;
+    float rotation_y = 0.0f;
+    float rotation_z = 0.0f;
+} magik_command_set_camera_orientation_t;
 
 
 

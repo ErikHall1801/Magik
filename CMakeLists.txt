@@ -57,6 +57,7 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/error
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/manager
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/memory
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/optics
 )
 
 # Find packages

@@ -32,10 +32,6 @@ namespace magik::cqs
 
             case MAGIK_COMMAND_SET_RESOLUTION: { is_valid_ = true; size_ = sizeof(magik_command_set_resolution_t); break; }
 
-            case MAGIK_COMMAND_SET_JULIA_SET_OFFSET: { is_valid_ = true; size_ = sizeof(magik_command_set_julia_set_offset_t); break; }
-
-            case MAGIK_COMMAND_SET_JULIA_SET_COLOR: { is_valid_ = true; size_ = sizeof(magik_command_set_julia_set_color_t); break; }
-
 
 
             // ##########################
@@ -53,6 +49,11 @@ namespace magik::cqs
             // ########################
             // ### 5000-5999 Camera ###
             // ########################
+            case MAGIK_COMMAND_SET_ACTIVE_CAMERA: { is_valid_ = true; size_ = sizeof(magik_command_set_active_camera_t); break; }
+
+            case MAGIK_COMMAND_SET_CAMERA_POSITION: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_position_t); break; }
+
+            case MAGIK_COMMAND_SET_CAMERA_ORIENTATION: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_orientation_t); break; }
 
 
 
@@ -139,25 +140,6 @@ namespace magik::cqs
                 break;
             }
 
-            case MAGIK_COMMAND_SET_JULIA_SET_OFFSET:
-            {
-                magik_command_set_julia_set_offset_t cmd;
-                memcpy(&cmd, playhead, command_size);
-                manager->render_context.real = cmd.real;
-                manager->render_context.imag = cmd.imaginary;
-                break;
-            }
-
-            case MAGIK_COMMAND_SET_JULIA_SET_COLOR:
-            {
-                magik_command_set_julia_set_color_t cmd;
-                memcpy(&cmd, playhead, command_size);
-                manager->render_context.c0 = cmd.c0;
-                manager->render_context.c1 = cmd.c1;
-                manager->render_context.c2 = cmd.c2;
-                break;
-            }
-
 
 
             // ##########################
@@ -175,6 +157,32 @@ namespace magik::cqs
             // ########################
             // ### 5000-5999 Camera ###
             // ########################
+            case MAGIK_COMMAND_SET_ACTIVE_CAMERA:
+            {
+                magik_command_set_active_camera_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_CAMERA_POSITION:
+            {
+                magik_command_set_camera_position_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->render_context.tmp_camera.pos_x = cmd.position_x;
+                manager->render_context.tmp_camera.pos_y = cmd.position_y;
+                manager->render_context.tmp_camera.pos_z = cmd.position_z;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_CAMERA_ORIENTATION:
+            {
+                magik_command_set_camera_orientation_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->render_context.tmp_camera.rot_x = cmd.rotation_x;
+                manager->render_context.tmp_camera.rot_y = cmd.rotation_y;
+                manager->render_context.tmp_camera.rot_z = cmd.rotation_z;
+                break;
+            }
 
 
 

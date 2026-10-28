@@ -56,7 +56,7 @@ namespace magik::worker
         if(tmp_element != manager->aov_context.render_framebuffer_object.collection.end())
         {
             auto buffer = tmp_element->second;
-            magik::bridge::call_test_pattern_julia_set_kernel(manager->cuda_stream, buffer.d_data, buffer.x_resolution, buffer.y_resolution, manager->render_context.c0, manager->render_context.c1, manager->render_context.c2, manager->render_context.real, manager->render_context.imag);
+            magik::bridge::call_test_pattern_julia_set_kernel(manager->cuda_stream, buffer.d_data, buffer.x_resolution, buffer.y_resolution, manager->render_context.tmp_camera.pos_x, manager->render_context.tmp_camera.pos_y, manager->render_context.tmp_camera.pos_z, manager->render_context.tmp_camera.rot_x, manager->render_context.tmp_camera.rot_y);
         }
         else
         {
