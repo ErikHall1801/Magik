@@ -36,6 +36,11 @@ add_library(magik SHARED
 
     # (Optional)
     src/device/bridge/magik_bridge.h
+
+    ###
+
+    # src/renderer/renderer.cpp
+    # src/renderer/renderer.h
 )
 
 # Define the location of the header files
@@ -53,10 +58,23 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/device/interops
         ${CMAKE_CURRENT_SOURCE_DIR}/src/device/library
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/error
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/manager
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/memory
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/optics
+        ###
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/error
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/math
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/bxdf
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/cqs
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/framebuffer
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/kernels
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/memory
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/metrics
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/optics
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/stage
+        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/traceables
 )
 
 # Find packages
