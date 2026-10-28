@@ -14,7 +14,7 @@ set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 add_library(magik SHARED 
     # Core Host
     src/magik.cpp
-    src/host/error/magik_error.cpp
+    src/utility/error/magik_error.cpp
     
     # CUDA Bridge
     src/device/bridge/magik_bridge.cu
@@ -53,7 +53,7 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/device/interops
         ${CMAKE_CURRENT_SOURCE_DIR}/src/device/library
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/error
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/error
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/manager
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/memory
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/optics
