@@ -1,5 +1,5 @@
 #include "kernel_julia_set.cuh"
-#include "cuda_defines.cuh"
+#include "cuda_device_utilities.cuh"
 
 namespace magik
 {

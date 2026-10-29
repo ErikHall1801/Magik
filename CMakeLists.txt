@@ -76,7 +76,7 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/traceables
 
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utility
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/defines
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/cuda
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/error
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/math
 )
