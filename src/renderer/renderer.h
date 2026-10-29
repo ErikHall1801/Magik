@@ -2,7 +2,7 @@
 
 #include "magik.h"
 #include "framebuffer.h"
-#include "cqs.h"
+#include "command.h"
 #include "stage.h"
 
 #include <thread>

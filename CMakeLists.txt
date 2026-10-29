@@ -61,23 +61,24 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/manager
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/memory
         ${CMAKE_CURRENT_SOURCE_DIR}/src/host/optics
+
         ###
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/error
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/defines
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/math
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/memory
+
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/bxdf
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/command
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/framebuffer
-        # ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/math
-        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer
-        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/bxdf
-        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/cqs
-        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/framebuffer
-        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/kernels
-        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/metrics
-        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/optics
-        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/stage
-        # ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/traceables
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/kernels
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/memory
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/metrics
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/optics
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/stage
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/traceables
+
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/defines
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/error
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/math
 )
 
 # Find packages
