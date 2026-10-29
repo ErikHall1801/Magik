@@ -1,38 +1,18 @@
 #include "kernel_julia_set.cuh"
 #include "cuda_device_utilities.cuh"
 #include "cuda_host_utilities.h"
+#include "internal_math.h"
 
 namespace magik
 {
-    struct complex 
+    static __device__ magik::complex_type<float, float> mapPoint(int width,int height,double radius,int x,int y)
     {
-        float x = 0.0f;
-        float y = 0.0f;
-    };
-
-    static __device__ complex add(complex a, complex b)
-    {
-        complex c;
-        c.x = a.x + b.x;
-        c.y = a.y + b.y;
-        return c;
-    };
-
-    static __device__ complex sqr(complex a)
-    {
-        complex c;
-        c.x = a.x*a.x - a.y*a.y;
-        c.y = 2*a.x*a.y;
-        return c;
-    }
-
-    static __device__ complex mapPoint(int width,int height,double radius,int x,int y){
-        complex c;
+        magik::complex_type<float, float> c;
         int l = (width<height)?width:height;
         
-        c.x = 2*radius*(x - width/2.0)/l;
-        c.y = 2*radius*(y - height/2.0)/l;
-        
+        c.real = 2.0f*radius*(x - width/2.0f)/l;
+        c.imag = 2.0f*radius*(y - height/2.0f)/l;
+
         return c;
     }
 
@@ -47,15 +27,14 @@ namespace magik
         float radius = 1.5f;
         uint32_t max_iter = 256;
         uint32_t iter = 0;
-        complex z0, z1;
-        complex c = {real, imag};
 
+        magik::complex_type<float, float> z0, z1, c = {real, imag};
         z0 = mapPoint(x_resolution, y_resolution, radius, i_x, i_y);
 
         for(iter = 0; iter < max_iter; iter++)
         {
-            z1 = add(sqr(z0), c);
-            if((z1.x * z1.x + z1.y * z1.y) > (radius * radius)) break;
+            z1 = z0*z0 + c;
+            if((z1.real * z1.real + z1.imag * z1.imag) > (radius * radius)) break;
             z0 = z1;
         }
 
@@ -67,7 +46,7 @@ namespace magik
         }
         else
         {
-            float mod_sq = z1.x * z1.x + z1.y * z1.y;
+            float mod_sq = z1.real * z1.real + z1.imag * z1.imag;
             
             float log_zn = logf(mod_sq) / 2.0f;
             float nu = logf(log_zn / 0.69314718f) / 0.69314718f;
