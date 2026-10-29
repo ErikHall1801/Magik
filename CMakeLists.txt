@@ -70,6 +70,7 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/optics
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/stage
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/traceables
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/wavefront
 
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utility
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/cuda
