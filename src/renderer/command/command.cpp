@@ -104,9 +104,9 @@ namespace magik
                 magik_command_add_aov_t cmd;
                 memcpy(&cmd, playhead, command_size);
                 std::string aov_name(cmd.name, cmd.length_of_name);
-                // magik::aov::raw_buffer aov;
-                // aov.channels = cmd.channels;
-                // manager->aov_context.render_framebuffer_object.collection.emplace(aov_name, aov);
+                magik::framebuffer_t fb;
+                fb.channels = cmd.channels;
+                manager->framebuffer_swapchain.render_framebuffer.collection.emplace(aov_name, fb);
                 break;
             }
 
@@ -115,7 +115,7 @@ namespace magik
                 magik_command_remove_aov_t cmd;
                 memcpy(&cmd, playhead, command_size);
                 std::string aov_name(cmd.name, cmd.length_of_name);
-                // manager->aov_context.render_framebuffer_object.collection.erase(aov_name);
+                manager->framebuffer_swapchain.render_framebuffer.collection.erase(aov_name);
                 break;
             }
 
@@ -136,8 +136,8 @@ namespace magik
             {
                 magik_command_set_resolution_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                // manager->aov_context.x_resolution_target = cmd.x_resolution;
-                // manager->aov_context.y_resolution_target = cmd.y_resolution;
+                manager->framebuffer_swapchain.x_resolution_target = cmd.x_resolution;
+                manager->framebuffer_swapchain.y_resolution_target = cmd.y_resolution;
                 break;
             }
 
@@ -169,9 +169,9 @@ namespace magik
             {
                 magik_command_set_camera_position_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                // manager->render_context.tmp_camera.pos_x = cmd.position_x;
-                // manager->render_context.tmp_camera.pos_y = cmd.position_y;
-                // manager->render_context.tmp_camera.pos_z = cmd.position_z;
+                manager->stage.c0 = cmd.position_x;
+                manager->stage.c1 = cmd.position_y;
+                manager->stage.c2 = cmd.position_z;
                 break;
             }
 
@@ -179,9 +179,8 @@ namespace magik
             {
                 magik_command_set_camera_orientation_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                // manager->render_context.tmp_camera.rot_x = cmd.rotation_x;
-                // manager->render_context.tmp_camera.rot_y = cmd.rotation_y;
-                // manager->render_context.tmp_camera.rot_z = cmd.rotation_z;
+                manager->stage.real = cmd.rotation_x;
+                manager->stage.imag = cmd.rotation_y;
                 break;
             }
 
