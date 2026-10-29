@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "internal_math.h"
 
 namespace magik
 {

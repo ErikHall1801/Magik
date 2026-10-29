@@ -2109,14 +2109,6 @@ namespace magik
             return modf(a, &_fraction);
         }
 
-        // swap
-        template<typename T> MAGIK_DEVICE_HOST constexpr auto swap(T& a, T& b)
-        {
-            T temp = b;
-            b = a;
-            a = temp;
-        }
-
         // coordinate transformation
             // spherical to cartesian
             template<typename T> MAGIK_DEVICE_HOST constexpr auto spherical_to_cartesian(T r, T theta, T phi)
@@ -2181,10 +2173,22 @@ namespace magik
                     error = -1.0f/360.0f*temp_h*k1 + 128.0f/4275.0f*temp_h*k3 + 2197.0f/75240.0f*temp_h*k4 - 1.0f/50.0f*temp_h*k5 - 2.0f/55.0f*temp_h*k6;
 
                     rms_error = error.compute_rms_error(error, y0, y1, abs_tol, rel_tol);
-                    rms_error_safe = max(rms_error, 1e-30f);
+                    
+                    if(rms_error > 1e-30f)
+                    {
+                        rms_error_safe = rms_error;
+                    }
+                    else
+                    {
+                        rms_error_safe = 1e-30f;
+                    }
 
                     h_new = 0.9f*temp_h*pow(1.0f / rms_error_safe, 0.2f);
-                    h_new = min(h_new, h_max);
+
+                    if(h_new > h_max)
+                    {
+                        h_new = h_max;
+                    }
 
                     temp_h = h_new;
 
@@ -2348,8 +2352,8 @@ namespace magik
 
                 if(abs(fa) < abs(fb))
                 {
-                    magik::swap(fa,fb);
-                    magik::swap(a,b);
+                    std::swap(fa,fb);
+                    std::swap(a,b);
                 }
 
                 T_state c = a;
@@ -2412,8 +2416,8 @@ namespace magik
 
                     if(abs(fa) < abs(fb))
                     {
-                        magik::swap(fa,fb);
-                        magik::swap(a,b);
+                        std::swap(fa,fb);
+                        std::swap(a,b);
                     }
                 }
 
@@ -2507,4 +2511,13 @@ namespace magik
             }
 
         // Fourier Transform
+
+    using complexf = complex_type<float, float>;
+    using dualf = dual_type<float, float>;
+    using vec2f = two_vector_type<float>;
+    using vec3f = three_vector_type<float>;
+    using vec4f = four_vector_type<float>;
+    using mat2f = matrix_two_type<float>;
+    using mat3f = matrix_three_type<float>;
+    using mat4f = matrix_four_type<float>;
 }
