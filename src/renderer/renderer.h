@@ -23,8 +23,10 @@ struct magik_render_manager
 
     magik::command_context_t command_context;
     magik::framebuffer_swapchain_t framebuffer_swapchain;
+    // stage <- The collection of scenes this manager... manages ?
 
-    // framebuffer <- You know, the framebuffer being drawn to
-    // cqs <- Command Queue System
-    // stage <- The collection of scenes this manager... manages ?  
+    /*
+    What now ? Well, we have to port the kernel and make sure all logic 
+    is transfered, then make it compile. 
+    */
 };

@@ -2,7 +2,7 @@
 
 #include "magik.h"
 #include "magik_error.h"
-#include "magik_memory.h"
+#include "internal_memory.h"
 #include "opengl_interop.cuh"
 
 #include <atomic>
@@ -50,13 +50,6 @@ struct magik_aov_framebuffer_object_external //Rename this !!!
 
 namespace magik
 {
-    /*
-    Basically, the idea is that we rewrite the AOV shit, then delete the old files and work on it until it works.
-    So, we got most of it ported. What we now need is some memory management. 
-    Sure, now the question is where we put OpenGL. One of those questions i am not willing to answer today. 
-    That being said, the goal is to make this work tomorrow. 
-    */
-
     struct framebuffer_t
     {
         uint32_t x_resolution = 0;
@@ -72,14 +65,6 @@ namespace magik
 
     struct framebuffer_swapchain_t
     {
-        /*
-        I like this naming system more. Its more apparent what each 
-        component does. 
-        It will be interesting to see how this works with the spectral
-        irradiance buffer. In principle this buffer would live next to
-        the render_framebuffer. But it is somewhat its own thing. 
-        */
-
         uint32_t x_resolution_target = 2880;
         uint32_t y_resolution_target = 2160;
 

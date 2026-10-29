@@ -1,4 +1,4 @@
-#include "magik_memory.h"
+#include "internal_memory.h"
 #include "cuda_memory.cuh"
 
 namespace magik
