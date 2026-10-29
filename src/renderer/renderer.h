@@ -22,6 +22,7 @@ struct magik_render_manager
     uint32_t cuda_device = 0;
 
     magik::command_context_t command_context;
+    magik::framebuffer_swapchain_t framebuffer_swapchain;
 
     // framebuffer <- You know, the framebuffer being drawn to
     // cqs <- Command Queue System
