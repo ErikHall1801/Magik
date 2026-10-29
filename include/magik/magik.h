@@ -208,19 +208,6 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 
 
 /**
-* [SECTION] Frame time
-*/
-
-/**
-* @brief Returns the frame time in microseconds. 
-* 
-* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
-*/
-MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft);
-
-
-
-/**
 * [SECTION] Memory
 */
 
@@ -330,20 +317,6 @@ MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_
 MAGIK_API e_magik_result_types magik_render_manager_destroy(magik_render_manager_t mananger);
 
 /**
-* @brief Writes the current number of reserved and committed bits of typed memory into the provided pointers
-* 
-* @param [in] manager Initialized manager
-* @param [in] size_reserve The size of virtual memory reserved
-* @param [in] size_commit The size of physical memory committed
-* @param [in] type The memory type being fetched
-* 
-* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_UNKNOWN_ENUM_TYPE
-* 
-* @warning This function returns MAGIK_SUCCESS if the worker thread is not running yet and writes 0 to the output. 
-*/
-MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager_t manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type); 
-
-/**
 * @brief Returns the last error recorded by the manager
 * 
 * @param [in] manager Initalized manager
@@ -357,6 +330,32 @@ MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager_t m
 * Do note, the DCC owns the manager. So when the API crashes, the last error is persistent in the manager.  
 */
 MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_manager_t manager);
+
+
+
+/**
+* [SECTION] Renderer statistics
+*/
+
+/**
+* 
+*/
+typedef struct magik_renderer_statistics_t
+{
+    double sampled_time_point_seconds = 0.0f;
+    double average_sample_time_seconds = 0.0f;
+    double latest_sample_time_seconds = 0.0f;
+    double total_render_time_seconds = 0.0f;
+
+    // Memory
+} magik_renderer_statistics_t;
+
+/**
+* @brief Returns render statistics.
+* 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
+*/
+MAGIK_API e_magik_result_types magik_fetch_renderer_statistics(magik_render_manager_t manager, magik_renderer_statistics_t* statistics);
 
 
 

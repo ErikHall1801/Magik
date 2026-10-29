@@ -24,6 +24,12 @@ namespace magik
     {
         e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_SUCCESS;
 
+        size_t iteration = 0;
+
+        // Timing stage
+        auto iteration_start_time = std::chrono::steady_clock::now();
+        auto iteration_end_time = std::chrono::steady_clock::now();
+
         bool is_dirty = false; // What is dirty ? 
 
         // Init stage
@@ -37,6 +43,8 @@ namespace magik
         // Render stage
         while(manager->is_running)
         {
+            iteration_start_time = std::chrono::steady_clock::now();
+
             // Command stage
             result = magik::consume_back_command_buffer(manager);
 
@@ -93,6 +101,14 @@ namespace magik
                 using namespace std::chrono_literals;
                 std::this_thread::sleep_for(100ms);
             }
+
+            iteration++;
+            iteration_end_time = std::chrono::steady_clock::now();
+
+            manager->sampled_time_point_seconds.store(std::chrono::duration<double>(iteration_start_time.time_since_epoch()).count(), std::memory_order_release);
+            manager->average_sample_time_seconds.store(manager->total_render_time_seconds.load(std::memory_order_relaxed) / (double)iteration);
+            manager->latest_sample_time_seconds.store(std::chrono::duration<double>(iteration_end_time - iteration_start_time).count(), std::memory_order_release);
+            manager->total_render_time_seconds.fetch_add(manager->latest_sample_time_seconds.load(std::memory_order_relaxed), std::memory_order_release);
         }
 
         // Shutdown stage

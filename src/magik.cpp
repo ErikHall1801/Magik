@@ -82,26 +82,6 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 
 
 /**
-* [SECTION] Frame time <- Change to "Renderer statistics" which includes avg. times, total time, memory usage etc.
-*/
-
-MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft)
-{
-    /*
-    This function should return renderer statistics, not just some
-    random global variable. 
-    */
-
-    if(!ft) return MAGIK_ERROR_INVALID_POINTER;
-
-    // *ft = frame_time.load(std::memory_order_relaxed);
-
-    return MAGIK_SUCCESS;
-}
-
-
-
-/**
 * [SECTION] Memory
 */
 
@@ -169,15 +149,27 @@ MAGIK_API e_magik_result_types magik_render_manager_destroy(magik_render_manager
     return MAGIK_SUCCESS;
 }
 
-// Depricated - Part of render info !
-MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager_t manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type)
-{
-    return MAGIK_SUCCESS;
-}
-
 MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_manager_t manager)
 {
     return manager->atomic_last_error_type.load(std::memory_order_acquire);
+}
+
+
+
+/**
+* [SECTION] Renderer statistics
+*/
+
+MAGIK_API e_magik_result_types magik_fetch_renderer_statistics(magik_render_manager_t manager, magik_renderer_statistics_t* statistics)
+{
+    if(!manager || !statistics) return MAGIK_ERROR_INVALID_POINTER;
+
+    statistics->sampled_time_point_seconds = manager->sampled_time_point_seconds.load(std::memory_order_relaxed);
+    statistics->average_sample_time_seconds = manager->average_sample_time_seconds.load(std::memory_order_relaxed);
+    statistics->latest_sample_time_seconds = manager->latest_sample_time_seconds.load(std::memory_order_relaxed);
+    statistics->total_render_time_seconds = manager->total_render_time_seconds.load(std::memory_order_relaxed);
+
+    return MAGIK_SUCCESS;
 }
 
 

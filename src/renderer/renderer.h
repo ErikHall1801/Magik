@@ -32,6 +32,11 @@ struct magik_render_manager
     host_mem_decommit_function user_host_mem_decommit_func = nullptr;
     host_mem_release_function user_host_mem_release_func = nullptr;
 
+    std::atomic<double> sampled_time_point_seconds = 0.0f;
+    std::atomic<double> average_sample_time_seconds = 0.0f;
+    std::atomic<double> latest_sample_time_seconds = 0.0f;
+    std::atomic<double> total_render_time_seconds = 0.0f;
+
     /*
     I think the approach here is to delete the old files, make it 
     compile and see if it runs. We can, however, port the arena 
