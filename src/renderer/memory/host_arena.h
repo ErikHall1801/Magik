@@ -24,7 +24,7 @@
 #define AREAN_BASE_POS (sizeof(host_mem_arena))
 #define ALIGN_UP_POW2(n, p) (((uint64_t)(n) + ((uint64_t)(p) - 1)) & (~((uint64_t)(p) - 1)))
 
-namespace magik::host_memory
+namespace magik
 {
     struct host_mem_arena
     {

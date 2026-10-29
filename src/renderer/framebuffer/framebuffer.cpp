@@ -221,7 +221,7 @@ namespace magik
 
         for(auto& [target_key, target_value] : framebuffer_swapchain->render_framebuffer.collection)
         {
-            framebuffer_swapchain->back_framebuffer->collection.emplace(target_key, framebuffer_swapchain_t());
+            framebuffer_swapchain->back_framebuffer->collection.emplace(target_key, framebuffer_t());
 
             auto& back_element = framebuffer_swapchain->back_framebuffer->collection.find(target_key)->second;
 

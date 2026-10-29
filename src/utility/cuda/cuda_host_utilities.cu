@@ -1,8 +1,22 @@
 #include "cuda_host_utilities.h"
-#include "cuda_device_utilities.cuh"
+
+#include <cuda_runtime.h>
+#include <cstdint>
+#include <cstdlib>
+#include <iostream>
 
 namespace magik
 {
+    void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line)
+    {
+        if(result) 
+        {
+            std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " : '" << cudaGetErrorString(result) << "' at " << file << ":" << line << " '" << func << "' \n";
+            cudaDeviceReset();
+            exit(99);
+        }
+    }
+
     void set_cuda_device(uint32_t cuda_device)
     {
         check_cuda_errors(cudaSetDevice(cuda_device));

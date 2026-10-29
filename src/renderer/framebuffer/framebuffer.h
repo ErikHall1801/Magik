@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <variant>
 
 struct magik_aov_raw_buffer_external //Rename this !!!
 {

@@ -1,7 +1,7 @@
-#include "magik_host_memory.h"
-#include "magik_render_manager.h"
+#include "host_arena.h"
+#include "renderer.h"
 
-namespace magik::host_memory
+namespace magik
 {
     #if defined(_WIN32)
         static uint32_t platform_get_pagesize(void)
@@ -158,8 +158,8 @@ namespace magik::host_memory
         new_arena->pos = AREAN_BASE_POS;
         new_arena->commit_pos = commit_size;
 
-        manager->host_mem_commit.fetch_add(commit_size);
-        manager->host_mem_reserve.fetch_add(reserve_size);
+        // manager->host_mem_commit.fetch_add(commit_size);
+        // manager->host_mem_reserve.fetch_add(reserve_size);
 
         *arena = new_arena;
         return MAGIK_SUCCESS;
@@ -167,8 +167,8 @@ namespace magik::host_memory
 
     void arena_destroy(magik_render_manager* manager, host_mem_arena* host_arena, host_mem_release_function user_host_mem_release_func)
     {
-        manager->host_mem_reserve.fetch_sub(host_arena->reserve_size);
-        manager->host_mem_commit.fetch_sub(host_arena->commit_size);
+        // manager->host_mem_reserve.fetch_sub(host_arena->reserve_size);
+        // manager->host_mem_commit.fetch_sub(host_arena->commit_size);
         platform_mem_release(user_host_mem_release_func, host_arena, host_arena->reserve_size);
     }
 
@@ -199,7 +199,7 @@ namespace magik::host_memory
                 return MAGIK_ERROR_HOST_MEMORY_ALLOCATION_FAILED;
             }
 
-            manager->host_mem_commit.fetch_add(commit_size);
+            // manager->host_mem_commit.fetch_add(commit_size);
             host_arena->commit_pos = new_commit_pos;
         }
 
@@ -220,8 +220,8 @@ namespace magik::host_memory
     {
         size = MIN(size, host_arena->pos - AREAN_BASE_POS);
         host_arena->pos -= size;
-        manager->host_mem_reserve.fetch_sub(size);
-        manager->host_mem_commit.fetch_sub(size);
+        // manager->host_mem_reserve.fetch_sub(size);
+        // manager->host_mem_commit.fetch_sub(size);
     }
 
     void arean_pop_to(magik_render_manager* manager, host_mem_arena* host_arena, uint64_t pos)

@@ -33,13 +33,12 @@ struct magik_render_manager
     host_mem_release_function user_host_mem_release_func = nullptr;
 
     /*
-    What now ? Well, we have to port the kernel and make sure all logic 
-    is transfered, then make it compile. 
-    Now its time to change what "magik.cpp" does. Link the new functions
-    and make all of this like, compile. 
-    Even then, there is a lot to do, mainly with untangling some of the 
-    CUDA stuff. Plus renaming various bits'n pieces in magik.cpp and 
-    magik.h. 
+    I think the approach here is to delete the old files, make it 
+    compile and see if it runs. We can, however, port the arena 
+    stuff. 
+
+    Once it compiles and runs we will have to rename various bits'n
+    pieces. 
     */
 };
 

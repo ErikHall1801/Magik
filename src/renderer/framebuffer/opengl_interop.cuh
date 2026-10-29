@@ -1,7 +1,6 @@
 #pragma once
 
 #include "magik_error.h"
-#include "cuda_device_utilities.cuh"
 
 #include <stdint.h>
 

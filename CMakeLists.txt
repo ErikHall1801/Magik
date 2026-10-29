@@ -12,35 +12,44 @@ set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 
 # Declare a shared library
 add_library(magik SHARED 
-    # Core Host
+    # Renderer
+        # bxdf
+
+        # command
+        src/renderer/command/command.cpp
+
+        # framebuffer
+        src/renderer/framebuffer/framebuffer.cpp
+        src/renderer/framebuffer/opengl_interop.cu
+
+        # kernels
+        src/renderer/kernels/kernel_julia_set.cu
+
+        # memory
+        src/renderer/memory/host_arena.cpp
+
+        # metrics
+
+        # optics
+
+        # stage
+
+        # traceables
+
+        src/renderer/renderer.cpp
+
+    # Utility
+        # cuda
+        src/utility/cuda/cuda_device_utilities.cu
+        src/utility/cuda/cuda_host_utilities.cu
+
+        # error
+        src/utility/error/magik_error.cpp
+
+        # math
+
+    # Core
     src/magik.cpp
-    src/utility/error/magik_error.cpp
-    
-    # CUDA Bridge
-    src/device/bridge/magik_bridge.cu
-    
-    # CUDA Kernels
-    src/device/kernels/magik_test_pattern.cu
-
-    # CUDA Interops
-    src/device/interops/magik_interop_opengl.cu
-    
-    # Manager
-    src/host/manager/magik_arbitrary_output_variables.cpp
-    src/host/manager/magik_command_queue_system.cpp
-    src/host/manager/magik_render_manager.cpp
-    src/host/manager/magik_worker.cpp
-
-    # Memory
-    src/host/memory/magik_host_memory.cpp
-
-    # (Optional)
-    src/device/bridge/magik_bridge.h
-
-    ###
-
-    # src/renderer/renderer.cpp
-    # src/renderer/renderer.h
 )
 
 # Define the location of the header files
@@ -51,19 +60,6 @@ target_include_directories(magik
 
     # Private includes for internal build
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/device
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/bridge
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/kernels
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/interops
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/library
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/host
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/manager
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/memory
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/optics
-
-        ###
-
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/bxdf
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/command
@@ -87,6 +83,9 @@ find_package(glad CONFIG REQUIRED)
 target_link_libraries(magik PRIVATE
     glad::glad
 )
+
+find_package(CUDAToolkit REQUIRED)
+target_link_libraries(magik PRIVATE glad::glad CUDA::cudart)
 
 target_compile_definitions(magik PRIVATE MAGIK_BUILD_DLL)
 

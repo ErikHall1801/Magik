@@ -2,6 +2,7 @@
 #include <glad/glad.h>
 #include "cuda_runtime.h"
 #include "cuda_gl_interop.h"
+#include "cuda_host_utilities.h"
 #include <iostream>
 
 namespace magik
