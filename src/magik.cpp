@@ -175,32 +175,32 @@ MAGIK_API e_magik_result_types magik_fetch_renderer_statistics(magik_render_mana
 
 
 /**
-* [SECTION] Arbitrary Output Variables <- Change to "Framebuffer"
+* [SECTION] Framebuffer
 */
 
-MAGIK_API e_magik_result_types magik_aov_configure_framebuffer_object(magik_aov_framebuffer_object_external_t* framebuffer_object, e_magik_aov_config_types config_type)
+MAGIK_API e_magik_result_types magik_configure_framebuffer_collection(magik_framebuffer_collection_external_t* framebuffer, e_magik_framebuffer_collection_config_types config_type)
 {
-    return magik::configure_external_framebuffer_collection(framebuffer_object, config_type);
+    return magik::configure_external_framebuffer_collection(framebuffer, config_type);
 }
 
-MAGIK_API e_magik_result_types magik_aov_fetch(magik_render_manager_t manager, bool* is_new_fetch, magik_aov_framebuffer_object_external_t framebuffer_object)
+MAGIK_API e_magik_result_types magik_framebuffer_collection_fetch(magik_render_manager_t manager, bool* is_new_fetch, magik_framebuffer_collection_external_t framebuffer)
 {
-    return magik::fetch_framebuffer_collection(manager, framebuffer_object, is_new_fetch);
+    return magik::fetch_framebuffer_collection(manager, framebuffer, is_new_fetch);
 }
 
-MAGIK_API e_magik_result_types magik_aov_extract_config_host(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t framebuffer_object, const char* name)
+MAGIK_API e_magik_result_types magik_extract_config_host(magik_render_manager_t manager, magik_framebuffer_container_config_host_t* container, magik_framebuffer_collection_external_t framebuffer, const char* name)
 {
-    return magik::extract_config_host(manager, container, framebuffer_object, name);
+    return magik::extract_config_host(manager, container, framebuffer, name);
 }
 
-MAGIK_API e_magik_result_types magik_aov_extract_config_opengl_interop(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t framebuffer_object, const char* name)
+MAGIK_API e_magik_result_types magik_extract_config_opengl_interop(magik_render_manager_t manager, magik_framebuffer_container_config_opengl_interop_t* container, magik_framebuffer_collection_external_t framebuffer, const char* name)
 {
-    return magik::extract_config_opengl_interop(manager, container, framebuffer_object, name);
+    return magik::extract_config_opengl_interop(manager, container, framebuffer, name);
 }
 
-MAGIK_API e_magik_result_types magik_aov_destroy_framebuffer_object(magik_aov_framebuffer_object_external_t framebuffer_object)
+MAGIK_API e_magik_result_types magik_destroy_framebuffer_collection(magik_framebuffer_collection_external_t framebuffer)
 {
-    return magik::destroy_external_framebuffer_collection(framebuffer_object);
+    return magik::destroy_external_framebuffer_collection(framebuffer);
 }
 
 

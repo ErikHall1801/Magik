@@ -43,9 +43,9 @@ struct magik_aov_raw_buffer_external //Rename this !!!
     } config_vulkan_interop;
 };
 
-struct magik_aov_framebuffer_object_external //Rename this !!!
+struct magik_framebuffer_collection_external //Rename this !!!
 {
-    e_magik_aov_config_types config_type;
+    e_magik_framebuffer_collection_config_types config_type;
     std::unordered_map<std::string, magik_aov_raw_buffer_external> collection;
 };
 
@@ -80,15 +80,15 @@ namespace magik
     };
 
     // Obviously all the names in magik.h have to chanbge too. 
-    e_magik_result_types configure_external_framebuffer_collection(magik_aov_framebuffer_object_external_t* external_collection_framebuffer, e_magik_aov_config_types config_type);
+    e_magik_result_types configure_external_framebuffer_collection(magik_framebuffer_collection_external_t* external_collection_framebuffer, e_magik_framebuffer_collection_config_types config_type);
 
-    e_magik_result_types fetch_framebuffer_collection(magik_render_manager_t manager, magik_aov_framebuffer_object_external_t external_collection_framebuffer, bool* is_new_fetch);
+    e_magik_result_types fetch_framebuffer_collection(magik_render_manager_t manager, magik_framebuffer_collection_external_t external_collection_framebuffer, bool* is_new_fetch);
 
-    e_magik_result_types extract_config_host(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t external_collection_framebuffer, const char* name);
+    e_magik_result_types extract_config_host(magik_render_manager_t manager, magik_framebuffer_container_config_host_t* container, magik_framebuffer_collection_external_t external_collection_framebuffer, const char* name);
 
-    e_magik_result_types extract_config_opengl_interop(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t external_collection_framebuffer, const char* name);
+    e_magik_result_types extract_config_opengl_interop(magik_render_manager_t manager, magik_framebuffer_container_config_opengl_interop_t* container, magik_framebuffer_collection_external_t external_collection_framebuffer, const char* name);
 
-    e_magik_result_types destroy_external_framebuffer_collection(magik_aov_framebuffer_object_external_t external_collection_framebuffer);
+    e_magik_result_types destroy_external_framebuffer_collection(magik_framebuffer_collection_external_t external_collection_framebuffer);
 
     e_magik_result_types initialize_framebuffer_swapchain(framebuffer_swapchain_t* framebuffer_swapchain);
 
@@ -100,7 +100,7 @@ namespace magik
 
     e_magik_result_types try_swap_front_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain, bool* is_swapped);
 
-    e_magik_result_types memcpy_front_framebuffer_to_external_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain, magik_aov_framebuffer_object_external* external_collection_framebuffer);
+    e_magik_result_types memcpy_front_framebuffer_to_external_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer);
 
     e_magik_result_types destroy_framebuffer_swpachain(framebuffer_swapchain_t* framebuffer_swapchain);
 }
