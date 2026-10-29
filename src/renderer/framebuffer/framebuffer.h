@@ -66,9 +66,6 @@ namespace magik
 
     struct framebuffer_swapchain_t
     {
-        uint32_t x_resolution_target = 2880;
-        uint32_t y_resolution_target = 2160;
-
         framebuffer_collection_t framebuffer_collection[3];
 
         framebuffer_collection_t* front_framebuffer = nullptr;
@@ -92,7 +89,7 @@ namespace magik
 
     e_magik_result_types initialize_framebuffer_swapchain(framebuffer_swapchain_t* framebuffer_swapchain);
 
-    e_magik_result_types allocate_render_framebuffer_swapchain(framebuffer_swapchain_t* framebuffer_swapchain, bool* is_dirty);
+    e_magik_result_types allocate_render_framebuffer_swapchain(framebuffer_swapchain_t* framebuffer_swapchain, bool* is_dirty, uint32_t x_resolution_target, uint32_t y_resolution_target);
 
     e_magik_result_types memcpy_render_to_back_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain);
 

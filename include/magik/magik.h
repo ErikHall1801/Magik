@@ -569,11 +569,6 @@ typedef enum e_magik_cqs_command_types
     */
     MAGIK_COMMAND_PRINTF = 2000,
 
-    /**
-    * @brief Force resizes the render buffer
-    */
-    MAGIK_COMMAND_SET_RESOLUTION = 2001,
-
 
 
     // ##########################
@@ -605,6 +600,11 @@ typedef enum e_magik_cqs_command_types
     * @brief Set the pitch, yaw and roll of a camera
     */
     MAGIK_COMMAND_SET_CAMERA_ORIENTATION = 5002,
+
+    /**
+    * @brief Set the resolution of the camera, values less than 2 are guarded against.
+    */
+    MAGIK_COMMAND_SET_CAMERA_RESOLUTION = 5003,
 
 
 
@@ -675,13 +675,6 @@ typedef struct MAGIK_ALIGN4 magik_command_printf_t
     char text[512];
 } magik_command_printf_t;
 
-typedef struct MAGIK_ALIGN4 magik_command_set_resolution_t
-{
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_RESOLUTION;
-    uint32_t x_resolution = 2;
-    uint32_t y_resolution = 2;
-} magik_command_set_resolution_t;
-
 
 
 // ##########################
@@ -722,6 +715,13 @@ typedef struct MAGIK_ALIGN4 magik_command_set_camera_orientation_t
     float rotation_y = 0.0f;
     float rotation_z = 0.0f;
 } magik_command_set_camera_orientation_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_camera_resolution_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_RESOLUTION;
+    uint32_t x_resolution = 2;
+    uint32_t y_resolution = 2;
+} magik_command_set_camera_resolution_t;
 
 
 

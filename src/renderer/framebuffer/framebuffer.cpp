@@ -174,27 +174,24 @@ namespace magik
         return MAGIK_SUCCESS;
     }
 
-    e_magik_result_types allocate_render_framebuffer_swapchain(framebuffer_swapchain_t* framebuffer_swapchain, bool* is_dirty)
+    e_magik_result_types allocate_render_framebuffer_swapchain(framebuffer_swapchain_t* framebuffer_swapchain, bool* is_dirty, uint32_t x_resolution_target, uint32_t y_resolution_target)
     {
-        if(framebuffer_swapchain->x_resolution_target <= 0) {framebuffer_swapchain->x_resolution_target = 2;}
-        if(framebuffer_swapchain->y_resolution_target <= 0) {framebuffer_swapchain->y_resolution_target = 2;}
-
         size_t size_of_nth_buffer = 0;
 
         *is_dirty = false;
 
         for(auto& [key, value] : framebuffer_swapchain->render_framebuffer.collection)
         {
-            if((framebuffer_swapchain->x_resolution_target != value.x_resolution) || (framebuffer_swapchain->y_resolution_target != value.y_resolution))
+            if((x_resolution_target != value.x_resolution) || (y_resolution_target != value.y_resolution))
             {
                 *is_dirty = true;
 
-                size_of_nth_buffer = static_cast<size_t>(framebuffer_swapchain->x_resolution_target*framebuffer_swapchain->y_resolution_target*value.channels) * sizeof(float);
+                size_of_nth_buffer = static_cast<size_t>(x_resolution_target*y_resolution_target*value.channels) * sizeof(float);
 
                 magik::free_device(value.d_data);
 
-                value.x_resolution = framebuffer_swapchain->x_resolution_target;
-                value.y_resolution = framebuffer_swapchain->y_resolution_target;
+                value.x_resolution = x_resolution_target;
+                value.y_resolution = y_resolution_target;
                 value.d_data = magik::allocate_device<float>(size_of_nth_buffer);
             }
         }

@@ -31,8 +31,6 @@ namespace magik
             // ################################
             case MAGIK_COMMAND_PRINTF: { is_valid_ = true; size_ = sizeof(magik_command_printf_t); break; }
 
-            case MAGIK_COMMAND_SET_RESOLUTION: { is_valid_ = true; size_ = sizeof(magik_command_set_resolution_t); break; }
-
 
 
             // ##########################
@@ -55,6 +53,8 @@ namespace magik
             case MAGIK_COMMAND_SET_CAMERA_POSITION: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_position_t); break; }
 
             case MAGIK_COMMAND_SET_CAMERA_ORIENTATION: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_orientation_t); break; }
+
+            case MAGIK_COMMAND_SET_CAMERA_RESOLUTION: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_resolution_t); break; }
 
 
 
@@ -132,15 +132,6 @@ namespace magik
                 break;
             }
 
-            case MAGIK_COMMAND_SET_RESOLUTION:
-            {
-                magik_command_set_resolution_t cmd;
-                memcpy(&cmd, playhead, command_size);
-                manager->framebuffer_swapchain.x_resolution_target = cmd.x_resolution;
-                manager->framebuffer_swapchain.y_resolution_target = cmd.y_resolution;
-                break;
-            }
-
 
 
             // ##########################
@@ -190,6 +181,19 @@ namespace magik
 
                 manager->stage.real = cmd.rotation_x;
                 manager->stage.imag = cmd.rotation_y;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_CAMERA_RESOLUTION:
+            {
+                magik_command_set_camera_resolution_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                if(cmd.x_resolution <= 0) {cmd.x_resolution = 2;}
+                if(cmd.y_resolution <= 0) {cmd.y_resolution = 2;}
+
+                manager->stage.optical_systen.x_resolution = cmd.x_resolution;
+                manager->stage.optical_systen.y_resolution = cmd.y_resolution;
                 break;
             }
 
