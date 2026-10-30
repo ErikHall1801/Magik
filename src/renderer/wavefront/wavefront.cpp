@@ -119,12 +119,10 @@ namespace magik
 
         - Make an actual pinhole camera, so we dont have to flip things (also change the start position)
             - For this, in order to avoid another kernel, just make a sensor.h that the ideal and physical lens use. 
-        - Make the kernels at the start async too, no need to fence. Rework the kernel args so they just take the ray buffer.  
+            - So we have a kernel for the thin lens, equalrectangular, physical etc. 
         - Make render settings, which include the threads per block
         - Move to a spectral pipeline
-        - Warp aggregated ballots, just as a test 
         - Rework, if possible, the cuda header situation. I dont like that the cuda runtime is pulled in from ray.h all too much
-        - Move the queue reset logic into the kernel launch
         - At least look into how we can potentially make is_work_done async. 
         - Add debug info and statistics for the wavefront sample  (In particular "History snapshots", how many rays were in each queue throughout the sample)
         - device arena allocator
