@@ -21,7 +21,7 @@ namespace magik
         ray_pool_t ray_pool;
     };
 
-    void realloc_wavefront_ray_buffer(wavefront_ray_buffer_t* buffer, uint32_t x_resolution_target, uint32_t y_resolution_target);
+    void realloc_wavefront_ray_buffer(magik_render_manager* manager, wavefront_ray_buffer_t* buffer, uint32_t x_resolution_target, uint32_t y_resolution_target);
 
     void destroy_wavefront_ray_buffer(wavefront_ray_buffer_t* buffer);
 

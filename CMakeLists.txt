@@ -30,6 +30,7 @@ add_library(magik SHARED
         src/renderer/kernels/kernel_bxdf.cu
         src/renderer/kernels/kernel_enforce_ray_limits.cu
         src/renderer/kernels/kernel_reset_ray_state.cu
+        src/renderer/kernels/kernel_initialize_random_device.cu
 
         # memory
         src/renderer/memory/host_arena.cpp

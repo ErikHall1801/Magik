@@ -14,6 +14,7 @@ namespace magik
 
         ray_pool.n_step[thread_id] = 0;
         ray_pool.d_rgb[thread_id] = vec3f{0.0f, 0.0f, 0.0f};
+        ray_pool.d_step_distance[thread_id] = 0.0f;
     }
 
     void launch_kernel_reset_ray_state_sync(void** user_stream, ray_pool_t ray_pool, uint32_t x_resolution, uint32_t y_resolution)

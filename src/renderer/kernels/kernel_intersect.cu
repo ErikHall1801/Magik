@@ -61,7 +61,6 @@ namespace magik
             // As before, we define that, if there was a hit, by the end of this operation
             // the ray is at that position. 
             ray_pool.d_pos[ray_id] = ray_orig + ray_dir * distance * closest_hit;
-
             ray_pool.hit_id[ray_id] = hit_id;
             ray_pool.hit_normal[ray_id] = closest_normal;
         }

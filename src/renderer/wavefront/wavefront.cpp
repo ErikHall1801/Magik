@@ -6,10 +6,11 @@
 #include "kernel_bxdf.cuh"
 #include "kernel_enforce_ray_limits.cuh"
 #include "kernel_reset_ray_state.cuh"
+#include "kernel_initialize_random_device.cuh"
 
 namespace magik
 {
-    void realloc_wavefront_ray_buffer(wavefront_ray_buffer_t* buffer, uint32_t x_resolution_target, uint32_t y_resolution_target)
+    void realloc_wavefront_ray_buffer(magik_render_manager* manager, wavefront_ray_buffer_t* buffer, uint32_t x_resolution_target, uint32_t y_resolution_target)
     {
         /*
         We need a way to automate this. realloc and destruction. 
@@ -29,6 +30,8 @@ namespace magik
         size_t size_of_vec3f_buffer = x_resolution_target*y_resolution_target*sizeof(vec3f);
         size_t size_of_float_buffer = x_resolution_target*y_resolution_target*sizeof(float);
         size_t size_of_uint32_t_buffer = x_resolution_target*y_resolution_target*sizeof(uint32_t);
+        size_t size_of_curandState_t_buffer = x_resolution_target*y_resolution_target*sizeof(curandState_t);
+
         buffer->ray_pool.d_dir = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
         buffer->ray_pool.d_pos = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
         buffer->ray_pool.d_rgb = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
@@ -36,10 +39,12 @@ namespace magik
         buffer->ray_pool.n_step = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
         buffer->ray_pool.hit_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
         buffer->ray_pool.hit_normal = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
+        buffer->ray_pool.d_random_device = magik::allocate_device<curandState_t>(size_of_curandState_t_buffer);
 
         magik::memset_device_sync<vec3f>(buffer->ray_pool.d_rgb, 0x0, size_of_vec3f_buffer);
         magik::memset_device_sync<uint32_t>(buffer->ray_pool.n_step, 0x0, size_of_uint32_t_buffer);
         magik::memset_device_sync<float>(buffer->ray_pool.d_step_distance, 0x0, size_of_float_buffer);
+        magik::launch_kernel_initialize_random_device_sync(&manager->cuda_stream, buffer->ray_pool, buffer->x_resolution, buffer->y_resolution);
 
         buffer->advance_queue_A.d_count = magik::allocate_device<uint32_t>(sizeof(uint32_t));
         buffer->advance_queue_A.d_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
@@ -62,6 +67,7 @@ namespace magik
         magik::free_device(buffer->ray_pool.n_step);
         magik::free_device(buffer->ray_pool.hit_id);
         magik::free_device(buffer->ray_pool.hit_normal);
+        magik::free_device(buffer->ray_pool.d_random_device);
 
         magik::free_device(buffer->advance_queue_A.d_id);
         magik::free_device(buffer->advance_queue_A.d_count);
@@ -176,6 +182,11 @@ namespace magik
         1. We have no way of clearing the wavefront buffer from the command 
             -> What about a bool in the manager which says "clear". Sure, but what do we clear ? And where ? 
         2. Pixels endlessly accumulate values. 
+
+        Alright well, we have something that at least appears to work, somewhat. Now its time to debug. I think
+        a big issue right now is that try to use ideal reflections. 
+        Ahhh, let me guess, i am feeding the direction in wrong. I think the ideal reflections are just not 
+        giving us enough information. We can switch to a basic diffuse brdf. 
         */
 
         bool working = true;

@@ -62,7 +62,7 @@ namespace magik
             result = magik::allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
 
             // Wavefront realloc
-            magik::realloc_wavefront_ray_buffer(&ray_buffer, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
+            magik::realloc_wavefront_ray_buffer(manager, &ray_buffer, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
 
             if(result)
             {

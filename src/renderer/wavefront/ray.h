@@ -2,6 +2,9 @@
 
 #include "internal_math.h"
 #include <cstdint>
+#include "cuda_runtime.h"
+#include <curand_kernel.h>
+#include "curand.h"
 
 namespace magik
 {
@@ -25,5 +28,7 @@ namespace magik
         uint32_t* n_step = nullptr;
         uint32_t* hit_id = nullptr;
         vec3f* hit_normal = nullptr;
+
+        curandState* d_random_device = nullptr; // true type is curand
     };
 }

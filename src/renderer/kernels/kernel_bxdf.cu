@@ -4,6 +4,23 @@
 
 namespace magik
 {
+    static __device__ vec3f random_unit_three_vector(curandState_t* random_device)
+    {
+        using ::sin;
+        using ::cos;
+        using ::acos;
+
+        float u = curand_uniform(random_device);
+        float theta = acos(1.0f - 2.0f*u);
+        float phi = 2.0f*magik::pi*curand_uniform(random_device);
+
+        vec3f p;
+        p.x = cos(phi) * sin(theta);
+        p.y = sin(phi) * sin(theta);
+        p.z = cos(theta);
+        return p;
+    }
+
     static __device__ vec3f offset_origin(vec3f x, vec3f n)
     {
         /*
@@ -55,8 +72,16 @@ namespace magik
 
             vec3f hit_normal = ray_pool.hit_normal[ray_id];
             vec3f hit_dir = ray_pool.d_dir[ray_id];
-            vec3f outgoing_dir = magik::vector_reflect(hit_dir, hit_normal);
-            vec3f new_orig = offset_origin(ray_pool.d_pos[ray_id], hit_normal);
+
+            vec3f outgoing_dir = random_unit_three_vector(&ray_pool.d_random_device[ray_id]);
+
+            if(vector_dot_product(hit_dir, outgoing_dir) < 0.0f)
+            {
+                outgoing_dir *= -1.0f;
+            }
+
+            // vec3f outgoing_dir = magik::vector_reflect(hit_dir, hit_normal);
+            vec3f new_orig = offset_origin(ray_pool.d_pos[ray_id], -hit_normal);
 
             ray_pool.d_dir[ray_id] = outgoing_dir;
             ray_pool.d_pos[ray_id] = new_orig;
