@@ -181,7 +181,7 @@ namespace magik
         }*/
 
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
-        launch_kernel_splat_to_render_buffer_sync(&manager->cuda_stream, 16, 16, buffer->x_resolution, buffer->y_resolution, tmp_element->second.d_data, buffer->ray_pool.d_pos);
+        launch_kernel_splat_to_render_buffer_sync(&manager->cuda_stream, 16, 16, buffer->x_resolution, buffer->y_resolution, tmp_element->second.d_data, buffer->ray_pool.d_dir);
 
         manager->x_sample.fetch_add(1, std::memory_order_relaxed);
     }

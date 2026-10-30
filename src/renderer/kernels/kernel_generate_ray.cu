@@ -4,6 +4,52 @@
 
 namespace magik
 {
+    static __device__ vec2f generate_screen_uv_coordinates(uint32_t x_resolution, uint32_t y_resolution)
+    {
+        int x_abs = threadIdx.x + blockIdx.x * blockDim.x;
+        int y_abs = threadIdx.y + blockIdx.y * blockDim.y;
+
+        float x_norm = -((float(x_abs) / float(x_resolution)) - 0.5f);
+        float y_norm = -(float(y_abs) / float(y_resolution) - 0.5f);
+
+        float u = x_norm;
+        float v = y_norm;
+        float ratio = float(y_resolution) / float(x_resolution);
+
+        if (ratio < 1.0)
+        {
+            v *= ratio;
+        }
+        else
+        {
+            u /= ratio;
+        }
+
+        return vec2f{u, v };
+    }
+
+    static __device__ float compute_inv_b(float diagonal_mm, uint32_t y_resolution, uint32_t x_resolution)
+    {
+        return diagonal_mm / sqrtf(static_cast<float>(x_resolution * x_resolution + y_resolution * y_resolution));
+    }
+
+    static __device__ vec3f generate_z_aligned_sensor_position(float diagonal_mm, uint32_t x_resolution, uint32_t y_resolution)
+    {
+        float inv_s = compute_inv_b(diagonal_mm, x_resolution, y_resolution);
+        float width_mm = x_resolution * inv_s;
+        float height_mm = y_resolution * inv_s;
+
+        float num_of_pixels = static_cast<float>(x_resolution * y_resolution);
+        float area_of_sensor = (width_mm * height_mm) / 1E6f;
+        float pixel_side_length = sqrtf(area_of_sensor / num_of_pixels);
+        float ju = 0.0f; // (curand_uniform(&thread_random_device) - 0.5f) * pixel_side_length;
+        float jv = 0.0f; // (curand_uniform(&thread_random_device) - 0.5f) * pixel_side_length;
+
+        vec2f uv = generate_screen_uv_coordinates(x_resolution, y_resolution);
+
+        return vec3f{ ((-uv.x * diagonal_mm) / 1000.0f) + ju, ((-uv.y * diagonal_mm) / 1000.0f) + jv, 0.0f }; // uv is flipped because the ideal and physical cameras naturally flip the render
+    }
+
     static __global__ void kernel_generate_ray_sync(vec3f* d_pos, vec3f* d_dir, ray_queue_t advance_queue, uint32_t x_resolution, uint32_t y_resolution, float focal_length, float sensor_diagonal_mm, vec3f position, mat3f orientation)
     {
         /*
@@ -38,7 +84,16 @@ namespace magik
         uint32_t thread_id = magik::get_n_dimensional_thread_id(x_resolution, 1);
 
         // Logic for making the ray dir and orig. 
-        vec3f ray_dir, ray_orig = position;
+        vec3f ray_dir, ray_orig;
+
+        vec3f sensor_position = generate_z_aligned_sensor_position(sensor_diagonal_mm, x_resolution, y_resolution) - vec3f{0.0f, 0.0f, focal_length/1000.0f};
+        ray_dir = sensor_position.norm();
+        ray_orig = sensor_position;
+
+        // To world space
+        ray_orig = orientation * ray_orig;
+        ray_orig += position;
+        ray_dir = orientation * ray_dir;
 
         d_dir[thread_id] = ray_dir;
         d_pos[thread_id] = ray_orig;

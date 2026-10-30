@@ -23,7 +23,6 @@ add_library(magik SHARED
         src/renderer/framebuffer/opengl_interop.cu
 
         # kernels
-        src/renderer/kernels/kernel_julia_set.cu
         src/renderer/kernels/kernel_generate_ray.cu
         src/renderer/kernels/kernel_splat_to_render_buffer.cu
 

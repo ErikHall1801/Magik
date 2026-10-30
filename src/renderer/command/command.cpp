@@ -163,10 +163,6 @@ namespace magik
                 manager->stage.optical_systen.position.x = cmd.position_x;
                 manager->stage.optical_systen.position.y = cmd.position_y;
                 manager->stage.optical_systen.position.z = cmd.position_z;
-                
-                manager->stage.c0 = cmd.position_x;
-                manager->stage.c1 = cmd.position_y;
-                manager->stage.c2 = cmd.position_z;
                 break;
             }
 
@@ -176,11 +172,8 @@ namespace magik
                 memcpy(&cmd, playhead, command_size);
                 mat3f m;
                 m.make_identity();
-                m.rotate(cmd.rotation_x, cmd.rotation_y, cmd.rotation_z);
+                m = m.rotate(cmd.rotation_z, cmd.rotation_y, cmd.rotation_x);
                 manager->stage.optical_systen.orientation = m;
-
-                manager->stage.real = cmd.rotation_x;
-                manager->stage.imag = cmd.rotation_y;
                 break;
             }
 
