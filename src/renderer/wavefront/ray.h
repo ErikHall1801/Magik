@@ -7,12 +7,6 @@ namespace magik
 {
     struct ray_queue_t
     {
-        /*
-        Now things get interesting, because this "count" value needs to be on the GPU. 
-        Moreover, we have to actually consider how this architecture will work. In depth. 
-
-        */
-
         uint32_t* d_count = nullptr; 
         uint32_t* d_id = nullptr;
     };

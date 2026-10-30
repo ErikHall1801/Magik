@@ -25,6 +25,7 @@ add_library(magik SHARED
         # kernels
         src/renderer/kernels/kernel_julia_set.cu
         src/renderer/kernels/kernel_generate_ray.cu
+        src/renderer/kernels/kernel_splat_to_render_buffer.cu
 
         # memory
         src/renderer/memory/host_arena.cpp

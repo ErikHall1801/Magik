@@ -56,8 +56,18 @@ namespace magik
         check_cuda_errors(cudaMemcpy(d_ptr_a, d_ptr_b, size, cudaMemcpyDeviceToDevice));
     }
 
-    template<typename T> inline void memset_async(T* d_ptr, T value, size_t size, void* user_stream)
+    template<typename T> inline void memset_device_async(T* d_ptr, int value, size_t size, void** user_stream)
     {
-        check_cuda_errors(cudaMemsetAsync(d_ptr, value, size, user_stream));
+        check_cuda_errors(cudaMemsetAsync(d_ptr, value, size, static_cast<cudaStream_t>(*user_stream)));
+    }
+
+    template<typename T> inline void memset_device_sync(T* d_ptr, int value, size_t size)
+    {
+        check_cuda_errors(cudaMemset(d_ptr, value, size));
+    }
+
+    template<typename T> inline void memcpy_device_to_host_async(T* d_ptr, T* h_ptr, size_t size, void** user_stream)
+    {
+        check_cuda_errors(cudaMemcpyAsync(h_ptr, d_ptr, size, cudaMemcpyDeviceToHost, static_cast<cudaStream_t>(*user_stream)));
     }
 }

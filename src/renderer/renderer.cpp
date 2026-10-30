@@ -100,8 +100,9 @@ namespace magik
             auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test");
             if(tmp_element != manager->framebuffer_swapchain.render_framebuffer.collection.end())
             {
-                auto tmp_buffer = tmp_element->second;
-                magik::launch_kernel_julia_set(manager->cuda_stream, tmp_buffer.d_data, tmp_buffer.x_resolution, tmp_buffer.y_resolution, 16, 16, manager->stage.c0, manager->stage.c1, manager->stage.c2, manager->stage.imag, manager->stage.real);
+                wavefront_sample(manager, &ray_buffer);
+                // auto tmp_buffer = tmp_element->second;
+                // magik::launch_kernel_julia_set(manager->cuda_stream, tmp_buffer.d_data, tmp_buffer.x_resolution, tmp_buffer.y_resolution, 16, 16, manager->stage.c0, manager->stage.c1, manager->stage.c2, manager->stage.imag, manager->stage.real);
             }
             else
             {
