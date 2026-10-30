@@ -50,7 +50,7 @@ namespace magik
         return vec3f{ ((-uv.x * diagonal_mm) / 1000.0f) + ju, ((-uv.y * diagonal_mm) / 1000.0f) + jv, 0.0f }; // uv is flipped because the ideal and physical cameras naturally flip the render
     }
 
-    static __global__ void kernel_generate_ray_sync(vec3f* d_pos, vec3f* d_dir, ray_queue_t advance_queue, uint32_t x_resolution, uint32_t y_resolution, float focal_length, float sensor_diagonal_mm, vec3f position, mat3f orientation)
+    static __global__ void kernel_generate_ray(vec3f* d_pos, vec3f* d_dir, ray_queue_t advance_queue, uint32_t x_resolution, uint32_t y_resolution, float focal_length, float sensor_diagonal_mm, vec3f position, mat3f orientation)
     {
         /*
         What i need to figure out is how to get the thread id here. How do we launch a flat kernel, so to speak. 
@@ -109,7 +109,7 @@ namespace magik
         dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
         dim3 n_block = magik::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
 
-        kernel_generate_ray_sync<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(ray_pool.d_pos, ray_pool.d_dir, advance_queue, x_resolution, y_resolution, focal_length, sensor_diagonal_mm, position, orientation);
+        kernel_generate_ray<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(ray_pool.d_pos, ray_pool.d_dir, advance_queue, x_resolution, y_resolution, focal_length, sensor_diagonal_mm, position, orientation);
         check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
         check_cuda_errors(cudaGetLastError());
     }

@@ -425,4 +425,15 @@ namespace magik
 
         return MAGIK_SUCCESS;
     }
+
+    e_magik_result_types reset_render_buffer(framebuffer_swapchain_t* framebuffer_swapchain)
+    {
+        for(const auto& [key, value] : framebuffer_swapchain->render_framebuffer.collection)
+        {
+            size_t size_of_render_buffer = value.channels*value.x_resolution*value.y_resolution*sizeof(float);
+            magik::memset_device_sync(value.d_data, 0x0, size_of_render_buffer);
+        }
+
+        return MAGIK_SUCCESS;
+    }
 }

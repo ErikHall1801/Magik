@@ -96,6 +96,13 @@ namespace magik
             }
 
             // Rendering stage
+            if(manager->framebuffer_swapchain.clear_render_buffer)
+            {
+                magik::reset_render_buffer(&manager->framebuffer_swapchain);
+                magik::wavefront_reset(manager, &ray_buffer);
+                manager->framebuffer_swapchain.clear_render_buffer = false;
+            }
+
             auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test");
             if(tmp_element != manager->framebuffer_swapchain.render_framebuffer.collection.end())
             {

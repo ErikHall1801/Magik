@@ -163,6 +163,8 @@ namespace magik
                 manager->stage.optical_systen.position.x = cmd.position_x;
                 manager->stage.optical_systen.position.y = cmd.position_y;
                 manager->stage.optical_systen.position.z = cmd.position_z;
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
             }
 
@@ -174,6 +176,8 @@ namespace magik
                 m.make_identity();
                 m = m.rotate(cmd.rotation_z, cmd.rotation_y, cmd.rotation_x);
                 manager->stage.optical_systen.orientation = m;
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
             }
 

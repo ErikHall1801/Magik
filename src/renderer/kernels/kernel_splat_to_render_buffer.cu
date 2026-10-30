@@ -4,7 +4,7 @@
 
 namespace magik
 {
-    static __global__ void kernel_splat_to_render_buffer(float* d_data, vec3f* d_dir, uint32_t x_resolution, uint32_t y_resolution)
+    static __global__ void kernel_splat_to_render_buffer(float* d_data, vec3f* d_rgb, uint32_t x_resolution, uint32_t y_resolution)
     {
         if(!magik::is_valid_thread(x_resolution, y_resolution)) return;
 
@@ -14,17 +14,17 @@ namespace magik
         uint32_t thread_id = magik::get_n_dimensional_thread_id(x_resolution, 1);
         uint32_t render_buffer_id = magik::get_n_dimensional_thread_id(x_resolution, 3);
 
-        d_data[render_buffer_id + 0] = d_dir[thread_id].x;
-        d_data[render_buffer_id + 1] = d_dir[thread_id].y;
-        d_data[render_buffer_id + 2] = d_dir[thread_id].z;
+        d_data[render_buffer_id + 0] += d_rgb[thread_id].x;
+        d_data[render_buffer_id + 1] += d_rgb[thread_id].y;
+        d_data[render_buffer_id + 2] += d_rgb[thread_id].z;
     }
 
-    void launch_kernel_splat_to_render_buffer_sync(void** user_stream, uint32_t x_threads_per_block, uint32_t y_threads_per_block, uint32_t x_resolution, uint32_t y_resolution, float* d_data, vec3f* d_dir)
+    void launch_kernel_splat_to_render_buffer_sync(void** user_stream, uint32_t x_threads_per_block, uint32_t y_threads_per_block, uint32_t x_resolution, uint32_t y_resolution, float* d_data, vec3f* d_rgb)
     {
         dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
         dim3 n_block = magik::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
 
-        kernel_splat_to_render_buffer<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(d_data, d_dir, x_resolution, y_resolution);
+        kernel_splat_to_render_buffer<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(d_data, d_rgb, x_resolution, y_resolution);
         check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
         check_cuda_errors(cudaGetLastError());
     }

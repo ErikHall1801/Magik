@@ -25,6 +25,11 @@ add_library(magik SHARED
         # kernels
         src/renderer/kernels/kernel_generate_ray.cu
         src/renderer/kernels/kernel_splat_to_render_buffer.cu
+        src/renderer/kernels/kernel_tmp_advance.cu
+        src/renderer/kernels/kernel_intersect.cu
+        src/renderer/kernels/kernel_bxdf.cu
+        src/renderer/kernels/kernel_enforce_ray_limits.cu
+        src/renderer/kernels/kernel_reset_ray_state.cu
 
         # memory
         src/renderer/memory/host_arena.cpp

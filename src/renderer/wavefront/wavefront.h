@@ -15,7 +15,7 @@ namespace magik
         ray_queue_t advance_queue_A;
         ray_queue_t advance_queue_B;
         ray_queue_t intersect_queue;
-        ray_queue_t shade_queue;
+        ray_queue_t bxdf_queue;
         ray_queue_t color_queue;
 
         ray_pool_t ray_pool;

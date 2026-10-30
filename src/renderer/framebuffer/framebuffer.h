@@ -74,6 +74,7 @@ namespace magik
         framebuffer_collection_t render_framebuffer;
 
         std::atomic<bool> is_ready_framebuffer_updated = false;
+        bool clear_render_buffer = false;
     };
 
     // Obviously all the names in magik.h have to chanbge too. 
@@ -100,4 +101,6 @@ namespace magik
     e_magik_result_types memcpy_front_framebuffer_to_external_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer);
 
     e_magik_result_types destroy_framebuffer_swpachain(framebuffer_swapchain_t* framebuffer_swapchain);
+
+    e_magik_result_types reset_render_buffer(framebuffer_swapchain_t* framebuffer_swapchain);
 }

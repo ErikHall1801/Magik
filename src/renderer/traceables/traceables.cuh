@@ -14,7 +14,7 @@ namespace magik
     // pool is, if we think about it, just the "framebuffer" struct  we have in VMEC. Big ol chunk of
     // memory with all the ray. 
 
-    __device__ static bool affine_aabb_intersection(float& hit_interpolation_parameter, vec3f &hit_normal, const vec3f spatial_dir, const vec3f spatial_pos, const float inv_chord_length, const vec3f bounds_min, const vec3f bounds_max)
+    __device__ static bool affine_aabb_intersection(float* hit_interpolation_parameter, vec3f* hit_normal, const vec3f spatial_dir, const vec3f spatial_pos, const float inv_chord_length, const vec3f bounds_min, const vec3f bounds_max)
     {
         vec3f bounds[2] = { bounds_min, bounds_max };
         vec3f inv_dir = vec3f{1.0f / spatial_dir.x, 1.0f / spatial_dir.y, 1.0f / spatial_dir.z};
@@ -62,8 +62,8 @@ namespace magik
         else if (hit_axis == 1) normal.y = n_sign;
         else normal.z = n_sign;
 
-        hit_interpolation_parameter = t;
-        hit_normal = normal;
+        *hit_interpolation_parameter = t;
+        *hit_normal = normal;
 
         return true;
     }

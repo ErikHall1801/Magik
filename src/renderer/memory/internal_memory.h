@@ -70,4 +70,9 @@ namespace magik
     {
         check_cuda_errors(cudaMemcpyAsync(h_ptr, d_ptr, size, cudaMemcpyDeviceToHost, static_cast<cudaStream_t>(*user_stream)));
     }
+
+    template<typename T> inline void memcpy_host_to_device_async(T* h_ptr, T* d_ptr, size_t size, void** user_stream)
+    {
+        check_cuda_errors(cudaMemcpyAsync(d_ptr, h_ptr, size, cudaMemcpyHostToDevice, static_cast<cudaStream_t>(*user_stream)));
+    }
 }
