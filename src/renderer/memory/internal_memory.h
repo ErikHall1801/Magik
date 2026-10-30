@@ -55,4 +55,9 @@ namespace magik
     {
         check_cuda_errors(cudaMemcpy(d_ptr_a, d_ptr_b, size, cudaMemcpyDeviceToDevice));
     }
+
+    template<typename T> inline void memset_async(T* d_ptr, T value, size_t size, void* user_stream)
+    {
+        check_cuda_errors(cudaMemsetAsync(d_ptr, value, size, user_stream));
+    }
 }

@@ -36,6 +36,8 @@ struct magik_render_manager
     std::atomic<double> average_sample_time_seconds = 0.0f;
     std::atomic<double> latest_sample_time_seconds = 0.0f;
     std::atomic<double> total_render_time_seconds = 0.0f;
+
+    std::atomic<uint32_t> x_sample = 0;
 };
 
 namespace magik

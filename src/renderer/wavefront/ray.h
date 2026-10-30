@@ -5,18 +5,26 @@
 
 namespace magik
 {
-    struct ray_queue
+    struct ray_queue_t
     {
-        uint32_t count = 0;
-        uint32_t* d_ray_id = nullptr;
+        /*
+        Now things get interesting, because this "count" value needs to be on the GPU. 
+        Moreover, we have to actually consider how this architecture will work. In depth. 
+
+        */
+
+        uint32_t* d_count = nullptr; 
+        uint32_t* d_id = nullptr;
     };
 
-    struct ray_pool
+    struct ray_pool_t
     {
         // We dont need anything more complex here.
 
-        vec3f* pos = nullptr;
-        vec3f* dir = nullptr;
-        vec3f* rgb = nullptr;
+        vec3f* d_pos = nullptr;
+        vec3f* d_dir = nullptr;
+        vec3f* d_rgb = nullptr;
+
+        float* d_step_distance = nullptr;
     };
 }

@@ -2109,6 +2109,14 @@ namespace magik
             return modf(a, &_fraction);
         }
 
+        // mswap
+        template<typename T> MAGIK_DEVICE_HOST constexpr auto mswap(T& a, T& b)
+        {
+            T tmp = a;
+            a = b;
+            b = tmp;
+        } 
+
         // coordinate transformation
             // spherical to cartesian
             template<typename T> MAGIK_DEVICE_HOST constexpr auto spherical_to_cartesian(T r, T theta, T phi)
@@ -2352,8 +2360,8 @@ namespace magik
 
                 if(abs(fa) < abs(fb))
                 {
-                    std::swap(fa,fb);
-                    std::swap(a,b);
+                    magik::mswap(fa,fb);
+                    magik::mswap(a,b);
                 }
 
                 T_state c = a;
@@ -2416,8 +2424,8 @@ namespace magik
 
                     if(abs(fa) < abs(fb))
                     {
-                        std::swap(fa,fb);
-                        std::swap(a,b);
+                        magik::mswap(fa,fb);
+                        magik::mswap(a,b);
                     }
                 }
 

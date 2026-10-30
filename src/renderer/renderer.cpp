@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include "wavefront.h"
 #include "kernel_julia_set.cuh"
 
 namespace magik
@@ -41,9 +42,7 @@ namespace magik
         }
 
         // Wavefront initalization stage
-        // This is kind of the most natural place to put things. Oh, on that note, we should
-        // use the camera resolution to size the buffer. 
-        // Alright, done that. 
+        wavefront_ray_buffer_t ray_buffer;
 
         // Render stage
         while(manager->is_running)
@@ -62,6 +61,9 @@ namespace magik
 
             // Framebuffer stage
             result = magik::allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
+
+            // Wavefront realloc
+            magik::realloc_wavefront_ray_buffer(&ray_buffer, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
 
             if(result)
             {
@@ -125,5 +127,7 @@ namespace magik
                 manager->atomic_last_error_type.compare_exchange_strong(expected, result);
             }
         }
+
+        magik::destroy_wavefront_ray_buffer(&ray_buffer);
     }
 }

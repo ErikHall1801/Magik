@@ -24,6 +24,7 @@ add_library(magik SHARED
 
         # kernels
         src/renderer/kernels/kernel_julia_set.cu
+        src/renderer/kernels/kernel_generate_ray.cu
 
         # memory
         src/renderer/memory/host_arena.cpp
@@ -35,6 +36,9 @@ add_library(magik SHARED
         # stage
 
         # traceables
+
+        # wavefront
+        src/renderer/wavefront/wavefront.cpp
 
         src/renderer/renderer.cpp
 
