@@ -95,11 +95,11 @@ namespace magik
 
             if(ray_pool.d_pos[ray_id].x < 0.0f)
             {
-                ray_pool.d_rgb[ray_id] = vec3f{0.8f, 0.15f, 0.15f};
+                ray_pool.d_rgb[ray_id] = vec3f{0.8f, 0.15f, 0.15f}*1.5f;
             }
             else
             {
-                ray_pool.d_rgb[ray_id] = vec3f{0.15f, 0.15f, 0.8f};
+                ray_pool.d_rgb[ray_id] = vec3f{0.15f, 0.15f, 0.8f}*1.5f;
             }
 
             to_advance = false;

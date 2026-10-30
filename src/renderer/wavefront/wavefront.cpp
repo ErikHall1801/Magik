@@ -1,5 +1,5 @@
 #include "wavefront.h"
-#include "kernel_generate_ray.cuh"
+#include "kernel_generate_thin_lens_ray.cuh"
 #include "kernel_splat_to_render_buffer.cuh"
 #include "kernel_tmp_advance.cuh"
 #include "kernel_intersect.cuh"
@@ -135,7 +135,7 @@ namespace magik
 
         set_advance_queue(buffer->advance_queue_A.d_count, buffer->x_resolution, buffer->y_resolution, &manager->cuda_stream);
 
-        launch_kernel_generate_ray_async(&manager->cuda_stream, 16, 16, buffer, manager->stage.optical_systen.focal_length, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.position, manager->stage.optical_systen.orientation);
+        launch_kernel_generate_thin_lensray_async(&manager->cuda_stream, 16, 16, buffer, manager->stage.optical_systen.focal_length, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.position, manager->stage.optical_systen.orientation);
 
         while(working)
         {

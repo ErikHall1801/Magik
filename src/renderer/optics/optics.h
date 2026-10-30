@@ -17,7 +17,7 @@ namespace magik
     {
         // Lens
         // Shutter (Shutter angle, shutter type)
-        // Sensor
+        // Sensor (As in type and properties)
         // Body
         // Video settings (FPS, motion blur) 
         // Physical properties (Position, velocity, orientation)
@@ -32,7 +32,7 @@ namespace magik
         uint32_t x_resolution = 2195;
         uint32_t y_resolution = 1860;
 
-        vec3f position;
+        vec3f position = vec3f{2.0f, 5.0f, 9.0f};
         mat3f orientation;
     };
 }

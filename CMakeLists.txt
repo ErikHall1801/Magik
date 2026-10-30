@@ -23,7 +23,7 @@ add_library(magik SHARED
         src/renderer/framebuffer/opengl_interop.cu
 
         # kernels
-        src/renderer/kernels/kernel_generate_ray.cu
+        src/renderer/kernels/kernel_generate_thin_lens_ray.cu
         src/renderer/kernels/kernel_splat_to_render_buffer.cu
         src/renderer/kernels/kernel_tmp_advance.cu
         src/renderer/kernels/kernel_intersect.cu

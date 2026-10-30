@@ -15,7 +15,7 @@ namespace magik
     * Naturally this header is device only. 
     */
 
-    static __device__ vec2f generate_screen_uv_coordinates(uint32_t x_resolution, uint32_t y_resolution)
+    __device__ static vec2f generate_screen_uv_coordinates(uint32_t x_resolution, uint32_t y_resolution)
     {
         int x_abs = threadIdx.x + blockIdx.x * blockDim.x;
         int y_abs = threadIdx.y + blockIdx.y * blockDim.y;
@@ -39,12 +39,12 @@ namespace magik
         return vec2f{u, v};
     }
 
-    static __device__ float compute_inv_b(float sensor_diagonal_mm, uint32_t y_resolution, uint32_t x_resolution)
+    __device__ static float compute_inv_b(float sensor_diagonal_mm, uint32_t y_resolution, uint32_t x_resolution)
     {
         return sensor_diagonal_mm / sqrtf(static_cast<float>(x_resolution * x_resolution + y_resolution * y_resolution));
     }
 
-    static __device__ vec3f generate_z_aligned_sensor_position(float sensor_diagonal_mm, uint32_t x_resolution, uint32_t y_resolution, curandState_t* random_device)
+    __device__ static vec3f generate_z_aligned_sensor_position(float sensor_diagonal_mm, uint32_t x_resolution, uint32_t y_resolution, curandState_t* random_device)
     {
         float inv_s = compute_inv_b(sensor_diagonal_mm, x_resolution, y_resolution);
         float width_mm = x_resolution * inv_s;
