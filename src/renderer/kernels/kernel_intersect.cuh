@@ -6,5 +6,5 @@
 
 namespace magik
 {
-    void launch_kernel_intersect_async(void** user_stream, uint32_t x_resolution, uint32_t y_resolution, ray_pool_t ray_pool, ray_queue_t intersect_queue, ray_queue_t advance_queue, ray_queue_t bxdf_queue, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max);
+    void launch_kernel_intersect_async(void** user_stream, wavefront_ray_buffer_t* buffer, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max);
 }

@@ -71,12 +71,14 @@ namespace magik
         }
     }
 
-    void launch_kernel_intersect_async(void** user_stream, uint32_t x_resolution, uint32_t y_resolution, ray_pool_t ray_pool, ray_queue_t intersect_queue, ray_queue_t advance_queue, ray_queue_t shade_queue, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max)
+    void launch_kernel_intersect_async(void** user_stream, wavefront_ray_buffer_t* buffer, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max)
     {
         uint32_t threads_per_block = 256; // 16²
-        uint32_t n_block = ((x_resolution*y_resolution) + threads_per_block - 1) / threads_per_block;
+        uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(ray_pool, intersect_queue, advance_queue, shade_queue, box_min, box_max, light_min, light_max);
+        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(buffer->ray_pool, buffer->intersect_queue, buffer->advance_queue_A, buffer->bxdf_queue, box_min, box_max, light_min, light_max);
         check_cuda_errors(cudaGetLastError());
+
+        reset_queue_async(buffer->intersect_queue.d_count, user_stream);
     }
 }

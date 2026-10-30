@@ -104,13 +104,12 @@ namespace magik
         advance_queue.d_id[thread_id] = thread_id;
     }
 
-    void launch_kernel_generate_ray_sync(void** user_stream, uint32_t x_threads_per_block, uint32_t y_threads_per_block, uint32_t x_resolution, uint32_t y_resolution, ray_pool_t ray_pool, ray_queue_t advance_queue, float focal_length, float sensor_diagonal_mm, vec3f position, mat3f orientation)
+    void launch_kernel_generate_ray_async(void** user_stream, uint32_t x_threads_per_block, uint32_t y_threads_per_block, wavefront_ray_buffer_t* buffer, float focal_length, float sensor_diagonal_mm, vec3f position, mat3f orientation)
     {
         dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
-        dim3 n_block = magik::compute_n_blocks(x_resolution, y_resolution, x_threads_per_block, y_threads_per_block);
+        dim3 n_block = magik::compute_n_blocks(buffer->x_resolution, buffer->y_resolution, x_threads_per_block, y_threads_per_block);
 
-        kernel_generate_ray<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(ray_pool.d_pos, ray_pool.d_dir, advance_queue, x_resolution, y_resolution, focal_length, sensor_diagonal_mm, position, orientation);
-        check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
+        kernel_generate_ray<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(buffer->ray_pool.d_pos, buffer->ray_pool.d_dir, buffer->advance_queue_A, buffer->x_resolution, buffer->y_resolution, focal_length, sensor_diagonal_mm, position, orientation);
         check_cuda_errors(cudaGetLastError());
     }
 }

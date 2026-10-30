@@ -17,13 +17,18 @@ namespace magik
         ray_pool.d_step_distance[thread_id] = 0.0f;
     }
 
-    void launch_kernel_reset_ray_state_sync(void** user_stream, ray_pool_t ray_pool, uint32_t x_resolution, uint32_t y_resolution)
+    void launch_kernel_reset_ray_state_async(void** user_stream, wavefront_ray_buffer_t* ray_buffer)
     {
-        dim3 threads_per_block = dim3(16, 16, 1);
-        dim3 n_block = magik::compute_n_blocks(x_resolution, y_resolution, 16, 16);
+        reset_queue_async(ray_buffer->advance_queue_A.d_count, user_stream);
+        reset_queue_async(ray_buffer->advance_queue_B.d_count, user_stream);
+        reset_queue_async(ray_buffer->intersect_queue.d_count, user_stream);
+        reset_queue_async(ray_buffer->bxdf_queue.d_count, user_stream);
+        reset_queue_async(ray_buffer->color_queue.d_count, user_stream);
 
-        kernel_reset_ray_state<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(ray_pool, x_resolution, y_resolution);
-        check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
+        dim3 threads_per_block = dim3(16, 16, 1);
+        dim3 n_block = magik::compute_n_blocks(ray_buffer->x_resolution, ray_buffer->y_resolution, 16, 16);
+
+        kernel_reset_ray_state<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(ray_buffer->ray_pool, ray_buffer->x_resolution, ray_buffer->y_resolution);
         check_cuda_errors(cudaGetLastError());
     }
 }

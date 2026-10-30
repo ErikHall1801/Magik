@@ -106,7 +106,7 @@ namespace magik
             auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test");
             if(tmp_element != manager->framebuffer_swapchain.render_framebuffer.collection.end())
             {
-                wavefront_sample(manager, &ray_buffer);
+                magik::wavefront_sample(manager, &ray_buffer);
             }
             else
             {

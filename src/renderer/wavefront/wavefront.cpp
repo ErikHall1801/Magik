@@ -12,14 +12,6 @@ namespace magik
 {
     void realloc_wavefront_ray_buffer(magik_render_manager* manager, wavefront_ray_buffer_t* buffer, uint32_t x_resolution_target, uint32_t y_resolution_target)
     {
-        /*
-        We need a way to automate this. realloc and destruction. 
-        A map would work, but its not a good match. We want a list of 
-        similar types. An array ? Well, we still want them to be 
-        named. 
-        I think the solution here will be a device arena. 
-        */
-
         if(buffer->x_resolution == x_resolution_target && buffer->y_resolution == y_resolution_target) return;
 
         destroy_wavefront_ray_buffer(buffer);
@@ -81,7 +73,7 @@ namespace magik
         magik::free_device(buffer->color_queue.d_count);
     }
 
-    static void reset_queue_async(uint32_t* d_count, void** user_stream)
+    void reset_queue_async(uint32_t* d_count, void** user_stream)
     {
         memset_device_async<uint32_t>(d_count, 0x0, sizeof(uint32_t), user_stream);
     }
@@ -104,7 +96,6 @@ namespace magik
 
     static void swap_queue(ray_queue_t* queue_A, ray_queue_t* queue_B)
     {
-        // We should investigate if an async option works too.
         magik::mswap(*queue_A, *queue_B);
     }
 
@@ -124,46 +115,46 @@ namespace magik
     void wavefront_sample(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
     {
         /*
-        Alright, look at us. We have a random buffer and at least something pathtracy seems 
-        to be happening. I think right now the biggest obstical to seeing anything is the lack
-        of averaging. And the light is very bright. 
+        What do we need to do ? 
 
-        Well, it could be much worse. The basic wavefront is working. The primary issue is that
-        rays just go through the wall. Oh well, not really. It seems the sides just eat rays ? 
+        - Make an actual pinhole camera, so we dont have to flip things (also change the start position)
+            - For this, in order to avoid another kernel, just make a sensor.h that the ideal and physical lens use. 
+        - Make the kernels at the start async too, no need to fence. Rework the kernel args so they just take the ray buffer.  
+        - Make render settings, which include the threads per block
+        - Move to a spectral pipeline
+        - Warp aggregated ballots, just as a test 
+        - Rework, if possible, the cuda header situation. I dont like that the cuda runtime is pulled in from ray.h all too much
+        - Move the queue reset logic into the kernel launch
+        - At least look into how we can potentially make is_work_done async. 
+        - Add debug info and statistics for the wavefront sample  (In particular "History snapshots", how many rays were in each queue throughout the sample)
+        - device arena allocator
+        - Can we drop the B queue ? That is a prerequist for CUDA's Graph's. 
         */
 
         bool working = true;
-        reset_queue_async(buffer->advance_queue_A.d_count, &manager->cuda_stream);
-        reset_queue_async(buffer->advance_queue_B.d_count, &manager->cuda_stream);
-        reset_queue_async(buffer->intersect_queue.d_count, &manager->cuda_stream);
-        reset_queue_async(buffer->bxdf_queue.d_count, &manager->cuda_stream);
-        reset_queue_async(buffer->color_queue.d_count, &manager->cuda_stream);
 
-        launch_kernel_reset_ray_state_sync(&manager->cuda_stream, buffer->ray_pool, buffer->x_resolution, buffer->y_resolution);
+        launch_kernel_reset_ray_state_async(&manager->cuda_stream, buffer);
 
         set_advance_queue(buffer->advance_queue_A.d_count, buffer->x_resolution, buffer->y_resolution, &manager->cuda_stream);
-        launch_kernel_generate_ray_sync(&manager->cuda_stream, 16, 16, buffer->x_resolution, buffer->y_resolution, buffer->ray_pool, buffer->advance_queue_A, manager->stage.optical_systen.focal_length, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.position, manager->stage.optical_systen.orientation);
+
+        launch_kernel_generate_ray_async(&manager->cuda_stream, 16, 16, buffer, manager->stage.optical_systen.focal_length, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.position, manager->stage.optical_systen.orientation);
 
         while(working)
         {
-            launch_kernel_tmp_advance_async(&manager->cuda_stream, buffer->x_resolution, buffer->y_resolution, buffer->ray_pool, buffer->advance_queue_A, buffer->intersect_queue);
-            reset_queue_async(buffer->advance_queue_A.d_count, &manager->cuda_stream);
+            launch_kernel_tmp_advance_async(&manager->cuda_stream, buffer);
 
-            launch_kernel_intersect_async(&manager->cuda_stream, buffer->x_resolution, buffer->y_resolution, buffer->ray_pool, buffer->intersect_queue, buffer->advance_queue_A, buffer->bxdf_queue, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
-            reset_queue_async(buffer->intersect_queue.d_count, &manager->cuda_stream);
+            launch_kernel_intersect_async(&manager->cuda_stream, buffer, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
 
-            launch_kernel_bxdf_async(&manager->cuda_stream, buffer->x_resolution, buffer->y_resolution, buffer->ray_pool, buffer->bxdf_queue, buffer->advance_queue_A, buffer->color_queue);
-            reset_queue_async(buffer->bxdf_queue.d_count, &manager->cuda_stream); 
+            launch_kernel_bxdf_async(&manager->cuda_stream, buffer);
 
-            launch_kernel_enforce_ray_limits_async(&manager->cuda_stream, buffer->x_resolution, buffer->y_resolution, buffer->ray_pool, buffer->advance_queue_A, buffer->advance_queue_B, buffer->color_queue);
-            reset_queue_async(buffer->advance_queue_A.d_count, &manager->cuda_stream);
+            launch_kernel_enforce_ray_limits_async(&manager->cuda_stream, buffer);
 
             swap_queue(&buffer->advance_queue_A, &buffer->advance_queue_B);
             is_work_done_sync(&working, buffer->advance_queue_A.d_count, &manager->cuda_stream); 
         }
 
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
-        launch_kernel_splat_to_render_buffer_sync(&manager->cuda_stream, 16, 16, buffer->x_resolution, buffer->y_resolution, tmp_element->second.d_data, buffer->ray_pool.d_rgb, manager->x_sample.load(std::memory_order_acquire));
+        launch_kernel_splat_to_render_buffer_sync(&manager->cuda_stream, 16, 16, buffer, tmp_element->second.d_data, manager->x_sample.load(std::memory_order_acquire));
 
         manager->x_sample.fetch_add(1, std::memory_order_relaxed);
     }
