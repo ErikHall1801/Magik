@@ -124,69 +124,12 @@ namespace magik
     void wavefront_sample(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
     {
         /*
-        We need to think about how this is meant to work, exactly, before writing anything. To do so, let's
-        consider each major question in isolation. 
+        Alright, look at us. We have a random buffer and at least something pathtracy seems 
+        to be happening. I think right now the biggest obstical to seeing anything is the lack
+        of averaging. And the light is very bright. 
 
-        How do we know when to stop ? The termination condition. For now, the easiest idea is to add a CPU 
-        syncronization point. That is, at the end of the while loop, the CPU fetches the ray count of the 
-        queues in the loop, if it is zero the work is done. 
-        This does add a synchronization point, and there are more advanced options like CUDA Graphs, but we 
-        want something that works, then optimize it. 
-
-        What about warp aggregated ballots ? According to Nvidia NVCC automatically aggregates atomic operation's
-        in "many" cases. Again, we will just use atomicAdd() in the kernel for now. If it is to slow we can 
-        always add our own aggregation logic. 
-
-        Do we need to double buffer the ray queues ? Yes we do, consider this. We have an advance queue with a 
-        million rays. It is fine that we tell the kernel to do all of this work at once, but in practice only a 
-        few thousand rays are executed in parallel. Now imagine out of 1000 rays 500 end up back on the advance
-        queue. This would immediatly cause issues as the kernel is fiddling with the very queue it is meant to
-        process. 
-
-        Do note, we cannot merge the advance and intersect queues because that would introduce the kind of problem 
-        discussed above in the intersect kernel. 
-
-        Here is something we should consider right now, how do we reset the color buffer ? A simple function will 
-        do the job, "wavefront_reset()". 
-
-        Another question, how do we enforce ray limits ? Well, the architecture is pretty nice. We can just check 
-        what is left in the advance queue and read how many bounces each ray already did. If they are at the 
-        limit we just put them on the color queue. 
-        This does run into the issue from above, as we technically write to the buffer we are reading from. So this
-        could justify an A/B advance buffer. Just to be clear, launch_kernel_enforce_ray_limits needs the A/B 
-        queues because it looks at the A buffer and either kicks rays to B or the Color queue. The A queue is read
-        only. Then we swap the two since the A buffer is what the rest of the wavefront uses. 
-
-        We can depricate the Julia set right now and just visualize the ray position, as that should theoretically
-        already change. 
-
-        Alright, here we are. We are visualizing the camera's ray direction, now it's time to do some actual 
-        wavefront rendering. 
-        We should take this one by one. The first kernel on our bucket list advances the "geodesic". There is 
-        no complicated math here, we simply hard code the step value to some arbitrary number. Its all about 
-        making the queue's work. 
-
-        I am extremely confused here with the id's. We have to launch these async kernels with linear configurations, 
-        since the queue is just a bunch of numbers that may not neatly fit into a square. 
-        The idea here is really simple;
-            1. Fetch the ray id
-            2. Fetch ray-specific data
-            3. Do work 
-            4. Append to queues
-        Some of these steps have to go into "device utilities". 
-        We really need the random number buffer. But for now we can get away with ideal reflections. Do note, 
-        proper ray limits and so on comes later. This is just meant to work, so the architecture stands. The details
-        can be improved later. 
-
-        There are two problems 
-        1. We have no way of clearing the wavefront buffer from the command 
-            -> What about a bool in the manager which says "clear". Sure, but what do we clear ? And where ? 
-        2. Pixels endlessly accumulate values. 
-
-        Alright well, we have something that at least appears to work, somewhat. Now its time to debug. I think
-        a big issue right now is that try to use ideal reflections. 
-        Ahhh, let me guess, i am feeding the direction in wrong. I think the ideal reflections are just not 
-        giving us enough information. We can switch to a basic diffuse brdf. 
+        Well, it could be much worse. The basic wavefront is working. The primary issue is that
+        rays just go through the wall. Oh well, not really. It seems the sides just eat rays ? 
         */
 
         bool working = true;
@@ -220,7 +163,7 @@ namespace magik
         }
 
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
-        launch_kernel_splat_to_render_buffer_sync(&manager->cuda_stream, 16, 16, buffer->x_resolution, buffer->y_resolution, tmp_element->second.d_data, buffer->ray_pool.d_rgb);
+        launch_kernel_splat_to_render_buffer_sync(&manager->cuda_stream, 16, 16, buffer->x_resolution, buffer->y_resolution, tmp_element->second.d_data, buffer->ray_pool.d_rgb, manager->x_sample.load(std::memory_order_acquire));
 
         manager->x_sample.fetch_add(1, std::memory_order_relaxed);
     }

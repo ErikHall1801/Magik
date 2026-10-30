@@ -62,6 +62,11 @@ namespace magik
         else if (hit_axis == 1) normal.y = n_sign;
         else normal.z = n_sign;
 
+        if(vector_dot_product(normal, spatial_dir) > 0.0f)
+        {
+            normal = -normal;
+        }
+
         *hit_interpolation_parameter = t;
         *hit_normal = normal;
 

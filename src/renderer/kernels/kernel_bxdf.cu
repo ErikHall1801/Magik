@@ -81,7 +81,7 @@ namespace magik
             }
 
             // vec3f outgoing_dir = magik::vector_reflect(hit_dir, hit_normal);
-            vec3f new_orig = offset_origin(ray_pool.d_pos[ray_id], -hit_normal);
+            vec3f new_orig = offset_origin(ray_pool.d_pos[ray_id], hit_normal);
 
             ray_pool.d_dir[ray_id] = outgoing_dir;
             ray_pool.d_pos[ray_id] = new_orig;
@@ -93,7 +93,14 @@ namespace magik
         {
             // Light, set a light amount in "rgb", send to color queue
 
-            ray_pool.d_rgb[ray_id] = vec3f{10.0f, 10.0f, 10.0f};
+            if(ray_pool.d_pos[ray_id].x < 0.0f)
+            {
+                ray_pool.d_rgb[ray_id] = vec3f{0.8f, 0.15f, 0.15f};
+            }
+            else
+            {
+                ray_pool.d_rgb[ray_id] = vec3f{0.15f, 0.15f, 0.8f};
+            }
 
             to_advance = false;
         }

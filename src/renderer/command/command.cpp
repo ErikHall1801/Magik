@@ -191,6 +191,8 @@ namespace magik
 
                 manager->stage.optical_systen.x_resolution = cmd.x_resolution;
                 manager->stage.optical_systen.y_resolution = cmd.y_resolution;
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
             }
 
