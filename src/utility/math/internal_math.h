@@ -8,7 +8,7 @@ namespace magik
         #ifdef __CUDACC__
             #define MAGIK_DEVICE_HOST __inline__ __device__ __host__
         #else
-            #define MAGIK_DEVICE_HOST
+            #define MAGIK_DEVICE_HOST inline
         #endif
 
         constexpr float pi = 3.14159265358979323846f;

@@ -50,10 +50,10 @@ namespace magik
                         fabsf(x.z) < origin ? x.z+float_scale*n.z : p_iz };
     }
 
-    static __global__ void kernel_bxdf(ray_pool_t ray_pool, ray_queue_t bxdf_queue, ray_queue_t advance_queue, ray_queue_t color_queue)
+    static __global__ void kernel_bxdf(ray_pool_t ray_pool, ray_queue_t bxdf_queue, ray_queue_t advance_queue, ray_queue_t redistribute_queue)
     {
         // Reads "bxdf queue"
-        // Writes "advance queue" or "color queue"
+        // Writes "advance queue" or "redistribution queue"
 
         // 1. Fetch ray id
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -86,22 +86,14 @@ namespace magik
             ray_pool.d_dir[ray_id] = outgoing_dir;
             ray_pool.d_pos[ray_id] = new_orig;
             ray_pool.d_step_distance[ray_id] = 0.0f;
+            ray_pool.d_monte_carlo_weight[ray_id] *= 0.9f;
 
             to_advance = true;
         }
         else if(hit_id == 2)
         {
-            // Light, set a light amount in "rgb", send to color queue
-
-            if(ray_pool.d_pos[ray_id].x < 0.0f)
-            {
-                ray_pool.d_rgb[ray_id] = vec3f{0.8f, 0.15f, 0.15f}*1.5f;
-            }
-            else
-            {
-                ray_pool.d_rgb[ray_id] = vec3f{0.15f, 0.15f, 0.8f}*1.5f;
-            }
-
+            // Light
+            ray_pool.d_spectral_radiance[ray_id] = magik::evaluate_sodium_vapor_lamp_spectrum(ray_pool.d_sensor_wavelength_nm[ray_id]) * 1000000.0f;
             to_advance = false;
         }
 
@@ -114,8 +106,8 @@ namespace magik
         }
         else
         {
-            slot = atomicAdd(color_queue.d_count, 1);
-            color_queue.d_id[slot] = ray_id;
+            slot = atomicAdd(redistribute_queue.d_count, 1);
+            redistribute_queue.d_id[slot] = ray_id;
         }
     }
 
@@ -124,7 +116,7 @@ namespace magik
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        kernel_bxdf<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->ray_pool, buffer->bxdf_queue, buffer->advance_queue_A, buffer->color_queue);
+        kernel_bxdf<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->ray_pool, buffer->bxdf_queue, buffer->advance_queue_A, buffer->redistribute_queue);
         check_cuda_errors(cudaGetLastError());
 
         reset_queue_async(buffer->bxdf_queue.d_count, &manager->cuda_stream); 

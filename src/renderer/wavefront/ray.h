@@ -16,19 +16,31 @@ namespace magik
 
     struct ray_pool_t
     {
-        // We dont need anything more complex here.
+        // Geodesic
+
+        // bxdf
+        float* d_sensor_wavelength_nm = nullptr;
+        float* d_monte_carlo_weight = nullptr;
+        float* d_spectral_radiance = nullptr;
+        float* d_intrinsic_spectral_irradiance = nullptr;
+
+        // Hit
+
+        // Info 
+
+        // Random
+        curandState* d_random_device = nullptr;
+
+        // All of the below will be replaced
 
         vec3f* d_pos = nullptr;
         vec3f* d_dir = nullptr;
-
         float* d_step_distance = nullptr;
 
         // All of these need to be re-initalized each sample to sensible values. 
-        vec3f* d_rgb = nullptr;
+        vec3f* d_rgb = nullptr; // This will be completely depricated, since the renderbuffer has color. The only color ! 
         uint32_t* n_step = nullptr;
         uint32_t* hit_id = nullptr;
         vec3f* hit_normal = nullptr;
-
-        curandState* d_random_device = nullptr; // true type is curand
     };
 }

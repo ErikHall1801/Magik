@@ -23,7 +23,8 @@ namespace magik
         reset_queue_async(ray_buffer->advance_queue_B.d_count, &manager->cuda_stream);
         reset_queue_async(ray_buffer->intersect_queue.d_count, &manager->cuda_stream);
         reset_queue_async(ray_buffer->bxdf_queue.d_count, &manager->cuda_stream);
-        reset_queue_async(ray_buffer->color_queue.d_count, &manager->cuda_stream);
+        reset_queue_async(ray_buffer->redistribute_queue.d_count, &manager->cuda_stream);
+        reset_queue_async(ray_buffer->splat_queue.d_count, &manager->cuda_stream);
 
         dim3 threads_per_block = dim3(manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y, 1);
         dim3 n_block = magik::compute_n_blocks(ray_buffer->x_resolution, ray_buffer->y_resolution, manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y);

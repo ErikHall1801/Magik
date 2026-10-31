@@ -4,10 +4,10 @@
 
 namespace magik
 {
-    static __global__ void kernel_enforce_ray_limits(ray_pool_t ray_pool, ray_queue_t advance_queue_A, ray_queue_t advance_queue_B, ray_queue_t color_queue)
+    static __global__ void kernel_enforce_ray_limits(ray_pool_t ray_pool, ray_queue_t advance_queue_A, ray_queue_t advance_queue_B, ray_queue_t splat_queue)
     {
         // Reads "advance queue A"
-        // Writes "advance queue B" or "color queue"
+        // Writes "advance queue B" or "splat queue"
 
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
         if(queue_index >= *advance_queue_A.d_count) return;
@@ -24,10 +24,10 @@ namespace magik
 
         uint32_t slot = 0;
 
-        if(terminate)
+        if(terminate) // Note, the ray is terminated, so it carries no radiance. We can go directly to the splat queue. 
         {
-            slot = atomicAdd(color_queue.d_count, 1);
-            color_queue.d_id[slot] = ray_id;
+            slot = atomicAdd(splat_queue.d_count, 1);
+            splat_queue.d_id[slot] = ray_id;
         }
         else
         {
@@ -41,7 +41,7 @@ namespace magik
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        kernel_enforce_ray_limits<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->ray_pool, buffer->advance_queue_A, buffer->advance_queue_B, buffer->color_queue);
+        kernel_enforce_ray_limits<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->ray_pool, buffer->advance_queue_A, buffer->advance_queue_B, buffer->splat_queue);
         check_cuda_errors(cudaGetLastError());
 
         reset_queue_async(buffer->advance_queue_A.d_count, &manager->cuda_stream);

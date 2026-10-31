@@ -24,13 +24,14 @@ add_library(magik SHARED
 
         # kernels
         src/renderer/kernels/kernel_generate_thin_lens_ray.cu
-        src/renderer/kernels/kernel_splat_to_render_buffer.cu
+        src/renderer/kernels/kernel_splat_to_renderbuffer.cu
         src/renderer/kernels/kernel_tmp_advance.cu
         src/renderer/kernels/kernel_intersect.cu
         src/renderer/kernels/kernel_bxdf.cu
         src/renderer/kernels/kernel_enforce_ray_limits.cu
         src/renderer/kernels/kernel_reset_ray_state.cu
         src/renderer/kernels/kernel_initialize_random_device.cu
+        src/renderer/kernels/kernel_redistribute_radiance.cu
 
         # memory
         src/renderer/memory/host_arena.cpp
@@ -72,6 +73,7 @@ target_include_directories(magik
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/bxdf
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/color
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/command
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/framebuffer
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/kernels
