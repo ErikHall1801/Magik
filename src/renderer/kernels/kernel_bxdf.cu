@@ -94,8 +94,8 @@ namespace magik
         {
             // Light
             // ray_pool.d_spectral_radiance[ray_id] = magik::evaluate_sodium_vapor_lamp_spectrum(ray_pool.d_sensor_wavelength_nm[ray_id]) * 50000000000.0f;
-            float temperature = magik::map_range(0.0f, 1.0f, 500.0f, 1400.0f, (ray_pool.d_pos[ray_id].x + 5.0f) / 10.0f);
-            ray_pool.d_spectral_radiance[ray_id] = magik::sample_plancks_law<float>(ray_pool.d_sensor_wavelength_nm[ray_id], temperature) * 10000.0f;
+            // float temperature = magik::map_range(0.0f, 1.0f, 500.0f, 1400.0f, (ray_pool.d_pos[ray_id].x + 5.0f) / 10.0f);
+            ray_pool.d_spectral_radiance[ray_id] = magik::sample_plancks_law<float>(ray_pool.d_sensor_wavelength_nm[ray_id], 3600.0f) * 0.0000005f;
             to_advance = false;
         }
 

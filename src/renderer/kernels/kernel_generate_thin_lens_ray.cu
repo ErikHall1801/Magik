@@ -31,7 +31,8 @@ namespace magik
         ray_pool.d_dir[thread_id] = ray_dir;
         ray_pool.d_pos[thread_id] = ray_orig;
 
-        draw_random_wavelength_uniform(&ray_pool.d_sensor_wavelength_nm[thread_id], &ray_pool.d_monte_carlo_weight[thread_id], max_wavelength_nm, min_wavelength_nm, &ray_pool.d_random_device[thread_id]);
+        draw_random_wavelength_cie_1931_weighted(&ray_pool.d_sensor_wavelength_nm[thread_id], &ray_pool.d_monte_carlo_weight[thread_id], max_wavelength_nm, min_wavelength_nm, &ray_pool.d_random_device[thread_id]);
+        // draw_random_wavelength_uniform(&ray_pool.d_sensor_wavelength_nm[thread_id], &ray_pool.d_monte_carlo_weight[thread_id], max_wavelength_nm, min_wavelength_nm, &ray_pool.d_random_device[thread_id]);
 
         advance_queue.d_id[thread_id] = thread_id;
     }

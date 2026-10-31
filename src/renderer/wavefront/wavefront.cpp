@@ -164,11 +164,10 @@ namespace magik
             - This is essentially Blenders scene packing, in a sense. 
             - We truly desperatly need a way to automate the allocation... 
 
-        - CUDA Graphs
-            - Hm, graphs are not out if we can do the swap on the GPU. 
-            - That is, we can launch a 1-thread kernel that just swaps the device pointers. 
-            - Then a CUDA Graph is in, and the is_work_done function is out. 
-            - Realistically speaking Graphs will not do much here for the moment. 
+        - Sampling strategy
+            - Since we know the broad shape of the CIE functions, we can importance sample. 
+            - Well, we can pick one of the curves at random and then importance sample that
+            - Or we make a very broad function. 
 
         - Wavefront sample statistics
             - These are added to the renderer statistics

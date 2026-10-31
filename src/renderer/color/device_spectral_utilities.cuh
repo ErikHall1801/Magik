@@ -23,6 +23,22 @@ namespace magik
         *monte_carlo_weight_out = 1.0f / (max_wavelength_nm - min_wavelength_nm);
     }
 
+    __device__ __inline__ static void draw_random_wavelength_cie_1931_weighted(float* wavelength_out, float* monte_carlo_weight_out, float max_wavelength_nm, float min_wavelength_nm, curandState_t* random_state)
+    {
+        /*
+        CREDITS - https://github.com/mmp/pbrt-v4
+        */
+
+        float u = curand_uniform(random_state);
+        float lambda = 538.0f - 138.888889f * atanhf(0.85691062f - 1.82750197f * u);
+
+        float c = coshf(0.0072f * (lambda - 538.0f));
+        float pdf = 0.0039398042f / (c * c);
+
+        *wavelength_out = lambda; 
+        *monte_carlo_weight_out = 1.0f/pdf;
+    }
+
     __device__ __inline__ static float radiance_to_irradiance(float spectral_radiance, float monte_carlo_weight, float sensor_width_mm, float sensor_height_mm, float iso, float fps, float shutter_angle, uint32_t sensor_resolution_x, uint32_t sensor_resolution_y)
     {
         float sensor_area = (sensor_width_mm * sensor_height_mm) / 1e6f;
