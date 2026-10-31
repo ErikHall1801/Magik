@@ -8,9 +8,7 @@ namespace magik
     static __global__ void kernel_splat_to_renderbuffer(ray_pool_t ray_pool, ray_queue_t splat_queue, float* d_renderbuffer, uint32_t n_spectral_irradiance_bin, float max_wavelength_nm, float min_wavelength_nm, uint32_t x_sample)
     {
         /*
-        Now, a couple of things change.
-        - This kernel is now async and part of the wavefront, so we have to write the queue to the x*y renderbuffer ! Not too bad, the ray_id tells us where to write. 
-        - We also use this kernel to encapsulate the whole color pipeline. Spectral -> CIE XYZ -> Color Space -> Tonemapping. So once OCIO is integrated it will work here. 
+        This kernel will eventually include the entire color pipeline, such as OCIO-generated functions. 
         */
 
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;

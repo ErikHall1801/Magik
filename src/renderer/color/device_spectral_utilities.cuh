@@ -17,9 +17,10 @@ namespace magik
     validate this. 
     */
 
-    __device__ __inline__ static float compute_random_wavelength(float max_wavelength_nm, float min_wavelength_nm, curandState_t* random_state)
+    __device__ __inline__ static void draw_random_wavelength_uniform(float* wavelength_out, float* monte_carlo_weight_out, float max_wavelength_nm, float min_wavelength_nm, curandState_t* random_state)
     {
-        return magik::lerp(min_wavelength_nm, max_wavelength_nm, curand_uniform(random_state));
+        *wavelength_out = magik::lerp(min_wavelength_nm, max_wavelength_nm, curand_uniform(random_state));
+        *monte_carlo_weight_out = 1.0f / (max_wavelength_nm - min_wavelength_nm);
     }
 
     __device__ __inline__ static float radiance_to_irradiance(float spectral_radiance, float monte_carlo_weight, float sensor_width_mm, float sensor_height_mm, float iso, float fps, float shutter_angle, uint32_t sensor_resolution_x, uint32_t sensor_resolution_y)
@@ -42,7 +43,7 @@ namespace magik
         float redistribution_standard_deviation;
         float sensor_width_mm;
         float sensor_height_mm;
-        float iso = 1.0f; 
+        float iso = 1000.0f; 
         float fps = 24.0f; 
         float shutter_angle = 180.0f;
         uint32_t ray_id;

@@ -105,6 +105,7 @@ namespace magik
         uint32_t h_count = 0;
 
         memcpy_device_to_host_async(advance_d_count, &h_count, sizeof(uint32_t), user_stream);
+        check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
 
         if(h_count == 0)
         {
@@ -158,20 +159,22 @@ namespace magik
         /*
         What do we need to do ? 
 
-        - Move to a spectral pipeline
-            - There must be some kind of race condition here, samples are getting eaten. 
-
         - device arena allocator
             - Another aspect is to consider how the size calculation could be automated.
             - This is essentially Blenders scene packing, in a sense. 
             - We truly desperatly need a way to automate the allocation... 
 
-        - Rework the header situation
-            - In particular how the cuda runtime is just pulled in at random
+        - CUDA Graphs
+            - Hm, graphs are not out if we can do the swap on the GPU. 
+            - That is, we can launch a 1-thread kernel that just swaps the device pointers. 
+            - Then a CUDA Graph is in, and the is_work_done function is out. 
+            - Realistically speaking Graphs will not do much here for the moment. 
 
         - Wavefront sample statistics
             - These are added to the renderer statistics
             - Perhaps include a "queue history", that is the number of rays in each queue across a sample
+            - This would have told us that the wavefront was not working. 
+            - We could add an option to only check if the work is done ever Nth iteration 
         */
 
         bool working = true;
@@ -183,18 +186,18 @@ namespace magik
 
         while(working)
         {
-            launch_kernel_tmp_advance_async(manager, buffer); // advance A -> intersect
+            launch_kernel_tmp_advance_async(manager, buffer);
 
-            launch_kernel_intersect_async(manager, buffer); // intersect -> advance A || bxdf
+            launch_kernel_intersect_async(manager, buffer);
 
-            launch_kernel_bxdf_async(manager, buffer); // bxdf -> advance A || redistribute
+            launch_kernel_bxdf_async(manager, buffer);
 
-            launch_kernel_redistribute_radiance_async(manager, buffer); // redistribute -> splat
+            launch_kernel_redistribute_radiance_async(manager, buffer);
 
-            launch_kernel_enforce_ray_limits_async(manager, buffer); // advance A -> advance B || splat
+            launch_kernel_enforce_ray_limits_async(manager, buffer);
             swap_queue(&buffer->advance_queue_A, &buffer->advance_queue_B);
 
-            launch_kernel_splat_to_renderbuffer_async(manager, buffer, tmp_element->second.d_data); // splat -> renderbuffer (Not a queue !)
+            launch_kernel_splat_to_renderbuffer_async(manager, buffer, tmp_element->second.d_data);
 
             is_work_done_sync(&working, buffer->advance_queue_A.d_count, &manager->cuda_stream); 
         }

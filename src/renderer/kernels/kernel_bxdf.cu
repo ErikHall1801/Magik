@@ -73,20 +73,20 @@ namespace magik
             vec3f hit_normal = ray_pool.hit_normal[ray_id];
             vec3f hit_dir = ray_pool.d_dir[ray_id];
 
+            vec3f n = vector_dot_product(hit_normal, hit_dir) < 0.0f ? hit_normal : -hit_normal; // faces the ray
             vec3f outgoing_dir = random_unit_three_vector(&ray_pool.d_random_device[ray_id]);
 
-            if(vector_dot_product(hit_dir, outgoing_dir) < 0.0f)
+            if(vector_dot_product(outgoing_dir, n) < 0.0f)
             {
                 outgoing_dir *= -1.0f;
             }
 
-            // vec3f outgoing_dir = magik::vector_reflect(hit_dir, hit_normal);
-            vec3f new_orig = offset_origin(ray_pool.d_pos[ray_id], hit_normal);
+            vec3f new_orig = offset_origin(ray_pool.d_pos[ray_id], n);
 
             ray_pool.d_dir[ray_id] = outgoing_dir;
             ray_pool.d_pos[ray_id] = new_orig;
             ray_pool.d_step_distance[ray_id] = 0.0f;
-            ray_pool.d_monte_carlo_weight[ray_id] *= 0.9f;
+            ray_pool.d_monte_carlo_weight[ray_id] *= 2.0f * 0.9f * vector_dot_product(n, outgoing_dir);
 
             to_advance = true;
         }
@@ -94,7 +94,8 @@ namespace magik
         {
             // Light
             // ray_pool.d_spectral_radiance[ray_id] = magik::evaluate_sodium_vapor_lamp_spectrum(ray_pool.d_sensor_wavelength_nm[ray_id]) * 50000000000.0f;
-            ray_pool.d_spectral_radiance[ray_id] = magik::sample_plancks_law<float>(ray_pool.d_sensor_wavelength_nm[ray_id], 1800.0f) * 150.0f;
+            float temperature = magik::map_range(0.0f, 1.0f, 500.0f, 1400.0f, (ray_pool.d_pos[ray_id].x + 5.0f) / 10.0f);
+            ray_pool.d_spectral_radiance[ray_id] = magik::sample_plancks_law<float>(ray_pool.d_sensor_wavelength_nm[ray_id], temperature) * 10000.0f;
             to_advance = false;
         }
 
