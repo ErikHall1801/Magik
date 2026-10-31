@@ -41,14 +41,12 @@ namespace magik
         // bah !!!
         buffer->ray_pool.d_dir = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
         buffer->ray_pool.d_pos = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
-        buffer->ray_pool.d_rgb = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
         buffer->ray_pool.d_step_distance = magik::allocate_device<float>(size_of_float_buffer);
         buffer->ray_pool.n_step = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
         buffer->ray_pool.hit_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
         buffer->ray_pool.hit_normal = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
         buffer->ray_pool.d_random_device = magik::allocate_device<curandState_t>(size_of_curandState_t_buffer);
 
-        magik::memset_device_sync<vec3f>(buffer->ray_pool.d_rgb, 0x0, size_of_vec3f_buffer);
         magik::memset_device_sync<uint32_t>(buffer->ray_pool.n_step, 0x0, size_of_uint32_t_buffer);
         magik::memset_device_sync<float>(buffer->ray_pool.d_step_distance, 0x0, size_of_float_buffer);
         magik::launch_kernel_initialize_random_device_sync(&manager->cuda_stream, buffer->ray_pool, buffer->x_resolution, buffer->y_resolution);
@@ -77,7 +75,6 @@ namespace magik
 
         magik::free_device(buffer->ray_pool.d_dir);
         magik::free_device(buffer->ray_pool.d_pos);
-        magik::free_device(buffer->ray_pool.d_rgb);
         magik::free_device(buffer->ray_pool.d_step_distance);
         magik::free_device(buffer->ray_pool.n_step);
         magik::free_device(buffer->ray_pool.hit_id);
@@ -129,16 +126,12 @@ namespace magik
         size_t size_of_float_buffer = buffer->x_resolution*buffer->y_resolution*sizeof(float);
         size_t size_of_redistribute_buffer = static_cast<size_t>(buffer->x_resolution*buffer->y_resolution*manager->stage.settings.n_spectral_irradiance_bin)*sizeof(float);
 
-        magik::memset_device_sync<float>(buffer->ray_pool.d_sensor_wavelength_nm, 0x0, size_of_float_buffer);
-        magik::memset_device_sync<float>(buffer->ray_pool.d_monte_carlo_weight, 0x0, size_of_float_buffer);
-        magik::memset_device_sync<float>(buffer->ray_pool.d_spectral_radiance, 0x0, size_of_float_buffer);
-        magik::memset_device_sync<float>(buffer->ray_pool.d_intrinsic_spectral_irradiance, 0x0, size_of_redistribute_buffer);
+        magik::memset_device_async<float>(buffer->ray_pool.d_sensor_wavelength_nm, 0x0, size_of_float_buffer, &manager->cuda_stream);
+        magik::memset_device_async<float>(buffer->ray_pool.d_monte_carlo_weight, 0x0, size_of_float_buffer, &manager->cuda_stream);
+        magik::memset_device_async<float>(buffer->ray_pool.d_spectral_radiance, 0x0, size_of_float_buffer, &manager->cuda_stream);
+        magik::memset_device_async<float>(buffer->ray_pool.d_intrinsic_spectral_irradiance, 0x0, size_of_redistribute_buffer, &manager->cuda_stream);
 
         manager->x_sample.store(0, std::memory_order_release);
-
-        // bahhh !!!
-        size_t size_of_color_buffer = buffer->x_resolution*buffer->y_resolution*sizeof(float)*3;
-        magik::memset_device_sync<vec3f>(buffer->ray_pool.d_rgb, 0x0, size_of_color_buffer);
     }
 
     static void reset_wavefront_buffer_async(magik_render_manager* manager, wavefront_ray_buffer_t* ray_buffer)
@@ -152,9 +145,9 @@ namespace magik
 
         size_t size_of_float_buffer = ray_buffer->x_resolution*ray_buffer->y_resolution*sizeof(float);
         size_t size_of_uint32_t_buffer = ray_buffer->x_resolution*ray_buffer->y_resolution*sizeof(uint32_t);
-        memset_device_sync<float>(ray_buffer->ray_pool.d_spectral_radiance, 0x0, size_of_float_buffer);
-        memset_device_sync<float>(ray_buffer->ray_pool.d_step_distance, 0x0, size_of_float_buffer);
-        memset_device_sync<uint32_t>(ray_buffer->ray_pool.n_step, 0x0, size_of_uint32_t_buffer);
+        memset_device_async<float>(ray_buffer->ray_pool.d_spectral_radiance, 0x0, size_of_float_buffer, &manager->cuda_stream);
+        memset_device_async<float>(ray_buffer->ray_pool.d_step_distance, 0x0, size_of_float_buffer, &manager->cuda_stream);
+        memset_device_async<uint32_t>(ray_buffer->ray_pool.n_step, 0x0, size_of_uint32_t_buffer, &manager->cuda_stream);
 
         uint32_t h_count = ray_buffer->x_resolution*ray_buffer->y_resolution;
         memcpy_host_to_device_async(&h_count, ray_buffer->advance_queue_A.d_count, sizeof(uint32_t), &manager->cuda_stream);
@@ -166,8 +159,7 @@ namespace magik
         What do we need to do ? 
 
         - Move to a spectral pipeline
-            - Alright well, we technically have the splat logic. What remains to be done ? 
-            - Lets see
+            - There must be some kind of race condition here, samples are getting eaten. 
 
         - device arena allocator
             - Another aspect is to consider how the size calculation could be automated.

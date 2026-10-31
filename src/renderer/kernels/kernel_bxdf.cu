@@ -93,7 +93,8 @@ namespace magik
         else if(hit_id == 2)
         {
             // Light
-            ray_pool.d_spectral_radiance[ray_id] = magik::evaluate_sodium_vapor_lamp_spectrum(ray_pool.d_sensor_wavelength_nm[ray_id]) * 1000000.0f;
+            // ray_pool.d_spectral_radiance[ray_id] = magik::evaluate_sodium_vapor_lamp_spectrum(ray_pool.d_sensor_wavelength_nm[ray_id]) * 50000000000.0f;
+            ray_pool.d_spectral_radiance[ray_id] = magik::sample_plancks_law<float>(ray_pool.d_sensor_wavelength_nm[ray_id], 1800.0f) * 150.0f;
             to_advance = false;
         }
 

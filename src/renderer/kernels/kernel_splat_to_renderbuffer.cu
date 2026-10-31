@@ -17,11 +17,11 @@ namespace magik
         if(queue_index >= *splat_queue.d_count) return;
         uint32_t ray_id = splat_queue.d_id[queue_index];
 
-        vec3f linear_color = spectral_irradiance_to_cie_xyz(&ray_pool.d_intrinsic_spectral_irradiance[ray_id], n_spectral_irradiance_bin, ray_pool.d_sensor_wavelength_nm[ray_id], max_wavelength_nm, min_wavelength_nm, x_sample);
+        vec3f linear_color = spectral_irradiance_to_cie_xyz(&ray_pool.d_intrinsic_spectral_irradiance[(size_t)ray_id * n_spectral_irradiance_bin], n_spectral_irradiance_bin, max_wavelength_nm, min_wavelength_nm, x_sample);
 
-        d_renderbuffer[ray_id + 0] = linear_color.x;
-        d_renderbuffer[ray_id + 1] = linear_color.y;
-        d_renderbuffer[ray_id + 2] = linear_color.z;
+        d_renderbuffer[ray_id * 3 + 0] = linear_color.x;
+        d_renderbuffer[ray_id * 3 + 1] = linear_color.y;
+        d_renderbuffer[ray_id * 3 + 2] = linear_color.z;
     }
 
     void launch_kernel_splat_to_renderbuffer_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer, float* d_renderbuffer)

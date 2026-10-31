@@ -36,11 +36,12 @@ namespace magik
             args.max_wavelength_nm = max_wavelength_nm;
             args.min_wavelength_nm = min_wavelength_nm;
             args.redistribution_standard_deviation = redistribution_standard_deviation;
-            args.sensor_width_mm = sensor_resolution_x * inv_b;
-            args.sensor_height_mm = sensor_resolution_y * inv_b;
+            args.sensor_width_mm = static_cast<float>(sensor_resolution_x) * inv_b;
+            args.sensor_height_mm = static_cast<float>(sensor_resolution_y) * inv_b;
             args.sensor_resolution_x = sensor_resolution_x;
             args.sensor_resolution_y = sensor_resolution_y;
             args.n_spectral_irradiance_bin = n_spectral_irradiance_bin;
+            args.ray_id = ray_id;
 
             redistribute_spectral_radiance(&args);
         }

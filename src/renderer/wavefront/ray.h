@@ -38,7 +38,6 @@ namespace magik
         float* d_step_distance = nullptr;
 
         // All of these need to be re-initalized each sample to sensible values. 
-        vec3f* d_rgb = nullptr; // This will be completely depricated, since the renderbuffer has color. The only color ! 
         uint32_t* n_step = nullptr;
         uint32_t* hit_id = nullptr;
         vec3f* hit_normal = nullptr;
