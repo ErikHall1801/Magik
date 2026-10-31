@@ -71,14 +71,14 @@ namespace magik
         }
     }
 
-    void launch_kernel_intersect_async(void** user_stream, wavefront_ray_buffer_t* buffer, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max)
+    void launch_kernel_intersect_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
     {
-        uint32_t threads_per_block = 256; // 16²
+        uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(buffer->ray_pool, buffer->intersect_queue, buffer->advance_queue_A, buffer->bxdf_queue, box_min, box_max, light_min, light_max);
+        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->ray_pool, buffer->intersect_queue, buffer->advance_queue_A, buffer->bxdf_queue, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(buffer->intersect_queue.d_count, user_stream);
+        reset_queue_async(buffer->intersect_queue.d_count, &manager->cuda_stream);
     }
 }

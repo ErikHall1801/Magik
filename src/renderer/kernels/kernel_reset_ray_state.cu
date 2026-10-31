@@ -17,18 +17,18 @@ namespace magik
         ray_pool.d_step_distance[thread_id] = 0.0f;
     }
 
-    void launch_kernel_reset_ray_state_async(void** user_stream, wavefront_ray_buffer_t* ray_buffer)
+    void launch_kernel_reset_ray_state_async(magik_render_manager* manager, wavefront_ray_buffer_t* ray_buffer)
     {
-        reset_queue_async(ray_buffer->advance_queue_A.d_count, user_stream);
-        reset_queue_async(ray_buffer->advance_queue_B.d_count, user_stream);
-        reset_queue_async(ray_buffer->intersect_queue.d_count, user_stream);
-        reset_queue_async(ray_buffer->bxdf_queue.d_count, user_stream);
-        reset_queue_async(ray_buffer->color_queue.d_count, user_stream);
+        reset_queue_async(ray_buffer->advance_queue_A.d_count, &manager->cuda_stream);
+        reset_queue_async(ray_buffer->advance_queue_B.d_count, &manager->cuda_stream);
+        reset_queue_async(ray_buffer->intersect_queue.d_count, &manager->cuda_stream);
+        reset_queue_async(ray_buffer->bxdf_queue.d_count, &manager->cuda_stream);
+        reset_queue_async(ray_buffer->color_queue.d_count, &manager->cuda_stream);
 
-        dim3 threads_per_block = dim3(16, 16, 1);
-        dim3 n_block = magik::compute_n_blocks(ray_buffer->x_resolution, ray_buffer->y_resolution, 16, 16);
+        dim3 threads_per_block = dim3(manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y, 1);
+        dim3 n_block = magik::compute_n_blocks(ray_buffer->x_resolution, ray_buffer->y_resolution, manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y);
 
-        kernel_reset_ray_state<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(ray_buffer->ray_pool, ray_buffer->x_resolution, ray_buffer->y_resolution);
+        kernel_reset_ray_state<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(ray_buffer->ray_pool, ray_buffer->x_resolution, ray_buffer->y_resolution);
         check_cuda_errors(cudaGetLastError());
     }
 }

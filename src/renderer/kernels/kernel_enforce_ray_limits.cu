@@ -36,14 +36,14 @@ namespace magik
         }
     }
 
-    void launch_kernel_enforce_ray_limits_async(void** user_stream, wavefront_ray_buffer_t* buffer)
+    void launch_kernel_enforce_ray_limits_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
     {
-        uint32_t threads_per_block = 256;
+        uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        kernel_enforce_ray_limits<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(buffer->ray_pool, buffer->advance_queue_A, buffer->advance_queue_B, buffer->color_queue);
+        kernel_enforce_ray_limits<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->ray_pool, buffer->advance_queue_A, buffer->advance_queue_B, buffer->color_queue);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(buffer->advance_queue_A.d_count, user_stream);
+        reset_queue_async(buffer->advance_queue_A.d_count, &manager->cuda_stream);
     }
 }

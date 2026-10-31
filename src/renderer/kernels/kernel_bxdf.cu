@@ -119,14 +119,14 @@ namespace magik
         }
     }
 
-    void launch_kernel_bxdf_async(void** user_stream, wavefront_ray_buffer_t* buffer)
+    void launch_kernel_bxdf_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
     {
-        uint32_t threads_per_block = 256; // 16²
+        uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        kernel_bxdf<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(buffer->ray_pool, buffer->bxdf_queue, buffer->advance_queue_A, buffer->color_queue);
+        kernel_bxdf<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->ray_pool, buffer->bxdf_queue, buffer->advance_queue_A, buffer->color_queue);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(buffer->bxdf_queue.d_count, user_stream); 
+        reset_queue_async(buffer->bxdf_queue.d_count, &manager->cuda_stream); 
     }
 }

@@ -22,14 +22,14 @@ namespace magik
         d_intersect_queue_id[slot] = ray_id;
     }
 
-    void launch_kernel_tmp_advance_async(void** user_stream, wavefront_ray_buffer_t* buffer)
+    void launch_kernel_tmp_advance_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
     {
-        uint32_t threads_per_block = 256;
+        uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        kernel_tmp_advance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(buffer->advance_queue_A.d_count, buffer->advance_queue_A.d_id, buffer->intersect_queue.d_count, buffer->intersect_queue.d_id, buffer->ray_pool);
+        kernel_tmp_advance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->advance_queue_A.d_count, buffer->advance_queue_A.d_id, buffer->intersect_queue.d_count, buffer->intersect_queue.d_id, buffer->ray_pool);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(buffer->advance_queue_A.d_count, user_stream);
+        reset_queue_async(buffer->advance_queue_A.d_count, &manager->cuda_stream);
     }
 }

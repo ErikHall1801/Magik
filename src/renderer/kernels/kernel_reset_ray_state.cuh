@@ -6,5 +6,5 @@
 
 namespace magik
 {
-    void launch_kernel_reset_ray_state_async(void** user_stream, wavefront_ray_buffer_t* ray_buffer);
+    void launch_kernel_reset_ray_state_async(magik_render_manager* manager, wavefront_ray_buffer_t* ray_buffer);
 }

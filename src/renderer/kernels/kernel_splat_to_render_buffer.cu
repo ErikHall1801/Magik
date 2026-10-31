@@ -32,13 +32,13 @@ namespace magik
         d_data[render_buffer_id + 2] = new_color.z;
     }
 
-    void launch_kernel_splat_to_render_buffer_sync(void** user_stream, uint32_t x_threads_per_block, uint32_t y_threads_per_block, wavefront_ray_buffer_t* buffer, float* d_data, uint32_t x_sample)
+    void launch_kernel_splat_to_render_buffer_sync(magik_render_manager* manager, wavefront_ray_buffer_t* buffer, float* d_data)
     {
-        dim3 threads_per_block = dim3(x_threads_per_block, y_threads_per_block, 1);
-        dim3 n_block = magik::compute_n_blocks(buffer->x_resolution, buffer->y_resolution, x_threads_per_block, y_threads_per_block);
+        dim3 threads_per_block = dim3(manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y, 1);
+        dim3 n_block = magik::compute_n_blocks(buffer->x_resolution, buffer->y_resolution, manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y);
 
-        kernel_splat_to_render_buffer<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(d_data, buffer->ray_pool.d_rgb, buffer->x_resolution, buffer->y_resolution, x_sample);
-        check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
+        kernel_splat_to_render_buffer<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_data, buffer->ray_pool.d_rgb, buffer->x_resolution, buffer->y_resolution, manager->x_sample.load(std::memory_order_acquire));
+        check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(manager->cuda_stream)));
         check_cuda_errors(cudaGetLastError());
     }
 }

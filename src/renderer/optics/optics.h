@@ -25,7 +25,7 @@ namespace magik
         // But for now, lets not make this more complicated than it has to be
         // We dont need anything else for a basic camera. We technically do not
         // even need the sensor diagonal. 
-
+        // So all of the above is temporary. 
         float focal_length = 12.0f;
 
         float sensor_diagonal_mm = 24.0f;

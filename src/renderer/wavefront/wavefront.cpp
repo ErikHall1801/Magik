@@ -117,42 +117,49 @@ namespace magik
         /*
         What do we need to do ? 
 
-        - Make an actual pinhole camera, so we dont have to flip things (also change the start position)
-            - For this, in order to avoid another kernel, just make a sensor.h that the ideal and physical lens use. 
-            - So we have a kernel for the thin lens, equalrectangular, physical etc. 
-        - Make render settings, which include the threads per block
         - Move to a spectral pipeline
-        - Rework, if possible, the cuda header situation. I dont like that the cuda runtime is pulled in from ray.h all too much
-        - At least look into how we can potentially make is_work_done async. 
-        - Add debug info and statistics for the wavefront sample  (In particular "History snapshots", how many rays were in each queue throughout the sample)
+            - We will use the analytical SPDs to get light
+            - Once we are spectral the thin lens can be fully ported. 
+
+        - CUDA Graph's
+            - We would need to get rid of the B queue
+            - The primary goal is to get rid of or make is_work_done async
+        
+        - Rework the header situation
+            - In particular how the cuda runtime is just pulled in at random
+
+        - Wavefront sample statistics
+            - These are added to the renderer statistics
+            - Perhaps include a "queue history", that is the number of rays in each queue across a sample
+        
         - device arena allocator
-        - Can we drop the B queue ? That is a prerequist for CUDA's Graph's. 
+            - Another aspect is to consider how the size calculation could be automated.         
         */
 
         bool working = true;
 
-        launch_kernel_reset_ray_state_async(&manager->cuda_stream, buffer);
+        launch_kernel_reset_ray_state_async(manager, buffer);
 
         set_advance_queue(buffer->advance_queue_A.d_count, buffer->x_resolution, buffer->y_resolution, &manager->cuda_stream);
 
-        launch_kernel_generate_thin_lensray_async(&manager->cuda_stream, 16, 16, buffer, manager->stage.optical_systen.focal_length, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.position, manager->stage.optical_systen.orientation);
+        launch_kernel_generate_thin_lens_ray_async(manager, buffer);
 
         while(working)
         {
-            launch_kernel_tmp_advance_async(&manager->cuda_stream, buffer);
+            launch_kernel_tmp_advance_async(manager, buffer);
 
-            launch_kernel_intersect_async(&manager->cuda_stream, buffer, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
+            launch_kernel_intersect_async(manager, buffer);
 
-            launch_kernel_bxdf_async(&manager->cuda_stream, buffer);
+            launch_kernel_bxdf_async(manager, buffer);
 
-            launch_kernel_enforce_ray_limits_async(&manager->cuda_stream, buffer);
+            launch_kernel_enforce_ray_limits_async(manager, buffer);
 
             swap_queue(&buffer->advance_queue_A, &buffer->advance_queue_B);
             is_work_done_sync(&working, buffer->advance_queue_A.d_count, &manager->cuda_stream); 
         }
 
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
-        launch_kernel_splat_to_render_buffer_sync(&manager->cuda_stream, 16, 16, buffer, tmp_element->second.d_data, manager->x_sample.load(std::memory_order_acquire));
+        launch_kernel_splat_to_render_buffer_sync(manager, buffer, tmp_element->second.d_data);
 
         manager->x_sample.fetch_add(1, std::memory_order_relaxed);
     }
