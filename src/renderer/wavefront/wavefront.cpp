@@ -163,17 +163,15 @@ namespace magik
             - Another aspect is to consider how the size calculation could be automated.
             - This is essentially Blenders scene packing, in a sense. 
             - We truly desperatly need a way to automate the allocation... 
-
-        - Sampling strategy
-            - Since we know the broad shape of the CIE functions, we can importance sample. 
-            - Well, we can pick one of the curves at random and then importance sample that
-            - Or we make a very broad function. 
+            - Sure, we want an arena here, but that is half the story. We need some sort of automated 
+              allocation scheme. Such that when the struct grows we dont go crazy. 
 
         - Wavefront sample statistics
             - These are added to the renderer statistics
             - Perhaps include a "queue history", that is the number of rays in each queue across a sample
             - This would have told us that the wavefront was not working. 
             - We could add an option to only check if the work is done ever Nth iteration 
+            - In the meantime, we can make a kernel to swap the pointers. That is, the internal pointers. 
         */
 
         bool working = true;

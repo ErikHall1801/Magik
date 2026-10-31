@@ -50,8 +50,6 @@ add_library(magik SHARED
 
     # Utility
         # cuda
-        src/utility/cuda/cuda_device_utilities.cu
-        src/utility/cuda/cuda_host_utilities.cu
 
         # error
         src/utility/error/magik_error.cpp
