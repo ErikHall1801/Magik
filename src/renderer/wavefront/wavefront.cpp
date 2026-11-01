@@ -193,9 +193,13 @@ namespace magik
 
             launch_kernel_tmp_advance_async(manager, buffer); // To replace this
 
-            // launch_kernel_tlas_intersect_async
+            // launch_kernel_intersect_tlas_affine_async
 
-            // launch_kernel_blas_intersect_async
+            // launch_kernel_intersect_tlas_hermite_async
+
+            // launch_kernel_intersect_blas_affine_async
+
+            // launch_kernel_intersect_blas_hermite_async
 
             launch_kernel_intersect_async(manager, buffer); // To replace this
 

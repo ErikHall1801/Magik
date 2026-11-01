@@ -1,7 +1,6 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdlib>
+#include <stdint.h>
 #include <cuda_runtime_api.h>
 #include "cuda_host_utilities.h"
 
