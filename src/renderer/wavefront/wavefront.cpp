@@ -7,6 +7,7 @@
 #include "kernel_enforce_ray_limits.cuh"
 #include "kernel_initialize_random_device.cuh"
 #include "kernel_redistribute_radiance.cuh"
+#include "kernel_utility.cuh"
 
 namespace magik
 {
@@ -117,11 +118,6 @@ namespace magik
         }
     }
 
-    static void swap_queue(ray_queue_t* queue_A, ray_queue_t* queue_B)
-    {
-        magik::mswap(*queue_A, *queue_B);
-    }
-
     void wavefront_reset(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
     {
         size_t size_of_float_buffer = buffer->x_resolution*buffer->y_resolution*sizeof(float);
@@ -157,21 +153,25 @@ namespace magik
     void wavefront_sample(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
     {
         /*
-        What do we need to do ? 
+        What do we want to do tomorrow ? 
 
-        - device arena allocator
-            - Another aspect is to consider how the size calculation could be automated.
-            - This is essentially Blenders scene packing, in a sense. 
-            - We truly desperatly need a way to automate the allocation... 
-            - Sure, we want an arena here, but that is half the story. We need some sort of automated 
-              allocation scheme. Such that when the struct grows we dont go crazy. 
+        - Header cleanup
+            - Basically, we should try to not include everything everywhere. 
+            - Not sure exactly how. 
 
-        - Wavefront sample statistics
-            - These are added to the renderer statistics
-            - Perhaps include a "queue history", that is the number of rays in each queue across a sample
-            - This would have told us that the wavefront was not working. 
-            - We could add an option to only check if the work is done ever Nth iteration 
-            - In the meantime, we can make a kernel to swap the pointers. That is, the internal pointers. 
+        - Device arena 
+            - The basics are not hard. The real difficulty of this is automation
+            - We need an architecture that allows us to automatically update how 
+              memory is allocated based on the struct. 
+            - X Macro is the one approach i keep hearing about. 
+
+        - Wavefromt statistics
+            - These will be very important for debugging purposes. 
+            - The golden quantity we would like to have is a per-sample queue history
+              That is, each time a queue is reset, we record its current count. This
+              will tell us how the wavefront drains rays. Or does not. 
+            - Other metrics to measure are the total iterations. 
+            - We naturally keep the most recent sample and the average for all of these. 
         */
 
         bool working = true;
@@ -181,18 +181,31 @@ namespace magik
 
         launch_kernel_generate_thin_lens_ray_async(manager, buffer);
 
+        // launch_kernel_generate_initial_geodesic_async
+
         while(working)
         {
-            launch_kernel_tmp_advance_async(manager, buffer);
+            // launch_kernel_advance_minkowski_async
 
-            launch_kernel_intersect_async(manager, buffer);
+            // launch_kernel_advance_schwarzschild_async
+
+            // launch_kernel_advance_kerr_async
+
+            launch_kernel_tmp_advance_async(manager, buffer); // To replace this
+
+            // launch_kernel_tlas_intersect_async
+
+            // launch_kernel_blas_intersect_async
+
+            launch_kernel_intersect_async(manager, buffer); // To replace this
 
             launch_kernel_bxdf_async(manager, buffer);
 
             launch_kernel_redistribute_radiance_async(manager, buffer);
 
             launch_kernel_enforce_ray_limits_async(manager, buffer);
-            swap_queue(&buffer->advance_queue_A, &buffer->advance_queue_B);
+
+            launch_kernel_swap_queues_async(manager, buffer->advance_queue_A, buffer->advance_queue_B);
 
             launch_kernel_splat_to_renderbuffer_async(manager, buffer, tmp_element->second.d_data);
 

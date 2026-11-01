@@ -31,6 +31,7 @@ add_library(magik SHARED
         src/renderer/kernels/kernel_enforce_ray_limits.cu
         src/renderer/kernels/kernel_initialize_random_device.cu
         src/renderer/kernels/kernel_redistribute_radiance.cu
+        src/renderer/kernels/kernel_utility.cu
 
         # memory
         src/renderer/memory/host_arena.cpp
