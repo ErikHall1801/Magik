@@ -100,6 +100,8 @@ target_link_libraries(magik PRIVATE glad::glad CUDA::cudart)
 
 target_compile_definitions(magik PRIVATE MAGIK_BUILD_DLL)
 
+target_compile_options(magik PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>)
+
 # Set properties
 target_compile_features(magik PRIVATE cxx_std_20)
 set_target_properties(magik PROPERTIES

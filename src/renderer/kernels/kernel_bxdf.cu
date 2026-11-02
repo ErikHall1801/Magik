@@ -50,15 +50,15 @@ namespace magik
                         fabsf(x.z) < origin ? x.z+float_scale*n.z : p_iz };
     }
 
-    static __global__ void kernel_bxdf(uint32_t* d_hit_id, vec4f* d_hit_normal, vec4f* d_dir, vec4f* d_pos, curandState_t* d_random_device, float* d_step_distance, float* d_monte_carlo_weight, float* d_spectral_radiance, float* d_sensor_wavelength_nm, ray_queue_t bxdf_queue, ray_queue_t advance_queue, ray_queue_t redistribute_queue)
+    static __global__ void kernel_bxdf(uint32_t* d_hit_id, vec4f* d_hit_normal, vec4f* d_dir, vec4f* d_pos, curandState_t* d_random_device, float* d_step_distance, float* d_monte_carlo_weight, float* d_spectral_radiance, float* d_sensor_wavelength_nm, uint32_t* d_bxdf_queue_count, uint32_t* d_bxdf_queue_id, uint32_t* d_advance_queue_A_count, uint32_t* d_advance_queue_A_id, uint32_t* d_redistribute_queue_count, uint32_t* d_redistribute_queue_id)
     {
         // Reads "bxdf queue"
         // Writes "advance queue" or "redistribution queue"
 
         // 1. Fetch ray id
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
-        if(queue_index >= *bxdf_queue.d_count) return;
-        uint32_t ray_id = bxdf_queue.d_id[queue_index];
+        if(queue_index >= *d_bxdf_queue_count) return;
+        uint32_t ray_id = d_bxdf_queue_id[queue_index];
 
         // 2. Fetch ray-specific data
         uint32_t hit_id = d_hit_id[ray_id];
@@ -103,19 +103,22 @@ namespace magik
 
         if(to_advance)
         {
-            slot = atomicAdd(advance_queue.d_count, 1);
-            advance_queue.d_id[slot] = ray_id;
+            slot = atomicAdd(d_advance_queue_A_count, 1);
+            d_advance_queue_A_id[slot] = ray_id;
         }
         else
         {
-            slot = atomicAdd(redistribute_queue.d_count, 1);
-            redistribute_queue.d_id[slot] = ray_id;
+            slot = atomicAdd(d_redistribute_queue_count, 1);
+            d_redistribute_queue_id[slot] = ray_id;
         }
     }
 
     void launch_kernel_bxdf_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
+        // This is VERY bad !!! Needs to be the count ! 
+        // This is not actually that bad, we can be smart. At the end of each iteration we read back the count to
+        // see how many rays there are left. We can just reuse that value to get an uppoer bound. 
         uint32_t n_block = ((wavefront_buffer->x_resolution*wavefront_buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
         uint32_t* d_hit_id = wavefront_buffer->ray_pool.get<hit_id_t>();
@@ -128,9 +131,18 @@ namespace magik
         float* d_spectral_radiance = wavefront_buffer->ray_pool.get<spectral_radiance_t>();
         float* d_sensor_wavelength_nm = wavefront_buffer->ray_pool.get<sensor_wavelength_nm_t>();
 
-        kernel_bxdf<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_hit_id, d_hit_normal, d_dir, d_pos, d_random_device, d_step_distance, d_monte_carlo_weight, d_spectral_radiance, d_sensor_wavelength_nm, wavefront_buffer->bxdf_queue, wavefront_buffer->advance_queue_A, wavefront_buffer->redistribute_queue);
+        uint32_t* d_bxdf_queue_count = wavefront_buffer->queue_pool.get_count_ptr<bxdf_queue_t>();
+        uint32_t* d_bxdf_queue_id = wavefront_buffer->queue_pool.get_id_ptr<bxdf_queue_t>();
+
+        uint32_t* d_advance_queue_A_count = wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>();
+        uint32_t* d_advance_queue_A_id = wavefront_buffer->queue_pool.get_id_ptr<advance_A_queue_t>();
+
+        uint32_t* d_redistribute_queue_count = wavefront_buffer->queue_pool.get_count_ptr<redistribute_queue_t>();
+        uint32_t* d_redistribute_queue_id = wavefront_buffer->queue_pool.get_id_ptr<redistribute_queue_t>();
+
+        kernel_bxdf<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_hit_id, d_hit_normal, d_dir, d_pos, d_random_device, d_step_distance, d_monte_carlo_weight, d_spectral_radiance, d_sensor_wavelength_nm, d_bxdf_queue_count, d_bxdf_queue_id, d_advance_queue_A_count, d_advance_queue_A_id, d_redistribute_queue_count, d_redistribute_queue_id);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(wavefront_buffer->bxdf_queue.d_count, &manager->cuda_stream); 
+        wavefront_buffer->queue_pool.zero_count_async<bxdf_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
     }
 }

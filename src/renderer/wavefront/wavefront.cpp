@@ -11,56 +11,21 @@
 
 namespace magik
 {
-    void realloc_wavefront_buffer(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer, uint32_t x_resolution_target, uint32_t y_resolution_target)
+    void realloc_wavefront_buffer(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t n_bin, uint32_t x_resolution_target, uint32_t y_resolution_target)
     {
         if(wavefront_buffer->x_resolution == x_resolution_target && wavefront_buffer->y_resolution == y_resolution_target) return;
-
-        destroy_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer);
 
         wavefront_buffer->x_resolution = x_resolution_target;
         wavefront_buffer->y_resolution = y_resolution_target;
 
-        wavefront_buffer->ray_pool.set_n_dimension<intrinsic_spectral_irradiance_t>(manager->stage.settings.n_spectral_irradiance_bin);
-        wavefront_buffer->ray_pool.allocate_async(static_cast<cudaStream_t>(manager->cuda_stream), x_resolution_target, y_resolution_target, true);
+        wavefront_buffer->release_async(static_cast<cudaStream_t>(user_stream));
 
-        magik::launch_kernel_initialize_random_device_sync(&manager->cuda_stream, wavefront_buffer, wavefront_buffer->x_resolution, wavefront_buffer->y_resolution);
+        wavefront_buffer->allocate_async(user_stream, n_bin, x_resolution_target, y_resolution_target, true);
 
-        size_t size_of_uint32_t_buffer = x_resolution_target*y_resolution_target*sizeof(uint32_t);
-        wavefront_buffer->advance_queue_A.d_count = magik::allocate_device<uint32_t>(sizeof(uint32_t));
-        wavefront_buffer->advance_queue_A.d_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
-        wavefront_buffer->advance_queue_B.d_count = magik::allocate_device<uint32_t>(sizeof(uint32_t));
-        wavefront_buffer->advance_queue_B.d_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
-        wavefront_buffer->intersect_queue.d_count = magik::allocate_device<uint32_t>(sizeof(uint32_t));
-        wavefront_buffer->intersect_queue.d_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
-        wavefront_buffer->bxdf_queue.d_count = magik::allocate_device<uint32_t>(sizeof(uint32_t));
-        wavefront_buffer->bxdf_queue.d_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
-        wavefront_buffer->redistribute_queue.d_count = magik::allocate_device<uint32_t>(sizeof(uint32_t));
-        wavefront_buffer->redistribute_queue.d_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
-        wavefront_buffer->splat_queue.d_count = magik::allocate_device<uint32_t>(sizeof(uint32_t));
-        wavefront_buffer->splat_queue.d_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
-    }
+        launch_kernel_initialize_random_device_async(user_stream, wavefront_buffer, x_resolution_target, y_resolution_target);
 
-    void destroy_wavefront_buffer(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer)
-    {
-        wavefront_buffer->ray_pool.release_async(user_stream);
-
-        magik::free_device(wavefront_buffer->advance_queue_A.d_id);
-        magik::free_device(wavefront_buffer->advance_queue_A.d_count);
-        magik::free_device(wavefront_buffer->advance_queue_B.d_id);
-        magik::free_device(wavefront_buffer->advance_queue_B.d_count);
-        magik::free_device(wavefront_buffer->intersect_queue.d_id);
-        magik::free_device(wavefront_buffer->intersect_queue.d_count);
-        magik::free_device(wavefront_buffer->bxdf_queue.d_id);
-        magik::free_device(wavefront_buffer->bxdf_queue.d_count);
-        magik::free_device(wavefront_buffer->redistribute_queue.d_id);
-        magik::free_device(wavefront_buffer->redistribute_queue.d_count);
-        magik::free_device(wavefront_buffer->splat_queue.d_id);
-        magik::free_device(wavefront_buffer->splat_queue.d_count);
-    }
-
-    void reset_queue_async(uint32_t* d_count, void** user_stream)
-    {
-        memset_device_async<uint32_t>(d_count, 0x0, sizeof(uint32_t), user_stream);
+        check_cuda_errors(cudaStreamSynchronize(user_stream));
+        check_cuda_errors(cudaGetLastError());
     }
 
     static void is_work_done_sync(bool* working, uint32_t* advance_d_count, void** user_stream)
@@ -69,6 +34,7 @@ namespace magik
 
         memcpy_device_to_host_async(advance_d_count, &h_count, sizeof(uint32_t), user_stream);
         check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
+        check_cuda_errors(cudaGetLastError());
 
         if(h_count == 0)
         {
@@ -80,11 +46,8 @@ namespace magik
         }
     }
 
-    void reset_wavefront_buffer(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
+    void reset_wavefront_process_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
-        size_t size_of_float_buffer = wavefront_buffer->x_resolution*wavefront_buffer->y_resolution*sizeof(float);
-        size_t size_of_redistribute_buffer = static_cast<size_t>(wavefront_buffer->x_resolution*wavefront_buffer->y_resolution*manager->stage.settings.n_spectral_irradiance_bin)*sizeof(float);
-
         wavefront_buffer->ray_pool.memset_async<sensor_wavelength_nm_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
         wavefront_buffer->ray_pool.memset_async<monte_carlo_weight_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
         wavefront_buffer->ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
@@ -93,21 +56,15 @@ namespace magik
         manager->x_sample.store(0, std::memory_order_release);
     }
 
-    static void reset_wavefront_buffer_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
+    static void prepair_wavefront_buffer_async(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer)
     {
-        reset_queue_async(wavefront_buffer->advance_queue_A.d_count, &manager->cuda_stream);
-        reset_queue_async(wavefront_buffer->advance_queue_B.d_count, &manager->cuda_stream);
-        reset_queue_async(wavefront_buffer->intersect_queue.d_count, &manager->cuda_stream);
-        reset_queue_async(wavefront_buffer->bxdf_queue.d_count, &manager->cuda_stream);
-        reset_queue_async(wavefront_buffer->redistribute_queue.d_count, &manager->cuda_stream);
-        reset_queue_async(wavefront_buffer->splat_queue.d_count, &manager->cuda_stream);
+        wavefront_buffer->queue_pool.reset_all_counts(user_stream);
 
-        wavefront_buffer->ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<step_distance_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<n_step_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        wavefront_buffer->ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        wavefront_buffer->ray_pool.memset_async<step_distance_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        wavefront_buffer->ray_pool.memset_async<n_step_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
 
-        uint32_t h_count = wavefront_buffer->x_resolution*wavefront_buffer->y_resolution;
-        memcpy_host_to_device_async(&h_count, wavefront_buffer->advance_queue_A.d_count, sizeof(uint32_t), &manager->cuda_stream);
+        wavefront_buffer->queue_pool.set_count_async<advance_A_queue_t>(wavefront_buffer->x_resolution*wavefront_buffer->y_resolution, user_stream);
     }
 
     void wavefront_sample(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
@@ -115,15 +72,11 @@ namespace magik
         /*
         What do we want to do tomorrow ? 
 
+        - Once it works again, the biggest priority is using h_count in the kenrel launch ! 
+
         - Header cleanup
             - Basically, we should try to not include everything everywhere. 
             - Not sure exactly how. 
-
-        - Device arena 
-            - Ok, this works. Good. Now we need to copy this new memory 
-              setup for the queue's. On a technical side, this wont be a 
-              problem. But i want to rethink the wavefront ray pool as a 
-              whole. I think we should just call it the wavefront buffer. 
 
         - Wavefromt statistics
             - These will be very important for debugging purposes. 
@@ -139,7 +92,7 @@ namespace magik
         bool working = true;
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
 
-        reset_wavefront_buffer_async(manager, wavefront_buffer);
+        prepair_wavefront_buffer_async(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer);
 
         launch_kernel_generate_thin_lens_ray_async(manager, wavefront_buffer);
 
@@ -171,11 +124,11 @@ namespace magik
 
             launch_kernel_enforce_ray_limits_async(manager, wavefront_buffer);
 
-            launch_kernel_swap_queues_async(manager, wavefront_buffer->advance_queue_A, wavefront_buffer->advance_queue_B);
+            wavefront_buffer->queue_pool.swap_advance_queues();
 
             launch_kernel_splat_to_renderbuffer_async(manager, wavefront_buffer, tmp_element->second.d_data);
 
-            is_work_done_sync(&working, wavefront_buffer->advance_queue_A.d_count, &manager->cuda_stream); 
+            is_work_done_sync(&working, wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>(), &manager->cuda_stream); 
         }
 
         manager->x_sample.fetch_add(1, std::memory_order_relaxed);

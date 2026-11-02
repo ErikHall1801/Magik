@@ -5,15 +5,15 @@
 
 namespace magik
 {
-    static __global__ void kernel_intersect(vec4f* d_pos, vec4f* d_dir, float* d_step_distance, uint32_t* hit_id, vec4f* hit_normal, ray_queue_t intersect_queue, ray_queue_t advance_queue, ray_queue_t bxdf_queue, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max)
+    static __global__ void kernel_intersect(vec4f* d_pos, vec4f* d_dir, float* d_step_distance, uint32_t* hit_id, vec4f* hit_normal, uint32_t* d_intersect_queue_count, uint32_t* d_intersect_queue_id, uint32_t* d_advance_queue_A_count, uint32_t* d_advance_queue_A_id, uint32_t* d_bxdf_queue_count, uint32_t* d_bxdf_queue_id, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max)
     {
         // Reads "intersect queue"
         // Writes "advance queue" or "bxdf queue"
 
         // 1. Fetch ray id
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
-        if(queue_index >= *intersect_queue.d_count) return;
-        uint32_t ray_id = intersect_queue.d_id[queue_index];
+        if(queue_index >= *d_intersect_queue_count) return;
+        uint32_t ray_id = d_intersect_queue_id[queue_index];
 
         // 2. Fetch ray-specific data
         vec3f ray_orig = vec3f{d_pos[ray_id].x, d_pos[ray_id].y, d_pos[ray_id].z};
@@ -55,8 +55,8 @@ namespace magik
 
         if(hit_any)
         {
-            slot = atomicAdd(bxdf_queue.d_count, 1);
-            bxdf_queue.d_id[slot] = ray_id;
+            slot = atomicAdd(d_bxdf_queue_count, 1);
+            d_bxdf_queue_id[slot] = ray_id;
 
             // As before, we define that, if there was a hit, by the end of this operation
             // the ray is at that position. 
@@ -67,8 +67,8 @@ namespace magik
         }
         else
         {
-            slot = atomicAdd(advance_queue.d_count, 1);
-            advance_queue.d_id[slot] = ray_id;
+            slot = atomicAdd(d_advance_queue_A_count, 1);
+            d_advance_queue_A_id[slot] = ray_id;
         }
     }
 
@@ -83,9 +83,18 @@ namespace magik
         uint32_t* d_hit_id = wavefront_buffer->ray_pool.get<hit_id_t>();
         vec4f* d_hit_normal = wavefront_buffer->ray_pool.get<hit_normal_t>();
 
-        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_pos, d_dir, d_step_distance, d_hit_id, d_hit_normal, wavefront_buffer->intersect_queue, wavefront_buffer->advance_queue_A, wavefront_buffer->bxdf_queue, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
+        uint32_t* d_intersect_queue_count = wavefront_buffer->queue_pool.get_count_ptr<intersect_queue_t>();
+        uint32_t* d_intersect_queue_id = wavefront_buffer->queue_pool.get_id_ptr<intersect_queue_t>();
+
+        uint32_t* d_advance_queue_A_count = wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>();
+        uint32_t* d_advance_queue_A_id = wavefront_buffer->queue_pool.get_id_ptr<advance_A_queue_t>();
+
+        uint32_t* d_bxdf_queue_count = wavefront_buffer->queue_pool.get_count_ptr<bxdf_queue_t>();
+        uint32_t* d_bxdf_queue_id = wavefront_buffer->queue_pool.get_id_ptr<bxdf_queue_t>();
+
+        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_pos, d_dir, d_step_distance, d_hit_id, d_hit_normal, d_intersect_queue_count, d_intersect_queue_id, d_advance_queue_A_count, d_advance_queue_A_id, d_bxdf_queue_count, d_bxdf_queue_id, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(wavefront_buffer->intersect_queue.d_count, &manager->cuda_stream);
+        wavefront_buffer->queue_pool.zero_count_async<intersect_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
     }
 }

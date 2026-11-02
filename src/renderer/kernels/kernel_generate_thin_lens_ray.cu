@@ -7,7 +7,7 @@
 
 namespace magik
 {
-    static __global__ void kernel_generate_thin_lens_ray(curandState_t* d_random_device, vec4f* d_dir, vec4f* d_pos, float* d_sensor_wavelength_nm, float* d_monte_carlo_weight, ray_queue_t advance_queue, uint32_t x_resolution, uint32_t y_resolution, float max_wavelength_nm, float min_wavelength_nm, float focal_length, float sensor_diagonal_mm, vec3f position, mat3f orientation)
+    static __global__ void kernel_generate_thin_lens_ray(curandState_t* d_random_device, vec4f* d_dir, vec4f* d_pos, float* d_sensor_wavelength_nm, float* d_monte_carlo_weight, uint32_t* d_advance_queue_id, uint32_t x_resolution, uint32_t y_resolution, float max_wavelength_nm, float min_wavelength_nm, float focal_length, float sensor_diagonal_mm, vec3f position, mat3f orientation)
     {
         if(!magik::is_valid_thread(x_resolution, y_resolution)) return;
 
@@ -34,7 +34,7 @@ namespace magik
         // draw_random_wavelength_cie_1931_weighted(&d_sensor_wavelength_nm[thread_id], &d_monte_carlo_weight[thread_id], max_wavelength_nm, min_wavelength_nm, &d_random_device[thread_id]);
         draw_random_wavelength_uniform(&d_sensor_wavelength_nm[thread_id], &d_monte_carlo_weight[thread_id], max_wavelength_nm, min_wavelength_nm, &d_random_device[thread_id]);
 
-        advance_queue.d_id[thread_id] = thread_id;
+        d_advance_queue_id[thread_id] = thread_id;
     }
 
     void launch_kernel_generate_thin_lens_ray_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
@@ -48,7 +48,9 @@ namespace magik
         float* d_sensor_wavelength_nm = wavefront_buffer->ray_pool.get<sensor_wavelength_nm_t>();
         float* d_monte_carlo_weight = wavefront_buffer->ray_pool.get<monte_carlo_weight_t>();
 
-        kernel_generate_thin_lens_ray<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_random_device, d_dir, d_pos, d_sensor_wavelength_nm, d_monte_carlo_weight, wavefront_buffer->advance_queue_A, wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.settings.max_wavelength_nm, manager->stage.settings.min_wavelength_nm, manager->stage.optical_systen.focal_length, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.position, manager->stage.optical_systen.orientation);
+        uint32_t* d_advance_A_queue_id = wavefront_buffer->queue_pool.get_id_ptr<advance_A_queue_t>();
+
+        kernel_generate_thin_lens_ray<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_random_device, d_dir, d_pos, d_sensor_wavelength_nm, d_monte_carlo_weight, d_advance_A_queue_id, wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.settings.max_wavelength_nm, manager->stage.settings.min_wavelength_nm, manager->stage.optical_systen.focal_length, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.position, manager->stage.optical_systen.orientation);
         check_cuda_errors(cudaGetLastError());
     }
 }

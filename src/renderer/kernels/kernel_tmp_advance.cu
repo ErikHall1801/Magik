@@ -32,9 +32,15 @@ namespace magik
         vec4f* d_dir = wavefront_buffer->ray_pool.get<direction_t>(); 
         uint32_t* n_step = wavefront_buffer->ray_pool.get<n_step_t>();
 
-        kernel_tmp_advance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_step_distance, d_pos, d_dir, n_step, wavefront_buffer->advance_queue_A.d_count, wavefront_buffer->advance_queue_A.d_id, wavefront_buffer->intersect_queue.d_count, wavefront_buffer->intersect_queue.d_id);
+        uint32_t* d_advance_queue_A_count = wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>();
+        uint32_t* d_advance_queue_A_id = wavefront_buffer->queue_pool.get_id_ptr<advance_A_queue_t>();
+
+        uint32_t* d_intersect_queue_count = wavefront_buffer->queue_pool.get_count_ptr<intersect_queue_t>();
+        uint32_t* d_intersect_queue_id = wavefront_buffer->queue_pool.get_id_ptr<intersect_queue_t>();
+
+        kernel_tmp_advance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_step_distance, d_pos, d_dir, n_step, d_advance_queue_A_count, d_advance_queue_A_id, d_intersect_queue_count, d_intersect_queue_id);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(wavefront_buffer->advance_queue_A.d_count, &manager->cuda_stream);
+        wavefront_buffer->queue_pool.zero_count_async<advance_A_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
     }
 }

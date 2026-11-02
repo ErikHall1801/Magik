@@ -12,15 +12,14 @@ namespace magik
         curand_init(clock64(), thread_id, 0, &d_random_device[thread_id]);
     }
 
-    void launch_kernel_initialize_random_device_sync(void** user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t x_resolution, uint32_t y_resolution)
+    void launch_kernel_initialize_random_device_async(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t x_resolution, uint32_t y_resolution)
     {
         dim3 threads_per_block = dim3(16, 16, 1);
         dim3 n_block = magik::compute_n_blocks(x_resolution, y_resolution, 16, 16);
 
         curandState_t* d_random_device = wavefront_buffer->ray_pool.get<random_device_t>();
 
-        kernel_initialize_random_device<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(*user_stream)>>>(d_random_device, x_resolution, y_resolution);
-        check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
+        kernel_initialize_random_device<<<n_block, threads_per_block, 0, user_stream>>>(d_random_device, x_resolution, y_resolution);
         check_cuda_errors(cudaGetLastError());
     }
 }

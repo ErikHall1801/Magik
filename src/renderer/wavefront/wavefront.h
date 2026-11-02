@@ -13,29 +13,32 @@ namespace magik
         uint32_t x_resolution = 0;
         uint32_t y_resolution = 0;
 
-        // Perhaps a queue_pool ? In a non-random order ? 
-        // Sure, but at that point why have these be in a 
-        // ray-class ? Why not put all the logic right here ? 
-        // This way we could more easily make one overall pool 
-        // template.
-        // On the other hand, we ideally want one arena. Right
-        // now we are heading for two. This would be less of 
-        // a problem if this struct held all the needed logic. 
-        // i say less because, we still need a template with two
-        // types. We will have to figure this out eventually, 
-        // since the assets are going to be packed memory too. 
-        //
-        // We can make seperate ray_pool and queue_pool objects
-        // which are managed jointly in this struct. So each 
-        // type has its own functions, but the memory stuff 
-        // is handled in here. 
+        /*
+        We should be clear about the idea. We will probably move 
+        ray.h into this file. But also, the idea is that while the 
+        ray and queue pool's are distinct members of this struct, 
+        they share a common device arena. Because their lifetimes 
+        are not unique. 
 
-        ray_queue_t advance_queue_A;
-        ray_queue_t advance_queue_B;
-        ray_queue_t intersect_queue;
-        ray_queue_t bxdf_queue;
-        ray_queue_t redistribute_queue;
-        ray_queue_t splat_queue;
+        This means we have to do a few things. For one, each struct
+        has fewer member functions. Such as .get_size(). Which returns
+        the requiered size. 
+        The idea is that the allocate() and release() functions are 
+        defined in this struct. So we can just call something along
+        the lines of "wavefront_buffer.allocate()" or 
+        "wavefront_buffer.release()" and it handles everything for us. 
+        */
+
+        device_mem_arena arena;
+
+        queue_pool_t<
+        advance_A_queue_t,
+        advance_B_queue_t,
+        intersect_queue_t,
+        bxdf_queue_t,
+        redistribute_queue_t,
+        splat_queue_t>
+        queue_pool;
 
         ray_pool_t<
         sensor_wavelength_nm_t,
@@ -50,6 +53,45 @@ namespace magik
         hit_id_t,
         hit_normal_t> 
         ray_pool;
+
+        // Align up
+        static constexpr size_t align_up(size_t x)
+        {
+            return (x + 255) & ~(255);
+        }
+
+        // allocate
+        void allocate_async(cudaStream_t user_stream, uint32_t n_bin, const uint32_t x_resolution, const uint32_t y_resolution, bool set_zero)
+        {
+            ray_pool.set_n_dimension<intrinsic_spectral_irradiance_t>(n_bin);
+
+            // Allocation stage
+            size_t total_size = 0;
+            total_size += align_up(queue_pool.total_bytes(x_resolution, y_resolution) + ray_pool.total_bytes(x_resolution, y_resolution));
+            arena = device_arena_create_async(user_stream, total_size);
+
+            // Note, right now we chose to assign the queue's and ray's in order, but it would likely be better
+            // to put queue's in locations where specific ray's need them. This would requiere a templated 
+            // allocator where the order of the variadic arguments determins the layout. 
+            // The assignment needs to be a member function too. I think. So we can all assign() on either type. 
+
+            // Queue assignment 
+            queue_pool.assign(&arena, x_resolution, y_resolution);
+
+            // Ray assignment 
+            ray_pool.assign(&arena, x_resolution, y_resolution);
+
+            // Memset
+            if(set_zero)
+            {
+                check_cuda_errors(cudaMemsetAsync(arena.d_base, 0x0, total_size, user_stream));
+            }
+        }
+
+        void release_async(cudaStream_t user_stream)
+        {
+            device_arena_destroy_async(user_stream, &arena);
+        }
     };
 
     struct wavefront_sample_statistics_t
@@ -76,13 +118,9 @@ namespace magik
         // update the statistics at the end of the wavefront sample. 
     };
 
-    void reset_queue_async(uint32_t* d_count, void** user_stream);
+    void realloc_wavefront_buffer(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t n_bin, uint32_t x_resolution_target, uint32_t y_resolution_target);
 
-    void realloc_wavefront_buffer(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer, uint32_t x_resolution_target, uint32_t y_resolution_target);
-
-    void destroy_wavefront_buffer(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer);
-
-    void reset_wavefront_buffer(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer);
+    void reset_wavefront_process_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer);
 
     void wavefront_sample(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer);
 }

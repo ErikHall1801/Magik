@@ -62,7 +62,7 @@ namespace magik
             result = allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
 
             // Wavefront realloc
-            realloc_wavefront_buffer(manager, &wavefront_buffer, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
+            realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.settings.n_spectral_irradiance_bin, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
 
             if(result)
             {
@@ -99,7 +99,7 @@ namespace magik
             if(manager->framebuffer_swapchain.clear_render_buffer)
             {
                 reset_render_buffer(&manager->framebuffer_swapchain);
-                reset_wavefront_buffer(manager, &wavefront_buffer);
+                reset_wavefront_process_async(manager, &wavefront_buffer);
                 manager->framebuffer_swapchain.clear_render_buffer = false;
             }
 
@@ -133,6 +133,6 @@ namespace magik
             }
         }
 
-        destroy_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer);
+        wavefront_buffer.release_async(static_cast<cudaStream_t>(manager->cuda_stream));
     }
 }
