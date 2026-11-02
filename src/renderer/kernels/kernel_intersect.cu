@@ -5,7 +5,7 @@
 
 namespace magik
 {
-    static __global__ void kernel_intersect(ray_pool_t ray_pool, ray_queue_t intersect_queue, ray_queue_t advance_queue, ray_queue_t bxdf_queue, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max)
+    static __global__ void kernel_intersect(vec4f* d_pos, vec4f* d_dir, float* d_step_distance, uint32_t* hit_id, vec4f* hit_normal, ray_queue_t intersect_queue, ray_queue_t advance_queue, ray_queue_t bxdf_queue, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max)
     {
         // Reads "intersect queue"
         // Writes "advance queue" or "bxdf queue"
@@ -16,13 +16,13 @@ namespace magik
         uint32_t ray_id = intersect_queue.d_id[queue_index];
 
         // 2. Fetch ray-specific data
-        vec3f ray_orig = ray_pool.d_pos[ray_id];
-        vec3f ray_dir = ray_pool.d_dir[ray_id];
-        float distance = ray_pool.d_step_distance[ray_id];
+        vec3f ray_orig = vec3f{d_pos[ray_id].x, d_pos[ray_id].y, d_pos[ray_id].z};
+        vec3f ray_dir = vec3f{d_dir[ray_id].x, d_dir[ray_id].y, d_dir[ray_id].z};
+        float distance = d_step_distance[ray_id];
 
         // 3. Do work
         bool hit_any = false;
-        uint32_t hit_id = 0;
+        uint32_t local_hit_id = 0;
 
         float closest_hit = 1e30f;
         vec3f closest_normal;
@@ -34,7 +34,7 @@ namespace magik
             closest_hit = candidate_hit_parameter;
             closest_normal = candidate_hit_normal;
             hit_any = true;
-            hit_id = 1;
+            local_hit_id = 1;
         }
 
         candidate_hit_parameter = 1e30f;
@@ -46,7 +46,7 @@ namespace magik
                 closest_hit = candidate_hit_parameter;
                 closest_normal = candidate_hit_normal;
                 hit_any = true;
-                hit_id = 2;
+                local_hit_id = 2;
             }
         }
 
@@ -60,9 +60,10 @@ namespace magik
 
             // As before, we define that, if there was a hit, by the end of this operation
             // the ray is at that position. 
-            ray_pool.d_pos[ray_id] = ray_orig + ray_dir * distance * closest_hit;
-            ray_pool.hit_id[ray_id] = hit_id;
-            ray_pool.hit_normal[ray_id] = closest_normal;
+            vec3f new_pos = ray_orig + ray_dir * distance * closest_hit;
+            d_pos[ray_id] = vec4f{new_pos.x, new_pos.y, new_pos.z, 0.0f};
+            hit_id[ray_id] = local_hit_id;
+            hit_normal[ray_id] = vec4f{closest_normal.x, closest_normal.y, closest_normal.z, 0.0f};
         }
         else
         {
@@ -76,7 +77,13 @@ namespace magik
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->ray_pool, buffer->intersect_queue, buffer->advance_queue_A, buffer->bxdf_queue, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
+        vec4f* d_pos = buffer->ray_pool.get<position_t>();
+        vec4f* d_dir = buffer->ray_pool.get<direction_t>();
+        float* d_step_distance = buffer->ray_pool.get<step_distance_t>();
+        uint32_t* d_hit_id = buffer->ray_pool.get<hit_id_t>();
+        vec4f* d_hit_normal = buffer->ray_pool.get<hit_normal_t>();
+
+        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_pos, d_dir, d_step_distance, d_hit_id, d_hit_normal, buffer->intersect_queue, buffer->advance_queue_A, buffer->bxdf_queue, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
         check_cuda_errors(cudaGetLastError());
 
         reset_queue_async(buffer->intersect_queue.d_count, &manager->cuda_stream);

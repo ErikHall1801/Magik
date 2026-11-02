@@ -6,7 +6,7 @@
 
 namespace magik
 {
-    __global__ static void kernel_redistribute_radiance(ray_pool_t ray_pool, ray_queue_t redistribute_queue, ray_queue_t splat_queue, float max_wavelength_nm, float min_wavelength_nm, float redistribution_standard_deviation, float sensor_diagonal_mm, float sensor_resolution_x, float sensor_resolution_y, uint32_t n_spectral_irradiance_bin)
+    __global__ static void kernel_redistribute_radiance(float* d_spectral_radiance, float* d_monte_carlo_weight, float* d_intrinsic_spectral_irradiance, float* d_sensor_wavelength_nm, ray_queue_t redistribute_queue, ray_queue_t splat_queue, float max_wavelength_nm, float min_wavelength_nm, float redistribution_standard_deviation, float sensor_diagonal_mm, float sensor_resolution_x, float sensor_resolution_y, uint32_t n_spectral_irradiance_bin)
     {
         // Reads "redistribute queue"
         // Writes "splat queue"
@@ -21,18 +21,18 @@ namespace magik
         if(queue_index >= *redistribute_queue.d_count) return;
         uint32_t ray_id = redistribute_queue.d_id[queue_index];
 
-        float spectral_radiance = ray_pool.d_spectral_radiance[ray_id];
-        float monte_carlo_weight = ray_pool.d_monte_carlo_weight[ray_id];
+        float spectral_radiance = d_spectral_radiance[ray_id];
+        float monte_carlo_weight = d_monte_carlo_weight[ray_id];
 
         if((spectral_radiance > 0.0f) && (monte_carlo_weight > 0.0f))
         {
             float inv_b = compute_inv_b(sensor_diagonal_mm, sensor_resolution_x, sensor_resolution_y);
 
             redistribute_spectral_radiance_t args;
-            args.d_spectral_irradiance = ray_pool.d_intrinsic_spectral_irradiance;
+            args.d_spectral_irradiance = d_intrinsic_spectral_irradiance;
             args.spectral_radiance = spectral_radiance;
             args.monte_carlo_weight = monte_carlo_weight;
-            args.sensor_wavelength_nm = ray_pool.d_sensor_wavelength_nm[ray_id];
+            args.sensor_wavelength_nm = d_sensor_wavelength_nm[ray_id];
             args.max_wavelength_nm = max_wavelength_nm;
             args.min_wavelength_nm = min_wavelength_nm;
             args.redistribution_standard_deviation = redistribution_standard_deviation;
@@ -55,7 +55,12 @@ namespace magik
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        kernel_redistribute_radiance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->ray_pool, buffer->redistribute_queue, buffer->splat_queue, manager->stage.settings.max_wavelength_nm, manager->stage.settings.min_wavelength_nm, manager->stage.settings.redistribution_standard_deviation, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution, manager->stage.settings.n_spectral_irradiance_bin);
+        float* d_spectral_radiance = buffer->ray_pool.get<spectral_radiance_t>();
+        float* d_monte_carlo_weight = buffer->ray_pool.get<monte_carlo_weight_t>();
+        float* d_intrinsic_spectral_irradiance = buffer->ray_pool.get<intrinsic_spectral_irradiance_t>();
+        float* d_sensor_wavelength_nm = buffer->ray_pool.get<sensor_wavelength_nm_t>();
+
+        kernel_redistribute_radiance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_spectral_radiance, d_monte_carlo_weight, d_intrinsic_spectral_irradiance, d_sensor_wavelength_nm, buffer->redistribute_queue, buffer->splat_queue, manager->stage.settings.max_wavelength_nm, manager->stage.settings.min_wavelength_nm, manager->stage.settings.redistribution_standard_deviation, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution, manager->stage.settings.n_spectral_irradiance_bin);
         check_cuda_errors(cudaGetLastError());
 
         reset_queue_async(buffer->redistribute_queue.d_count, &manager->cuda_stream);

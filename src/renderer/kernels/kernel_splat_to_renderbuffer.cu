@@ -5,7 +5,7 @@
 
 namespace magik
 {
-    static __global__ void kernel_splat_to_renderbuffer(ray_pool_t ray_pool, ray_queue_t splat_queue, float* d_renderbuffer, uint32_t n_spectral_irradiance_bin, float max_wavelength_nm, float min_wavelength_nm, uint32_t x_sample)
+    static __global__ void kernel_splat_to_renderbuffer(float* d_intrinsic_spectral_irradiance, ray_queue_t splat_queue, float* d_renderbuffer, uint32_t n_spectral_irradiance_bin, float max_wavelength_nm, float min_wavelength_nm, uint32_t x_sample)
     {
         /*
         This kernel will eventually include the entire color pipeline, such as OCIO-generated functions. 
@@ -15,7 +15,7 @@ namespace magik
         if(queue_index >= *splat_queue.d_count) return;
         uint32_t ray_id = splat_queue.d_id[queue_index];
 
-        vec3f linear_color = spectral_irradiance_to_cie_xyz(&ray_pool.d_intrinsic_spectral_irradiance[(size_t)ray_id * n_spectral_irradiance_bin], n_spectral_irradiance_bin, max_wavelength_nm, min_wavelength_nm, x_sample);
+        vec3f linear_color = spectral_irradiance_to_cie_xyz(&d_intrinsic_spectral_irradiance[(size_t)ray_id * n_spectral_irradiance_bin], n_spectral_irradiance_bin, max_wavelength_nm, min_wavelength_nm, x_sample);
 
         d_renderbuffer[ray_id * 3 + 0] = linear_color.x;
         d_renderbuffer[ray_id * 3 + 1] = linear_color.y;
@@ -27,7 +27,9 @@ namespace magik
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        kernel_splat_to_renderbuffer<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(buffer->ray_pool, buffer->splat_queue, d_renderbuffer, manager->stage.settings.n_spectral_irradiance_bin, manager->stage.settings.max_wavelength_nm, manager->stage.settings.min_wavelength_nm, manager->x_sample.load(std::memory_order_acquire));
+        float* d_intrinsic_spectral_irradiance = buffer->ray_pool.get<intrinsic_spectral_irradiance_t>();
+
+        kernel_splat_to_renderbuffer<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_intrinsic_spectral_irradiance, buffer->splat_queue, d_renderbuffer, manager->stage.settings.n_spectral_irradiance_bin, manager->stage.settings.max_wavelength_nm, manager->stage.settings.min_wavelength_nm, manager->x_sample.load(std::memory_order_acquire));
         check_cuda_errors(cudaGetLastError());
 
         reset_queue_async(buffer->splat_queue.d_count, &manager->cuda_stream);

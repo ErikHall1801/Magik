@@ -20,7 +20,19 @@ namespace magik
         ray_queue_t redistribute_queue;
         ray_queue_t splat_queue;
 
-        ray_pool_t ray_pool;
+        ray_pool_t<
+        sensor_wavelength_nm_t,
+        monte_carlo_weight_t,
+        spectral_radiance_t,
+        intrinsic_spectral_irradiance_t,
+        random_device_t,
+        position_t,
+        direction_t,
+        step_distance_t,
+        n_step_t,
+        hit_id_t,
+        hit_normal_t> 
+        ray_pool;
     };
 
     struct wavefront_sample_statistics_t
@@ -51,7 +63,7 @@ namespace magik
 
     void realloc_wavefront_ray_buffer(magik_render_manager* manager, wavefront_ray_buffer_t* buffer, uint32_t x_resolution_target, uint32_t y_resolution_target);
 
-    void destroy_wavefront_ray_buffer(wavefront_ray_buffer_t* buffer);
+    void destroy_wavefront_ray_buffer(cudaStream_t user_stream, wavefront_ray_buffer_t* buffer);
 
     void wavefront_reset(magik_render_manager* manager, wavefront_ray_buffer_t* buffer);
 

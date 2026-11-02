@@ -6,5 +6,5 @@
 
 namespace magik
 {
-    void launch_kernel_initialize_random_device_sync(void** user_stream, ray_pool_t ray_pool, uint32_t x_resolution, uint32_t y_resolution);
+    void launch_kernel_initialize_random_device_sync(void** user_stream, wavefront_ray_buffer_t* buffer, uint32_t x_resolution, uint32_t y_resolution);
 }

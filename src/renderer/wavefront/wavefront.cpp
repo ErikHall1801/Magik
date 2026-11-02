@@ -15,43 +15,17 @@ namespace magik
     {
         if(buffer->x_resolution == x_resolution_target && buffer->y_resolution == y_resolution_target) return;
 
-        destroy_wavefront_ray_buffer(buffer);
+        destroy_wavefront_ray_buffer(static_cast<cudaStream_t>(manager->cuda_stream), buffer);
 
         buffer->x_resolution = x_resolution_target;
         buffer->y_resolution = y_resolution_target;
 
-        size_t size_of_vec3f_buffer = x_resolution_target*y_resolution_target*sizeof(vec3f);
-        size_t size_of_float_buffer = x_resolution_target*y_resolution_target*sizeof(float);
+        buffer->ray_pool.set_n_dimension<intrinsic_spectral_irradiance_t>(manager->stage.settings.n_spectral_irradiance_bin);
+        buffer->ray_pool.allocate_async(static_cast<cudaStream_t>(manager->cuda_stream), x_resolution_target, y_resolution_target, true);
+
+        magik::launch_kernel_initialize_random_device_sync(&manager->cuda_stream, buffer, buffer->x_resolution, buffer->y_resolution);
+
         size_t size_of_uint32_t_buffer = x_resolution_target*y_resolution_target*sizeof(uint32_t);
-        size_t size_of_curandState_t_buffer = x_resolution_target*y_resolution_target*sizeof(curandState_t);
-        size_t size_of_redistribute_buffer = static_cast<size_t>(x_resolution_target*y_resolution_target*manager->stage.settings.n_spectral_irradiance_bin)*sizeof(float);
-
-        // bxdf
-        buffer->ray_pool.d_sensor_wavelength_nm = magik::allocate_device<float>(size_of_float_buffer);
-        buffer->ray_pool.d_monte_carlo_weight = magik::allocate_device<float>(size_of_float_buffer);
-        buffer->ray_pool.d_spectral_radiance = magik::allocate_device<float>(size_of_float_buffer);
-        buffer->ray_pool.d_intrinsic_spectral_irradiance = magik::allocate_device<float>(size_of_redistribute_buffer);
-
-        magik::memset_device_sync<float>(buffer->ray_pool.d_sensor_wavelength_nm, 0x0, size_of_float_buffer);
-        magik::memset_device_sync<float>(buffer->ray_pool.d_monte_carlo_weight, 0x0, size_of_float_buffer);
-        magik::memset_device_sync<float>(buffer->ray_pool.d_spectral_radiance, 0x0, size_of_float_buffer);
-        magik::memset_device_sync<float>(buffer->ray_pool.d_intrinsic_spectral_irradiance, 0x0, size_of_redistribute_buffer);
-
-
-
-        // bah !!!
-        buffer->ray_pool.d_dir = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
-        buffer->ray_pool.d_pos = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
-        buffer->ray_pool.d_step_distance = magik::allocate_device<float>(size_of_float_buffer);
-        buffer->ray_pool.n_step = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
-        buffer->ray_pool.hit_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
-        buffer->ray_pool.hit_normal = magik::allocate_device<vec3f>(size_of_vec3f_buffer);
-        buffer->ray_pool.d_random_device = magik::allocate_device<curandState_t>(size_of_curandState_t_buffer);
-
-        magik::memset_device_sync<uint32_t>(buffer->ray_pool.n_step, 0x0, size_of_uint32_t_buffer);
-        magik::memset_device_sync<float>(buffer->ray_pool.d_step_distance, 0x0, size_of_float_buffer);
-        magik::launch_kernel_initialize_random_device_sync(&manager->cuda_stream, buffer->ray_pool, buffer->x_resolution, buffer->y_resolution);
-
         buffer->advance_queue_A.d_count = magik::allocate_device<uint32_t>(sizeof(uint32_t));
         buffer->advance_queue_A.d_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
         buffer->advance_queue_B.d_count = magik::allocate_device<uint32_t>(sizeof(uint32_t));
@@ -66,21 +40,9 @@ namespace magik
         buffer->splat_queue.d_id = magik::allocate_device<uint32_t>(size_of_uint32_t_buffer);
     }
 
-    void destroy_wavefront_ray_buffer(wavefront_ray_buffer_t* buffer)
+    void destroy_wavefront_ray_buffer(cudaStream_t user_stream, wavefront_ray_buffer_t* buffer)
     {
-        // bxdf
-        magik::free_device(buffer->ray_pool.d_sensor_wavelength_nm);
-        magik::free_device(buffer->ray_pool.d_monte_carlo_weight);
-        magik::free_device(buffer->ray_pool.d_spectral_radiance);
-        magik::free_device(buffer->ray_pool.d_intrinsic_spectral_irradiance);
-
-        magik::free_device(buffer->ray_pool.d_dir);
-        magik::free_device(buffer->ray_pool.d_pos);
-        magik::free_device(buffer->ray_pool.d_step_distance);
-        magik::free_device(buffer->ray_pool.n_step);
-        magik::free_device(buffer->ray_pool.hit_id);
-        magik::free_device(buffer->ray_pool.hit_normal);
-        magik::free_device(buffer->ray_pool.d_random_device);
+        buffer->ray_pool.release_async(user_stream);
 
         magik::free_device(buffer->advance_queue_A.d_id);
         magik::free_device(buffer->advance_queue_A.d_count);
@@ -123,10 +85,10 @@ namespace magik
         size_t size_of_float_buffer = buffer->x_resolution*buffer->y_resolution*sizeof(float);
         size_t size_of_redistribute_buffer = static_cast<size_t>(buffer->x_resolution*buffer->y_resolution*manager->stage.settings.n_spectral_irradiance_bin)*sizeof(float);
 
-        magik::memset_device_async<float>(buffer->ray_pool.d_sensor_wavelength_nm, 0x0, size_of_float_buffer, &manager->cuda_stream);
-        magik::memset_device_async<float>(buffer->ray_pool.d_monte_carlo_weight, 0x0, size_of_float_buffer, &manager->cuda_stream);
-        magik::memset_device_async<float>(buffer->ray_pool.d_spectral_radiance, 0x0, size_of_float_buffer, &manager->cuda_stream);
-        magik::memset_device_async<float>(buffer->ray_pool.d_intrinsic_spectral_irradiance, 0x0, size_of_redistribute_buffer, &manager->cuda_stream);
+        buffer->ray_pool.memset_async<sensor_wavelength_nm_t>(static_cast<cudaStream_t>(manager->cuda_stream), buffer->x_resolution, buffer->y_resolution, 0x0);
+        buffer->ray_pool.memset_async<monte_carlo_weight_t>(static_cast<cudaStream_t>(manager->cuda_stream), buffer->x_resolution, buffer->y_resolution, 0x0);
+        buffer->ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(manager->cuda_stream), buffer->x_resolution, buffer->y_resolution, 0x0);
+        buffer->ray_pool.memset_async<intrinsic_spectral_irradiance_t>(static_cast<cudaStream_t>(manager->cuda_stream), buffer->x_resolution, buffer->y_resolution, 0x0);
 
         manager->x_sample.store(0, std::memory_order_release);
     }
@@ -140,11 +102,9 @@ namespace magik
         reset_queue_async(ray_buffer->redistribute_queue.d_count, &manager->cuda_stream);
         reset_queue_async(ray_buffer->splat_queue.d_count, &manager->cuda_stream);
 
-        size_t size_of_float_buffer = ray_buffer->x_resolution*ray_buffer->y_resolution*sizeof(float);
-        size_t size_of_uint32_t_buffer = ray_buffer->x_resolution*ray_buffer->y_resolution*sizeof(uint32_t);
-        memset_device_async<float>(ray_buffer->ray_pool.d_spectral_radiance, 0x0, size_of_float_buffer, &manager->cuda_stream);
-        memset_device_async<float>(ray_buffer->ray_pool.d_step_distance, 0x0, size_of_float_buffer, &manager->cuda_stream);
-        memset_device_async<uint32_t>(ray_buffer->ray_pool.n_step, 0x0, size_of_uint32_t_buffer, &manager->cuda_stream);
+        ray_buffer->ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(manager->cuda_stream), ray_buffer->x_resolution, ray_buffer->y_resolution, 0x0);
+        ray_buffer->ray_pool.memset_async<step_distance_t>(static_cast<cudaStream_t>(manager->cuda_stream), ray_buffer->x_resolution, ray_buffer->y_resolution, 0x0);
+        ray_buffer->ray_pool.memset_async<n_step_t>(static_cast<cudaStream_t>(manager->cuda_stream), ray_buffer->x_resolution, ray_buffer->y_resolution, 0x0);
 
         uint32_t h_count = ray_buffer->x_resolution*ray_buffer->y_resolution;
         memcpy_host_to_device_async(&h_count, ray_buffer->advance_queue_A.d_count, sizeof(uint32_t), &manager->cuda_stream);
@@ -160,10 +120,8 @@ namespace magik
             - Not sure exactly how. 
 
         - Device arena 
-            - The basics are not hard. The real difficulty of this is automation
-            - We need an architecture that allows us to automatically update how 
-              memory is allocated based on the struct. 
-            - X Macro is the one approach i keep hearing about. 
+            - Alright, the last thing we have to do before testing is to assign the 
+              number of bins. 
 
         - Wavefromt statistics
             - These will be very important for debugging purposes. 

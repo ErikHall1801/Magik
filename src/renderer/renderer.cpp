@@ -133,6 +133,6 @@ namespace magik
             }
         }
 
-        magik::destroy_wavefront_ray_buffer(&ray_buffer);
+        magik::destroy_wavefront_ray_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &ray_buffer);
     }
 }
