@@ -13,7 +13,7 @@ namespace magik
         uint32_t wavefront_threads_per_block = 256;
 
         // Spectral integration
-        uint32_t n_spectral_irradiance_bin = 24;
+        uint32_t n_spectral_irradiance_bin = 12;
         float max_wavelength_nm = 830.0f;
         float min_wavelength_nm = 360.0f;
         float redistribution_standard_deviation = 10.0f;

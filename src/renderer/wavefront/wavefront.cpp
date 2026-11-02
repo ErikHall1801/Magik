@@ -68,26 +68,6 @@ namespace magik
 
     void wavefront_sample(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
-        /*
-        What do we want to do tomorrow ? 
-
-        - Once it works again, the biggest priority is using h_count in the kenrel launch ! 
-
-        - Header cleanup
-            - Basically, we should try to not include everything everywhere. 
-            - Not sure exactly how. 
-
-        - Wavefromt statistics
-            - These will be very important for debugging purposes. 
-            - The golden quantity we would like to have is a per-sample queue history
-              That is, each time a queue is reset, we record its current count. This
-              will tell us how the wavefront drains rays. Or does not. 
-            - Other metrics to measure are the total iterations. 
-            - We naturally keep the most recent sample and the average for all of these. 
-            - Each queue should track its own statistics. This way we can update the 
-              stats whenever a queue is reset. 
-        */
-
         bool working = true;
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
 

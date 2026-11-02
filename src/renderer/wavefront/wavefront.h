@@ -15,22 +15,6 @@ namespace magik
 
         uint32_t queue_ceiling = 0;
 
-        /*
-        We should be clear about the idea. We will probably move 
-        ray.h into this file. But also, the idea is that while the 
-        ray and queue pool's are distinct members of this struct, 
-        they share a common device arena. Because their lifetimes 
-        are not unique. 
-
-        This means we have to do a few things. For one, each struct
-        has fewer member functions. Such as .get_size(). Which returns
-        the requiered size. 
-        The idea is that the allocate() and release() functions are 
-        defined in this struct. So we can just call something along
-        the lines of "wavefront_buffer.allocate()" or 
-        "wavefront_buffer.release()" and it handles everything for us. 
-        */
-
         device_mem_arena arena;
 
         queue_pool_t<
