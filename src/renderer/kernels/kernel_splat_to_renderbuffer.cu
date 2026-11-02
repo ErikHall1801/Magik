@@ -22,16 +22,16 @@ namespace magik
         d_renderbuffer[ray_id * 3 + 2] = linear_color.z;
     }
 
-    void launch_kernel_splat_to_renderbuffer_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer, float* d_renderbuffer)
+    void launch_kernel_splat_to_renderbuffer_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer, float* d_renderbuffer)
     {
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
-        uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
+        uint32_t n_block = ((wavefront_buffer->x_resolution*wavefront_buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        float* d_intrinsic_spectral_irradiance = buffer->ray_pool.get<intrinsic_spectral_irradiance_t>();
+        float* d_intrinsic_spectral_irradiance = wavefront_buffer->ray_pool.get<intrinsic_spectral_irradiance_t>();
 
-        kernel_splat_to_renderbuffer<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_intrinsic_spectral_irradiance, buffer->splat_queue, d_renderbuffer, manager->stage.settings.n_spectral_irradiance_bin, manager->stage.settings.max_wavelength_nm, manager->stage.settings.min_wavelength_nm, manager->x_sample.load(std::memory_order_acquire));
+        kernel_splat_to_renderbuffer<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_intrinsic_spectral_irradiance, wavefront_buffer->splat_queue, d_renderbuffer, manager->stage.settings.n_spectral_irradiance_bin, manager->stage.settings.max_wavelength_nm, manager->stage.settings.min_wavelength_nm, manager->x_sample.load(std::memory_order_acquire));
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(buffer->splat_queue.d_count, &manager->cuda_stream);
+        reset_queue_async(wavefront_buffer->splat_queue.d_count, &manager->cuda_stream);
     }
 }

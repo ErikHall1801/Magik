@@ -36,16 +36,16 @@ namespace magik
         }
     }
 
-    void launch_kernel_enforce_ray_limits_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
+    void launch_kernel_enforce_ray_limits_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
-        uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
+        uint32_t n_block = ((wavefront_buffer->x_resolution*wavefront_buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        uint32_t* d_n_step = buffer->ray_pool.get<n_step_t>();
+        uint32_t* d_n_step = wavefront_buffer->ray_pool.get<n_step_t>();
 
-        kernel_enforce_ray_limits<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_n_step, buffer->advance_queue_A, buffer->advance_queue_B, buffer->splat_queue);
+        kernel_enforce_ray_limits<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_n_step, wavefront_buffer->advance_queue_A, wavefront_buffer->advance_queue_B, wavefront_buffer->splat_queue);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(buffer->advance_queue_A.d_count, &manager->cuda_stream);
+        reset_queue_async(wavefront_buffer->advance_queue_A.d_count, &manager->cuda_stream);
     }
 }

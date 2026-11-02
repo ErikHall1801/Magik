@@ -6,5 +6,5 @@
 
 namespace magik
 {
-    void launch_kernel_redistribute_radiance_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer);
+    void launch_kernel_redistribute_radiance_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer);
 }

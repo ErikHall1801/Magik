@@ -72,20 +72,20 @@ namespace magik
         }
     }
 
-    void launch_kernel_intersect_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
+    void launch_kernel_intersect_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
-        uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
+        uint32_t n_block = ((wavefront_buffer->x_resolution*wavefront_buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        vec4f* d_pos = buffer->ray_pool.get<position_t>();
-        vec4f* d_dir = buffer->ray_pool.get<direction_t>();
-        float* d_step_distance = buffer->ray_pool.get<step_distance_t>();
-        uint32_t* d_hit_id = buffer->ray_pool.get<hit_id_t>();
-        vec4f* d_hit_normal = buffer->ray_pool.get<hit_normal_t>();
+        vec4f* d_pos = wavefront_buffer->ray_pool.get<position_t>();
+        vec4f* d_dir = wavefront_buffer->ray_pool.get<direction_t>();
+        float* d_step_distance = wavefront_buffer->ray_pool.get<step_distance_t>();
+        uint32_t* d_hit_id = wavefront_buffer->ray_pool.get<hit_id_t>();
+        vec4f* d_hit_normal = wavefront_buffer->ray_pool.get<hit_normal_t>();
 
-        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_pos, d_dir, d_step_distance, d_hit_id, d_hit_normal, buffer->intersect_queue, buffer->advance_queue_A, buffer->bxdf_queue, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
+        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_pos, d_dir, d_step_distance, d_hit_id, d_hit_normal, wavefront_buffer->intersect_queue, wavefront_buffer->advance_queue_A, wavefront_buffer->bxdf_queue, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(buffer->intersect_queue.d_count, &manager->cuda_stream);
+        reset_queue_async(wavefront_buffer->intersect_queue.d_count, &manager->cuda_stream);
     }
 }

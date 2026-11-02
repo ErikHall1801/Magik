@@ -22,19 +22,19 @@ namespace magik
         d_intersect_queue_id[slot] = ray_id;
     }
 
-    void launch_kernel_tmp_advance_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
+    void launch_kernel_tmp_advance_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
-        uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
+        uint32_t n_block = ((wavefront_buffer->x_resolution*wavefront_buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        float* d_step_distance = buffer->ray_pool.get<step_distance_t>(); 
-        vec4f* d_pos = buffer->ray_pool.get<position_t>(); 
-        vec4f* d_dir = buffer->ray_pool.get<direction_t>(); 
-        uint32_t* n_step = buffer->ray_pool.get<n_step_t>();
+        float* d_step_distance = wavefront_buffer->ray_pool.get<step_distance_t>(); 
+        vec4f* d_pos = wavefront_buffer->ray_pool.get<position_t>(); 
+        vec4f* d_dir = wavefront_buffer->ray_pool.get<direction_t>(); 
+        uint32_t* n_step = wavefront_buffer->ray_pool.get<n_step_t>();
 
-        kernel_tmp_advance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_step_distance, d_pos, d_dir, n_step, buffer->advance_queue_A.d_count, buffer->advance_queue_A.d_id, buffer->intersect_queue.d_count, buffer->intersect_queue.d_id);
+        kernel_tmp_advance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_step_distance, d_pos, d_dir, n_step, wavefront_buffer->advance_queue_A.d_count, wavefront_buffer->advance_queue_A.d_id, wavefront_buffer->intersect_queue.d_count, wavefront_buffer->intersect_queue.d_id);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(buffer->advance_queue_A.d_count, &manager->cuda_stream);
+        reset_queue_async(wavefront_buffer->advance_queue_A.d_count, &manager->cuda_stream);
     }
 }

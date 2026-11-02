@@ -8,10 +8,27 @@
 
 namespace magik
 {
-    struct wavefront_ray_buffer_t
+    struct wavefront_buffer_t
     {
         uint32_t x_resolution = 0;
         uint32_t y_resolution = 0;
+
+        // Perhaps a queue_pool ? In a non-random order ? 
+        // Sure, but at that point why have these be in a 
+        // ray-class ? Why not put all the logic right here ? 
+        // This way we could more easily make one overall pool 
+        // template.
+        // On the other hand, we ideally want one arena. Right
+        // now we are heading for two. This would be less of 
+        // a problem if this struct held all the needed logic. 
+        // i say less because, we still need a template with two
+        // types. We will have to figure this out eventually, 
+        // since the assets are going to be packed memory too. 
+        //
+        // We can make seperate ray_pool and queue_pool objects
+        // which are managed jointly in this struct. So each 
+        // type has its own functions, but the memory stuff 
+        // is handled in here. 
 
         ray_queue_t advance_queue_A;
         ray_queue_t advance_queue_B;
@@ -61,11 +78,11 @@ namespace magik
 
     void reset_queue_async(uint32_t* d_count, void** user_stream);
 
-    void realloc_wavefront_ray_buffer(magik_render_manager* manager, wavefront_ray_buffer_t* buffer, uint32_t x_resolution_target, uint32_t y_resolution_target);
+    void realloc_wavefront_buffer(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer, uint32_t x_resolution_target, uint32_t y_resolution_target);
 
-    void destroy_wavefront_ray_buffer(cudaStream_t user_stream, wavefront_ray_buffer_t* buffer);
+    void destroy_wavefront_buffer(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer);
 
-    void wavefront_reset(magik_render_manager* manager, wavefront_ray_buffer_t* buffer);
+    void reset_wavefront_buffer(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer);
 
-    void wavefront_sample(magik_render_manager* manager, wavefront_ray_buffer_t* buffer);
+    void wavefront_sample(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer);
 }

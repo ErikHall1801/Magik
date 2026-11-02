@@ -41,7 +41,7 @@ namespace magik
         }
 
         // Wavefront initalization stage
-        wavefront_ray_buffer_t ray_buffer;
+        wavefront_buffer_t wavefront_buffer;
 
         // Render stage
         while(manager->is_running)
@@ -59,10 +59,10 @@ namespace magik
             }
 
             // Framebuffer stage
-            result = magik::allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
+            result = allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
 
             // Wavefront realloc
-            magik::realloc_wavefront_ray_buffer(manager, &ray_buffer, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
+            realloc_wavefront_buffer(manager, &wavefront_buffer, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
 
             if(result)
             {
@@ -85,7 +85,7 @@ namespace magik
 
             if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
             {
-                result = magik::swap_back_framebuffer(&manager->framebuffer_swapchain);
+                result = swap_back_framebuffer(&manager->framebuffer_swapchain);
 
                 if(result)
                 {
@@ -98,15 +98,15 @@ namespace magik
             // Rendering stage
             if(manager->framebuffer_swapchain.clear_render_buffer)
             {
-                magik::reset_render_buffer(&manager->framebuffer_swapchain);
-                magik::wavefront_reset(manager, &ray_buffer);
+                reset_render_buffer(&manager->framebuffer_swapchain);
+                reset_wavefront_buffer(manager, &wavefront_buffer);
                 manager->framebuffer_swapchain.clear_render_buffer = false;
             }
 
             auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test");
             if(tmp_element != manager->framebuffer_swapchain.render_framebuffer.collection.end())
             {
-                magik::wavefront_sample(manager, &ray_buffer);
+                wavefront_sample(manager, &wavefront_buffer);
             }
             else
             {
@@ -126,13 +126,13 @@ namespace magik
         // Shutdown stage
         if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
         {
-            result = magik::destroy_framebuffer_swpachain(&manager->framebuffer_swapchain);
+            result = destroy_framebuffer_swpachain(&manager->framebuffer_swapchain);
             if(result)
             {
                 manager->atomic_last_error_type.compare_exchange_strong(expected, result);
             }
         }
 
-        magik::destroy_wavefront_ray_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &ray_buffer);
+        destroy_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer);
     }
 }

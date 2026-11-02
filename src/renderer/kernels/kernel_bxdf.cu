@@ -4,7 +4,7 @@
 
 namespace magik
 {
-    static __device__ vec3f random_unit_three_vector(curandState_t* random_device)
+    static __device__ vec3f random_unit_three_vector(curandState_t* random_device, vec3f n)
     {
         using ::sin;
         using ::cos;
@@ -18,7 +18,7 @@ namespace magik
         p.x = cos(phi) * sin(theta);
         p.y = sin(phi) * sin(theta);
         p.z = cos(theta);
-        return p;
+        return (p+n).norm();
     }
 
     static __device__ vec3f offset_origin(vec3f x, vec3f n)
@@ -74,7 +74,7 @@ namespace magik
             vec3f hit_dir = vec3f{d_dir[ray_id].x, d_dir[ray_id].y, d_dir[ray_id].z};
 
             vec3f n = vector_dot_product(hit_normal, hit_dir) < 0.0f ? hit_normal : -hit_normal; // faces the ray
-            vec3f outgoing_dir = random_unit_three_vector(&d_random_device[ray_id]);
+            vec3f outgoing_dir = random_unit_three_vector(&d_random_device[ray_id], n);
 
             if(vector_dot_product(outgoing_dir, n) < 0.0f)
             {
@@ -86,7 +86,7 @@ namespace magik
             d_dir[ray_id] = vec4f{outgoing_dir.x, outgoing_dir.y, outgoing_dir.z, 0.0f};
             d_pos[ray_id] = vec4f{new_orig.x, new_orig.y, new_orig.z};
             d_step_distance[ray_id] = 0.0f;
-            d_monte_carlo_weight[ray_id] *= 2.0f * 0.9f * vector_dot_product(n, outgoing_dir);
+            d_monte_carlo_weight[ray_id] *= 0.9f;
 
             to_advance = true;
         }
@@ -95,7 +95,7 @@ namespace magik
             // Light
             // ray_pool.d_spectral_radiance[ray_id] = magik::evaluate_sodium_vapor_lamp_spectrum(ray_pool.d_sensor_wavelength_nm[ray_id]) * 50000000000.0f;
             // float temperature = magik::map_range(0.0f, 1.0f, 500.0f, 1400.0f, (ray_pool.d_pos[ray_id].x + 5.0f) / 10.0f);
-            d_spectral_radiance[ray_id] = magik::sample_plancks_law<float>(d_sensor_wavelength_nm[ray_id], 3600.0f) * 0.0000005f;
+            d_spectral_radiance[ray_id] = magik::sample_plancks_law<float>(d_sensor_wavelength_nm[ray_id], 5600.0f) * 0.007f;
             to_advance = false;
         }
 
@@ -113,24 +113,24 @@ namespace magik
         }
     }
 
-    void launch_kernel_bxdf_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
+    void launch_kernel_bxdf_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
-        uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
+        uint32_t n_block = ((wavefront_buffer->x_resolution*wavefront_buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        uint32_t* d_hit_id = buffer->ray_pool.get<hit_id_t>();
-        vec4f* d_hit_normal = buffer->ray_pool.get<hit_normal_t>();
-        vec4f* d_dir = buffer->ray_pool.get<direction_t>();
-        vec4f* d_pos = buffer->ray_pool.get<position_t>();
-        curandState_t* d_random_device = buffer->ray_pool.get<random_device_t>();
-        float* d_step_distance = buffer->ray_pool.get<step_distance_t>();
-        float* d_monte_carlo_weight = buffer->ray_pool.get<monte_carlo_weight_t>();
-        float* d_spectral_radiance = buffer->ray_pool.get<spectral_radiance_t>();
-        float* d_sensor_wavelength_nm = buffer->ray_pool.get<sensor_wavelength_nm_t>();
+        uint32_t* d_hit_id = wavefront_buffer->ray_pool.get<hit_id_t>();
+        vec4f* d_hit_normal = wavefront_buffer->ray_pool.get<hit_normal_t>();
+        vec4f* d_dir = wavefront_buffer->ray_pool.get<direction_t>();
+        vec4f* d_pos = wavefront_buffer->ray_pool.get<position_t>();
+        curandState_t* d_random_device = wavefront_buffer->ray_pool.get<random_device_t>();
+        float* d_step_distance = wavefront_buffer->ray_pool.get<step_distance_t>();
+        float* d_monte_carlo_weight = wavefront_buffer->ray_pool.get<monte_carlo_weight_t>();
+        float* d_spectral_radiance = wavefront_buffer->ray_pool.get<spectral_radiance_t>();
+        float* d_sensor_wavelength_nm = wavefront_buffer->ray_pool.get<sensor_wavelength_nm_t>();
 
-        kernel_bxdf<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_hit_id, d_hit_normal, d_dir, d_pos, d_random_device, d_step_distance, d_monte_carlo_weight, d_spectral_radiance, d_sensor_wavelength_nm, buffer->bxdf_queue, buffer->advance_queue_A, buffer->redistribute_queue);
+        kernel_bxdf<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_hit_id, d_hit_normal, d_dir, d_pos, d_random_device, d_step_distance, d_monte_carlo_weight, d_spectral_radiance, d_sensor_wavelength_nm, wavefront_buffer->bxdf_queue, wavefront_buffer->advance_queue_A, wavefront_buffer->redistribute_queue);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(buffer->bxdf_queue.d_count, &manager->cuda_stream); 
+        reset_queue_async(wavefront_buffer->bxdf_queue.d_count, &manager->cuda_stream); 
     }
 }

@@ -50,19 +50,19 @@ namespace magik
         splat_queue.d_id[slot] = ray_id;
     }
 
-    void launch_kernel_redistribute_radiance_async(magik_render_manager* manager, wavefront_ray_buffer_t* buffer)
+    void launch_kernel_redistribute_radiance_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
-        uint32_t n_block = ((buffer->x_resolution*buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
+        uint32_t n_block = ((wavefront_buffer->x_resolution*wavefront_buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
 
-        float* d_spectral_radiance = buffer->ray_pool.get<spectral_radiance_t>();
-        float* d_monte_carlo_weight = buffer->ray_pool.get<monte_carlo_weight_t>();
-        float* d_intrinsic_spectral_irradiance = buffer->ray_pool.get<intrinsic_spectral_irradiance_t>();
-        float* d_sensor_wavelength_nm = buffer->ray_pool.get<sensor_wavelength_nm_t>();
+        float* d_spectral_radiance = wavefront_buffer->ray_pool.get<spectral_radiance_t>();
+        float* d_monte_carlo_weight = wavefront_buffer->ray_pool.get<monte_carlo_weight_t>();
+        float* d_intrinsic_spectral_irradiance = wavefront_buffer->ray_pool.get<intrinsic_spectral_irradiance_t>();
+        float* d_sensor_wavelength_nm = wavefront_buffer->ray_pool.get<sensor_wavelength_nm_t>();
 
-        kernel_redistribute_radiance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_spectral_radiance, d_monte_carlo_weight, d_intrinsic_spectral_irradiance, d_sensor_wavelength_nm, buffer->redistribute_queue, buffer->splat_queue, manager->stage.settings.max_wavelength_nm, manager->stage.settings.min_wavelength_nm, manager->stage.settings.redistribution_standard_deviation, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution, manager->stage.settings.n_spectral_irradiance_bin);
+        kernel_redistribute_radiance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_spectral_radiance, d_monte_carlo_weight, d_intrinsic_spectral_irradiance, d_sensor_wavelength_nm, wavefront_buffer->redistribute_queue, wavefront_buffer->splat_queue, manager->stage.settings.max_wavelength_nm, manager->stage.settings.min_wavelength_nm, manager->stage.settings.redistribution_standard_deviation, manager->stage.optical_systen.sensor_diagonal_mm, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution, manager->stage.settings.n_spectral_irradiance_bin);
         check_cuda_errors(cudaGetLastError());
 
-        reset_queue_async(buffer->redistribute_queue.d_count, &manager->cuda_stream);
+        reset_queue_async(wavefront_buffer->redistribute_queue.d_count, &manager->cuda_stream);
     }
 }
