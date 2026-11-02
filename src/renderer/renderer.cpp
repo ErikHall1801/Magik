@@ -22,6 +22,13 @@ namespace magik
 
     void run(magik_render_manager* manager)
     {
+        // A lot of this logic is more than suspect. 
+        // Why is the framebuffer_ object part of the manager at all ? 
+        // Some of these names need to be modified. 
+        // MAGIK_HD, MAGIK_HOST_DEVICE etc. We have like 3 files with 3 macros that do the same thing. 
+        // The "is_running" variable should be loaded. 
+        // "internal_memory.h" can be removed. 
+
         e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_SUCCESS;
 
         size_t iteration = 0;
