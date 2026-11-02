@@ -25,7 +25,7 @@ namespace magik
     void launch_kernel_tmp_advance_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
-        uint32_t n_block = ((wavefront_buffer->x_resolution*wavefront_buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
+        uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
 
         float* d_step_distance = wavefront_buffer->ray_pool.get<step_distance_t>(); 
         vec4f* d_pos = wavefront_buffer->ray_pool.get<position_t>(); 

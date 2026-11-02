@@ -116,10 +116,7 @@ namespace magik
     void launch_kernel_bxdf_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
-        // This is VERY bad !!! Needs to be the count ! 
-        // This is not actually that bad, we can be smart. At the end of each iteration we read back the count to
-        // see how many rays there are left. We can just reuse that value to get an uppoer bound. 
-        uint32_t n_block = ((wavefront_buffer->x_resolution*wavefront_buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
+        uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
 
         uint32_t* d_hit_id = wavefront_buffer->ray_pool.get<hit_id_t>();
         vec4f* d_hit_normal = wavefront_buffer->ray_pool.get<hit_normal_t>();

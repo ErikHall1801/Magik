@@ -13,6 +13,8 @@ namespace magik
         uint32_t x_resolution = 0;
         uint32_t y_resolution = 0;
 
+        uint32_t queue_ceiling = 0;
+
         /*
         We should be clear about the idea. We will probably move 
         ray.h into this file. But also, the idea is that while the 

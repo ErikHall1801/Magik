@@ -25,7 +25,7 @@ namespace magik
     void launch_kernel_splat_to_renderbuffer_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer, float* d_renderbuffer)
     {
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
-        uint32_t n_block = ((wavefront_buffer->x_resolution*wavefront_buffer->y_resolution) + threads_per_block - 1) / threads_per_block;
+        uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
 
         uint32_t* d_splat_queue_count = wavefront_buffer->queue_pool.get_count_ptr<splat_queue_t>();
         uint32_t* d_splat_queue_id = wavefront_buffer->queue_pool.get_id_ptr<splat_queue_t>();

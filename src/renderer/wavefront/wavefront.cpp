@@ -28,15 +28,13 @@ namespace magik
         check_cuda_errors(cudaGetLastError());
     }
 
-    static void is_work_done_sync(bool* working, uint32_t* advance_d_count, void** user_stream)
+    static void is_work_done_sync(bool* working, uint32_t* queue_ceiling, uint32_t* advance_d_count, void** user_stream)
     {
-        uint32_t h_count = 0;
-
-        memcpy_device_to_host_async(advance_d_count, &h_count, sizeof(uint32_t), user_stream);
+        memcpy_device_to_host_async(advance_d_count, queue_ceiling, sizeof(uint32_t), user_stream);
         check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
         check_cuda_errors(cudaGetLastError());
 
-        if(h_count == 0)
+        if(*queue_ceiling == 0)
         {
             *working = false;
         }
@@ -65,6 +63,7 @@ namespace magik
         wavefront_buffer->ray_pool.memset_async<n_step_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
 
         wavefront_buffer->queue_pool.set_count_async<advance_A_queue_t>(wavefront_buffer->x_resolution*wavefront_buffer->y_resolution, user_stream);
+        wavefront_buffer->queue_ceiling = wavefront_buffer->x_resolution*wavefront_buffer->y_resolution;
     }
 
     void wavefront_sample(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
@@ -128,7 +127,7 @@ namespace magik
 
             launch_kernel_splat_to_renderbuffer_async(manager, wavefront_buffer, tmp_element->second.d_data);
 
-            is_work_done_sync(&working, wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>(), &manager->cuda_stream); 
+            is_work_done_sync(&working, &wavefront_buffer->queue_ceiling, wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>(), &manager->cuda_stream); 
         }
 
         manager->x_sample.fetch_add(1, std::memory_order_relaxed);
