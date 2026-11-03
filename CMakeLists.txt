@@ -76,7 +76,7 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/framebuffer
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/kernels
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/memory
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/metrics
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/relativity
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/optics
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/stage
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/traceables

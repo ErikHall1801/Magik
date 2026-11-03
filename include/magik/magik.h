@@ -507,6 +507,19 @@ MAGIK_API e_magik_result_types magik_destroy_framebuffer_collection(magik_frameb
 
 
 /**
+* [SECTION] Relativity
+*/
+
+typedef enum e_magik_spacetime_metric_types
+{
+    MINKOWSKI = 0,
+    SCHWARZSCHILD = 1,
+    KERR = 2
+} e_magik_spacetime_metric_types;
+
+
+
+/**
 * [SECTION] Command Queue System
 */
 

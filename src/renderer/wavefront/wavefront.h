@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include "ray.h"
-#include "internal_memory.h"
 #include "device_arena.h"
 #include "renderer.h"
 

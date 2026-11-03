@@ -1,16 +1,12 @@
 #pragma once
 
+#include "cuda_host_device_utilities.h"
+
 namespace magik
 {
     // ##########################
     // ### Typedefs & defines ###
     // ##########################
-        #ifdef __CUDACC__
-            #define MAGIK_DEVICE_HOST __inline__ __device__ __host__
-        #else
-            #define MAGIK_DEVICE_HOST inline
-        #endif
-
         constexpr float pi = 3.14159265358979323846f;
         constexpr float speed_of_light = 299792458.0f;
         constexpr float planck_constant = 6.62607015E-34f;
