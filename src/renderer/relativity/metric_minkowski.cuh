@@ -10,17 +10,7 @@ namespace magik
         return -1.0f;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float minkowski_g_xx()
-    {
-        return 1.0f;
-    }
-
-    MAGIK_DEVICE_HOST static constexpr float minkowski_g_yy()
-    {
-        return 1.0f;
-    }
-
-    MAGIK_DEVICE_HOST static constexpr float minkowski_g_zz()
+    MAGIK_DEVICE_HOST static constexpr float minkowski_g_xxyyzz()
     {
         return 1.0f;
     }
@@ -31,17 +21,7 @@ namespace magik
         -1.0f;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float minkowski_g_inv_xx()
-    {
-        return 1.0f;
-    }
-
-    MAGIK_DEVICE_HOST static constexpr float minkowski_g_inv_yy()
-    {
-        return 1.0f;
-    }
-
-    MAGIK_DEVICE_HOST static constexpr float minkowski_g_inv_zz()
+    MAGIK_DEVICE_HOST static constexpr float minkowski_g_inv_xxyyzz()
     {
         return 1.0f;
     }
@@ -51,9 +31,9 @@ namespace magik
     {
         vec4f output;
         output.t = minkowski_g_tt()*contravariant_vector.t;
-        output.x = minkowski_g_xx()*contravariant_vector.x;
-        output.y = minkowski_g_yy()*contravariant_vector.y;
-        output.z = minkowski_g_zz()*contravariant_vector.z;
+        output.x = minkowski_g_xxyyzz()*contravariant_vector.x;
+        output.y = minkowski_g_xxyyzz()*contravariant_vector.y;
+        output.z = minkowski_g_xxyyzz()*contravariant_vector.z;
         return output;
     }
 
@@ -61,9 +41,9 @@ namespace magik
     {
         vec4f output;
         output.t = minkowski_g_inv_tt()*covariant_vector.t;
-        output.x = minkowski_g_inv_xx()*covariant_vector.x;
-        output.y = minkowski_g_inv_yy()*covariant_vector.y;
-        output.z = minkowski_g_inv_zz()*covariant_vector.z;
+        output.x = minkowski_g_inv_xxyyzz()*covariant_vector.x;
+        output.y = minkowski_g_inv_xxyyzz()*covariant_vector.y;
+        output.z = minkowski_g_inv_xxyyzz()*covariant_vector.z;
         return output;
     }
 
@@ -73,17 +53,17 @@ namespace magik
     MAGIK_DEVICE_HOST static constexpr float minkowski_inner_product_contravariant(vec4f u_contravariant, vec4f v_contravariant)
     {
         return minkowski_g_tt()*u_contravariant.t*v_contravariant.t \
-             + minkowski_g_xx()*u_contravariant.x*v_contravariant.x \
-             + minkowski_g_yy()*u_contravariant.y*v_contravariant.y \
-             + minkowski_g_zz()*u_contravariant.z*v_contravariant.z;
+             + minkowski_g_xxyyzz()*u_contravariant.x*v_contravariant.x \
+             + minkowski_g_xxyyzz()*u_contravariant.y*v_contravariant.y \
+             + minkowski_g_xxyyzz()*u_contravariant.z*v_contravariant.z;
     }
 
     MAGIK_DEVICE_HOST static constexpr float minkowski_inner_product_covariant(vec4f u_covariant, vec4f v_covariant)
     {
         return minkowski_g_inv_tt()*u_covariant.t*v_covariant.t \
-             + minkowski_g_inv_xx()*u_covariant.x*v_covariant.x \
-             + minkowski_g_inv_yy()*u_covariant.y*v_covariant.y \
-             + minkowski_g_inv_zz()*u_covariant.z*v_covariant.z;
+             + minkowski_g_inv_xxyyzz()*u_covariant.x*v_covariant.x \
+             + minkowski_g_inv_xxyyzz()*u_covariant.y*v_covariant.y \
+             + minkowski_g_inv_xxyyzz()*u_covariant.z*v_covariant.z;
     }
 
     struct minkowski_observer_rest_frame_to_global_t
@@ -98,9 +78,7 @@ namespace magik
     
     MAGIK_DEVICE_HOST static constexpr vec4f minkowski_observer_rest_frame_to_global(minkowski_observer_rest_frame_to_global_t args)
     {
-        float dir_w = compute_metric_agnostic_local_timelike_component(args.dimensionless_spatial_vector, args.input_vector_norm);
-            
-        vec4f four_momentum = vec4f{args.dimensionless_spatial_vector.x, args.dimensionless_spatial_vector.y, args.dimensionless_spatial_vector.z, dir_w};
+        vec4f four_momentum = vec4f{args.dimensionless_spatial_vector.x, args.dimensionless_spatial_vector.y, args.dimensionless_spatial_vector.z, compute_metric_agnostic_local_timelike_component(args.dimensionless_spatial_vector, args.input_vector_norm)};
         
         vec4f e_t = args.dimensionless_observer_four_velocity;
         
@@ -127,13 +105,13 @@ namespace magik
 
 
     /* Rest frame velocity */
-    MAGIK_DEVICE_HOST static constexpr float minkowski_compute_timelike_component_contravariant(vec3f dimensionless_observer_three_vector, float input_vector_norm)
+    MAGIK_DEVICE_HOST static constexpr float minkowski_compute_timelike_component_contravariant(vec3f dimensionless_observer_three_vector, float squard_norm)
     {
         float A = minkowski_g_tt();
-        float C = minkowski_g_xx()*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.x \
-                + minkowski_g_yy()*dimensionless_observer_three_vector.y*dimensionless_observer_three_vector.y \
-                + minkowski_g_zz()*dimensionless_observer_three_vector.z*dimensionless_observer_three_vector.z \
-                - input_vector_norm;
+        float C = minkowski_g_xxyyzz()*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.x \
+                + minkowski_g_xxyyzz()*dimensionless_observer_three_vector.y*dimensionless_observer_three_vector.y \
+                + minkowski_g_xxyyzz()*dimensionless_observer_three_vector.z*dimensionless_observer_three_vector.z \
+                - squard_norm;
 
         return (-sqrtf(-4.0f*A*C))/(2.0f*A);
     }
@@ -141,9 +119,9 @@ namespace magik
     MAGIK_DEVICE_HOST static constexpr float minkowski_compute_timelike_component_covariant(vec3f dimensionless_observer_three_vector, float squard_norm)
     { 
         float A = minkowski_g_inv_tt();
-        float C = minkowski_g_inv_xx()*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.x \
-                + minkowski_g_inv_yy()*dimensionless_observer_three_vector.y*dimensionless_observer_three_vector.y \
-                + minkowski_g_inv_zz()*dimensionless_observer_three_vector.z*dimensionless_observer_three_vector.z \
+        float C = minkowski_g_inv_xxyyzz()*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.x \
+                + minkowski_g_inv_xxyyzz()*dimensionless_observer_three_vector.y*dimensionless_observer_three_vector.y \
+                + minkowski_g_inv_xxyyzz()*dimensionless_observer_three_vector.z*dimensionless_observer_three_vector.z \
                 - squard_norm;
 
         return (-sqrtf(-4.0f*A*C))/(2.0f*A);
