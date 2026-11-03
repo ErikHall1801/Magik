@@ -26,7 +26,7 @@ extern "C" {
 */
 #define MAGIK_VERSION_NAME "Rhapsody"   // Codename
 #define MAGIK_VERSION_MAJOR 0           // New features (In our case before the API switch)
-#define MAGIK_VERSION_MINOR 4           // Small changes / additions
+#define MAGIK_VERSION_MINOR 5           // Small changes / additions
 #define MAGIK_VERSION_REVISION 0        // Bug fix release
 
 
@@ -208,19 +208,6 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 
 
 /**
-* [SECTION] Frame time
-*/
-
-/**
-* @brief Returns the frame time in microseconds. 
-* 
-* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
-*/
-MAGIK_API e_magik_result_types magik_fetch_frame_time(double* ft);
-
-
-
-/**
 * [SECTION] Memory
 */
 
@@ -330,20 +317,6 @@ MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_
 MAGIK_API e_magik_result_types magik_render_manager_destroy(magik_render_manager_t mananger);
 
 /**
-* @brief Writes the current number of reserved and committed bits of typed memory into the provided pointers
-* 
-* @param [in] manager Initialized manager
-* @param [in] size_reserve The size of virtual memory reserved
-* @param [in] size_commit The size of physical memory committed
-* @param [in] type The memory type being fetched
-* 
-* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_UNKNOWN_ENUM_TYPE
-* 
-* @warning This function returns MAGIK_SUCCESS if the worker thread is not running yet and writes 0 to the output. 
-*/
-MAGIK_API e_magik_result_types magik_fetch_memory_usage(magik_render_manager_t manager, uint64_t* size_reserve, uint64_t* size_commit, e_magik_memory_types type); 
-
-/**
 * @brief Returns the last error recorded by the manager
 * 
 * @param [in] manager Initalized manager
@@ -360,44 +333,70 @@ MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_man
 
 
 
-
 /**
-* [SECTION] Arbitrary Output Variables
+* [SECTION] Renderer statistics
 */
 
-typedef enum e_magik_aov_config_types
+/**
+* 
+*/
+typedef struct magik_renderer_statistics_t
 {
-    MAGIK_AOV_CONFIG_HOST = 0,
-    MAGIK_AOV_CONFIG_CUDA = 1,              // To-be-implemented. DO NOT USE ! 
-    MAGIK_AOV_CONFIG_OPENGL_INTEROP = 2,
-    MAGIK_AOV_CONFIG_VULKAN_INTEROP = 3     // To-be-implemented. DO NOT USE ! 
-} e_magik_aov_transfer_types;
+    double sampled_time_point_seconds = 0.0f;
+    double average_sample_time_seconds = 0.0f;
+    double latest_sample_time_seconds = 0.0f;
+    double total_render_time_seconds = 0.0f;
+
+    // Memory
+} magik_renderer_statistics_t;
 
 /**
-* @brief Opaque struct which holds the AOV buffers on the DCC thread. To extract the data you must call the matching extract function. 
+* @brief Returns render statistics.
+* 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
 */
-typedef struct magik_aov_framebuffer_object_external* magik_aov_framebuffer_object_external_t;
+MAGIK_API e_magik_result_types magik_fetch_renderer_statistics(magik_render_manager_t manager, magik_renderer_statistics_t* statistics);
+
+
+
 
 /**
-* @brief Configurs the DCC side AOV buffer to anticipate a "config_type" backend. The configuration can be changed at runtime. To do so 
+* [SECTION] Framebuffer
+*/
+
+typedef enum e_magik_framebuffer_collection_config_types
+{
+    MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_HOST = 0,
+    MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_CUDA = 1,              // To-be-implemented. DO NOT USE ! 
+    MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_OPENGL_INTEROP = 2,
+    MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_VULKAN_INTEROP = 3     // To-be-implemented. DO NOT USE ! 
+} e_magik_framebuffer_collection_config_types;
+
+/**
+* @brief Opaque struct which holds the framebuffers on the DCC thread. To extract the data you must call the matching extract function. 
+*/
+typedef struct magik_framebuffer_collection_external* magik_framebuffer_collection_external_t;
+
+/**
+* @brief Configurs the DCC side framebuffer to anticipate a "config_type" backend. The configuration can be changed at runtime. To do so 
 * destroy the buffer, then overwrite the struct with this function. 
 * 
 * @param [in] config_type 
 * 
-* @return magik_external_aov_buffer_t
+* @return e_magik_result_types
 * 
 * @warning This function may generate the following errors; MAGIK_SUCCESS, MAGIK_UNKNOWN_ENUM_TYPE
 * @warning This function does not requiere a swapchain to be setup, as the external framebuffer object can equally be used as the target 
 * to extract the render framebuffer. 
 */
-MAGIK_API e_magik_result_types magik_aov_configure_framebuffer_object(magik_aov_framebuffer_object_external_t* framebuffer, e_magik_aov_config_types config_type);
+MAGIK_API e_magik_result_types magik_configure_framebuffer_collection(magik_framebuffer_collection_external_t* framebuffer, e_magik_framebuffer_collection_config_types config_type);
 
 /**
 * @brief This function fetches the most up-to-date AOV buffer from the API. Magik uses a tripple buffer lock-free swap chain. Memory 
 * transfers only happen if the front AOV buffer internally tracked by Magik has changed since the last time this function was called. 
 * 
 * @param [in] manager The render manager from which you want the AOV 
-* @param [out] dcc_buffer The DCC buffer instance to which the AOVs will be copied too. 
+* @param [out] framebuffer The DCC buffer instance to which the AOVs will be copied too. 
 * 
 * @return MAGIK_SUCCESS, MAGIK_UNKNOWN_ENUM_TYPE, MAGIK_ERROR_GL_BUFFER_SIZE_MISMATCH, MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED,
 * MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED
@@ -411,7 +410,7 @@ MAGIK_API e_magik_result_types magik_aov_configure_framebuffer_object(magik_aov_
 * Calling _extract functions is not illegal even if this function returned falls. The extract functions simply convert Magik´s internal 
 * representation which is already stored on the DCC to the user defined configuration. 
 */
-MAGIK_API e_magik_result_types magik_aov_fetch(magik_render_manager_t manager, bool* is_new_fetch, magik_aov_framebuffer_object_external_t dcc_buffer); 
+MAGIK_API e_magik_result_types magik_framebuffer_collection_fetch(magik_render_manager_t manager, bool* is_new_fetch, magik_framebuffer_collection_external_t framebuffer); 
 
 /**
 * @brief Struct where the matching extract function will store pointers to the AOV memory to. 
@@ -419,91 +418,91 @@ MAGIK_API e_magik_result_types magik_aov_fetch(magik_render_manager_t manager, b
 * @warning Do not allocate the pointers in this struct ! They will be overwriten by the extract function ! This struct servers as an 
 * observer. 
 */
-typedef struct magik_aov_container_config_host_t
+typedef struct magik_framebuffer_container_config_host_t
 {
     uint32_t x_resolution = 0;
     uint32_t y_resolution = 0;
     uint32_t channels = 0;
     size_t size_of_data = 0;
     float* h_data = nullptr;
-} magik_aov_container_config_host_t;
+} magik_framebuffer_container_config_host_t;
 
 /**
 * @brief Extracts the pointers to the host configured AOV buffer. 
 * 
 * @param [in] container Pointer to the struct into which the AOV data will be stored
-* @param [in] dcc_buffer Buffer which stores the front AOV 
+* @param [in] framebuffer Buffer which stores the front AOV 
 * @param [in] name The name of the AOV to be extracted
 * 
 * @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
 */
-MAGIK_API e_magik_result_types magik_aov_extract_config_host(magik_render_manager_t manager, magik_aov_container_config_host_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name);
+MAGIK_API e_magik_result_types magik_extract_config_host(magik_render_manager_t manager, magik_framebuffer_container_config_host_t* container, magik_framebuffer_collection_external_t framebuffer, const char* name);
 
 /**
 * @brief Struct which containes base types for a CUDA DCC backend. The user is responsible for casting these base types into CUDA ones 
 * !
 */
-typedef struct magik_aov_container_config_cuda_t
+typedef struct magik_framebuffer_container_config_cuda_t
 {
 
-} magik_aov_container_config_cuda_t;
+} magik_framebuffer_container_config_cuda_t;
 
 /**
 * 
 */
-MAGIK_API e_magik_result_types magik_aov_extract_config_cuda(magik_aov_container_config_cuda_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_extract_config_cuda(magik_framebuffer_container_config_cuda_t* container, magik_framebuffer_collection_external_t framebuffer);
 
 /**
 * @brief Struct which containes base types for a OpenGL DCC backend. The user is responsible for casting these base types into OpenGL
 * ones !
 */
-typedef struct magik_aov_container_config_opengl_interop_t
+typedef struct magik_framebuffer_container_config_opengl_interop_t
 {
     uint32_t x_resolution = 0;
     uint32_t y_resolution = 0;
     uint32_t channels = 0;
     uint32_t gl_buffer_id = 0;
     void* cuda_resources = nullptr; // true type is cudaGraphicsResource_t
-} magik_aov_container_config_opengl_interop_t;
+} magik_framebuffer_container_config_opengl_interop_t;
 
 /**
 * @brief Extracts the OpenGL buffer id, cuda resources and resolution from the opaque AOV object
 * 
 * @param [in] container Pointer to the struct into which the AOV data will be stored
-* @param [in] dcc_buffer Buffer which stores the front AOV 
+* @param [in] framebuffer Buffer which stores the front AOV 
 * @param [in] name The name of the AOV to be extracted
 * 
 * @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER, MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED, 
 * 
 * @warning 
 */
-MAGIK_API e_magik_result_types magik_aov_extract_config_opengl_interop(magik_render_manager_t manager, magik_aov_container_config_opengl_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer, const char* name);
+MAGIK_API e_magik_result_types magik_extract_config_opengl_interop(magik_render_manager_t manager, magik_framebuffer_container_config_opengl_interop_t* container, magik_framebuffer_collection_external_t framebuffer, const char* name);
 
 /**
 * @brief Struct which containes base types for a Vulkan DCC backend. The user is responsible for casting these base types into 
 * Vulkan ones !
 */
-typedef struct magik_aov_container_config_vulkan_interop_t
+typedef struct magik_framebuffer_container_config_vulkan_interop_t
 {
 
-} magik_aov_container_config_vulkan_interop_t;
+} magik_framebuffer_container_config_vulkan_interop_t;
 
 /**
 * @brief To be implemented ! DO NOT USE ! 
 */
-MAGIK_API e_magik_result_types magik_aov_extract_vulkan_interop(magik_aov_container_config_vulkan_interop_t* container, magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_extract_vulkan_interop(magik_framebuffer_container_config_vulkan_interop_t* container, magik_framebuffer_collection_external_t framebuffer);
 
 /**
 * @brief Free´s the memory associated with an AOV buffer. The user does not have to call this function each time the configuration 
 * is changed. 
 * 
-* @param [in] dcc_buffer
+* @param [in] framebuffer
 * 
 * @return 
 * 
 * @warning 
 */
-MAGIK_API e_magik_result_types magik_aov_destroy_framebuffer_object(magik_aov_framebuffer_object_external_t dcc_buffer);
+MAGIK_API e_magik_result_types magik_destroy_framebuffer_collection(magik_framebuffer_collection_external_t framebuffer);
 
 
 
@@ -570,21 +569,6 @@ typedef enum e_magik_cqs_command_types
     */
     MAGIK_COMMAND_PRINTF = 2000,
 
-    /**
-    * @brief Force resizes the render buffer
-    */
-    MAGIK_COMMAND_SET_RESOLUTION = 2001,
-
-    /**
-    * @brief Sets the complex offset point of the julia set kernel
-    */
-    MAGIK_COMMAND_SET_JULIA_SET_OFFSET = 2002,
-
-    /**
-    * @brief Sets the Julia set color pallet
-    */
-    MAGIK_COMMAND_SET_JULIA_SET_COLOR = 2003,
-
 
 
     // ##########################
@@ -602,6 +586,25 @@ typedef enum e_magik_cqs_command_types
     // ########################
     // ### 5000-5999 Camera ###
     // ########################
+    /**
+    * @brief Set the active camera id
+    */
+    MAGIK_COMMAND_SET_ACTIVE_CAMERA = 5000,
+
+    /**
+    * @brief Set the position of a camera
+    */
+    MAGIK_COMMAND_SET_CAMERA_POSITION = 5001,
+
+    /**
+    * @brief Set the pitch, yaw and roll of a camera
+    */
+    MAGIK_COMMAND_SET_CAMERA_ORIENTATION = 5002,
+
+    /**
+    * @brief Set the resolution of the camera, values less than 2 are guarded against.
+    */
+    MAGIK_COMMAND_SET_CAMERA_RESOLUTION = 5003,
 
 
 
@@ -672,28 +675,6 @@ typedef struct MAGIK_ALIGN4 magik_command_printf_t
     char text[512];
 } magik_command_printf_t;
 
-typedef struct MAGIK_ALIGN4 magik_command_set_resolution_t
-{
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_RESOLUTION;
-    uint32_t x_resolution = 2;
-    uint32_t y_resolution = 2;
-} magik_command_set_resolution_t;
-
-typedef struct MAGIK_ALIGN4 magik_command_set_julia_set_offset_t
-{
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_JULIA_SET_OFFSET;
-    float real = 0.0f;
-    float imaginary = 0.0f;
-} magik_command_set_julia_set_offset_t;
-
-typedef struct MAGIK_ALIGN4 magik_command_set_julia_set_color_t
-{
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_JULIA_SET_COLOR;
-    float c0 = 0.0f;
-    float c1 = 0.0f;
-    float c2 = 0.0f;
-} magik_command_set_julia_set_color_t;
-
 
 
 // ##########################
@@ -711,6 +692,36 @@ typedef struct MAGIK_ALIGN4 magik_command_set_julia_set_color_t
 // ########################
 // ### 5000-5999 Camera ###
 // ########################
+typedef struct MAGIK_ALIGN4 magik_command_set_active_camera_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_ACTIVE_CAMERA;
+    uint32_t id = 0;
+} magik_command_set_active_camera_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_camera_position_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_POSITION;
+    uint32_t id = 0;
+    float position_x = 0.0f;
+    float position_y = 0.0f;
+    float position_z = 0.0f;
+} magik_command_set_camera_position_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_camera_orientation_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_ORIENTATION;
+    uint32_t id = 0;
+    float rotation_x = 0.0f;
+    float rotation_y = 0.0f;
+    float rotation_z = 0.0f;
+} magik_command_set_camera_orientation_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_camera_resolution_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_RESOLUTION;
+    uint32_t x_resolution = 2;
+    uint32_t y_resolution = 2;
+} magik_command_set_camera_resolution_t;
 
 
 

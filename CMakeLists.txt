@@ -12,30 +12,53 @@ set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 
 # Declare a shared library
 add_library(magik SHARED 
-    # Core Host
-    src/host/core/magik.cpp
-    src/host/error/magik_error.cpp
-    
-    # CUDA Bridge
-    src/device/bridge/magik_bridge.cu
-    
-    # CUDA Kernels
-    src/device/kernels/magik_test_pattern.cu
+    # Renderer
+        # bxdf
 
-    # CUDA Interops
-    src/device/interops/magik_interop_opengl.cu
-    
-    # Manager
-    src/host/manager/magik_arbitrary_output_variables.cpp
-    src/host/manager/magik_command_queue_system.cpp
-    src/host/manager/magik_render_manager.cpp
-    src/host/manager/magik_worker.cpp
+        # command
+        src/renderer/command/command.cpp
 
-    # Memory
-    src/host/memory/magik_host_memory.cpp
+        # framebuffer
+        src/renderer/framebuffer/framebuffer.cpp
+        src/renderer/framebuffer/opengl_interop.cu
 
-    # (Optional)
-    src/device/bridge/magik_bridge.h
+        # kernels
+        src/renderer/kernels/kernel_generate_thin_lens_ray.cu
+        src/renderer/kernels/kernel_splat_to_renderbuffer.cu
+        src/renderer/kernels/kernel_tmp_advance.cu
+        src/renderer/kernels/kernel_intersect.cu
+        src/renderer/kernels/kernel_bxdf.cu
+        src/renderer/kernels/kernel_enforce_ray_limits.cu
+        src/renderer/kernels/kernel_initialize_random_device.cu
+        src/renderer/kernels/kernel_redistribute_radiance.cu
+        src/renderer/kernels/kernel_utility.cu
+
+        # memory
+        src/renderer/memory/host_arena.cpp
+
+        # metrics
+
+        # optics
+
+        # stage
+
+        # traceables
+
+        # wavefront
+        src/renderer/wavefront/wavefront.cpp
+
+        src/renderer/renderer.cpp
+
+    # Utility
+        # cuda
+
+        # error
+        src/utility/error/magik_error.cpp
+
+        # math
+
+    # Core
+    src/magik.cpp
 )
 
 # Define the location of the header files
@@ -46,17 +69,23 @@ target_include_directories(magik
 
     # Private includes for internal build
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/device
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/bridge
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/kernels
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/interops
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/library
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/host
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/core
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/error
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/manager
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/host/memory
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/bxdf
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/color
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/command
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/framebuffer
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/kernels
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/memory
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/metrics
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/optics
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/stage
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/traceables
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/wavefront
+
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/cuda
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/error
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/math
 )
 
 # Find packages
@@ -66,7 +95,12 @@ target_link_libraries(magik PRIVATE
     glad::glad
 )
 
+find_package(CUDAToolkit REQUIRED)
+target_link_libraries(magik PRIVATE glad::glad CUDA::cudart)
+
 target_compile_definitions(magik PRIVATE MAGIK_BUILD_DLL)
+
+target_compile_options(magik PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>)
 
 # Set properties
 target_compile_features(magik PRIVATE cxx_std_20)
