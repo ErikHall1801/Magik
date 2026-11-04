@@ -78,7 +78,7 @@ namespace magik
     
     MAGIK_DEVICE_HOST static constexpr vec4f minkowski_observer_rest_frame_to_global(minkowski_observer_rest_frame_to_global_t args)
     {
-        vec4f four_momentum = vec4f{args.dimensionless_spatial_vector.x, args.dimensionless_spatial_vector.y, args.dimensionless_spatial_vector.z, compute_metric_agnostic_local_timelike_component(args.dimensionless_spatial_vector, args.input_vector_norm)};
+        vec4f four_momentum = vec4f{args.dimensionless_spatial_vector.x, args.dimensionless_spatial_vector.y, args.dimensionless_spatial_vector.z, compute_local_timelike_component(args.dimensionless_spatial_vector, args.input_vector_norm)};
         
         vec4f e_t = args.dimensionless_observer_four_velocity;
         
