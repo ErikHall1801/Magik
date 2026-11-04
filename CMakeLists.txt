@@ -5,7 +5,9 @@ project(Magik VERSION 0.1.0 LANGUAGES CXX C CUDA)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 
 # Link static libraries
@@ -103,7 +105,7 @@ target_compile_definitions(magik PRIVATE MAGIK_BUILD_DLL)
 target_compile_options(magik PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>)
 
 # Set properties
-target_compile_features(magik PRIVATE cxx_std_20)
+target_compile_features(magik PRIVATE cxx_std_20 cuda_std_20)
 set_target_properties(magik PROPERTIES
     CXX_EXTENSIONS OFF
     POSITION_INDEPENDENT_CODE ON

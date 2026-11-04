@@ -4,6 +4,7 @@
 #include "cuda_host_device_utilities.h"
 #include "internal_math.h"
 #include <cuda_runtime.h>
+#include <concepts>
 
 namespace magik
 {
@@ -111,4 +112,35 @@ namespace magik
     {
         return vec4f{spatial_si_coordinates.x / length_scale, spatial_si_coordinates.y / length_scale, spatial_si_coordinates.z / length_scale, global_time / time_scale};
     }
+
+    struct contravariant_seed_vectors_t
+    {
+        vec4f X{};
+        vec4f Y{};
+        vec4f Z{};
+    };
+
+    template<e_magik_spacetime_metric_types T_metric> struct metric
+    {
+        struct params_t;
+
+        static MAGIK_DEVICE_HOST float length_scale(params_t p);
+
+        static MAGIK_DEVICE_HOST geodesic_step_values solve_step(geodesic_step_values y0, params_t p);
+
+        static MAGIK_DEVICE_HOST bool in_domain(vec4f dimensionless_four_position, params_t p);
+
+        // on_domain_entry 
+
+        static MAGIK_DEVICE_HOST float contravariant_timelike_component(vec4f dimensionless_four_position, vec3f dimensionless_observer_three_vector, float squared_norm, params_t p);
+
+        static MAGIK_DEVICE_HOST vec4f raise_index(vec4f dimensionless_four_position, vec4f covariant_vector, params_t p);
+
+        static MAGIK_DEVICE_HOST vec4f rest_frame_four_velocity(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_three_velocity, params_t p);
+
+        // Squared norm is not needed
+        static MAGIK_DEVICE_HOST vec4f global_to_observer_rest_frame(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec4f dimensionless_four_vector, vec4f dimensionless_observer_four_velocity, params_t p);
+
+        static MAGIK_DEVICE_HOST vec4f rest_frame_direction_to_global_four_momentum(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_spatial_vector, vec4f dimensionless_observer_four_velocity, float squared_norm, params_t p);
+    };
 }

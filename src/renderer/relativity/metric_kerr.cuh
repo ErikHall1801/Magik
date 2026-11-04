@@ -114,15 +114,15 @@ namespace magik
     }
 
     /* Metric - Index */
-    MAGIK_DEVICE_HOST static constexpr vec4f kerr_lower_index(float dimensionless_x, float dimensionless_y, float dimensionless_z, vec4f contravariant_vector, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static constexpr vec4f kerr_lower_index(vec4f dimensionless_four_position, vec4f contravariant_vector, float dimensionless_spin_parameter)
     {
         vec4f output;
 
-        float r = kerr_schild_r(dimensionless_x, dimensionless_y, dimensionless_z, dimensionless_spin_parameter);
-        float f = kerr_schild_f(dimensionless_y, r, dimensionless_spin_parameter);
-        float k_x = kerr_schild_k_x(dimensionless_x, dimensionless_z, r, dimensionless_spin_parameter);
-        float k_y = kerr_schild_k_y(dimensionless_y, r);
-        float k_z = kerr_schild_k_z(dimensionless_x, dimensionless_z, r, dimensionless_spin_parameter);
+        float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
+        float f = kerr_schild_f(dimensionless_four_position.y, r, dimensionless_spin_parameter);
+        float k_x = kerr_schild_k_x(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
+        float k_y = kerr_schild_k_y(dimensionless_four_position.y, r);
+        float k_z = kerr_schild_k_z(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
 
         output.t = kerr_g_tt(f)*contravariant_vector.t + kerr_g_txyz(f, k_x)*contravariant_vector.x + kerr_g_txyz(f, k_y)*contravariant_vector.y + kerr_g_txyz(f, k_z)*contravariant_vector.z;
         output.x = kerr_g_txyz(f, k_x)*contravariant_vector.t + kerr_g_xx(f, k_x)*contravariant_vector.x + kerr_g_xy(f, k_x, k_y)*contravariant_vector.y + kerr_g_xz(f, k_x, k_z)*contravariant_vector.z;
@@ -132,15 +132,15 @@ namespace magik
         return output;
     }
 
-    MAGIK_DEVICE_HOST static constexpr vec4f kerr_raise_index(float dimensionless_x, float dimensionless_y, float dimensionless_z, vec4f covariant_vector, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static constexpr vec4f kerr_raise_index(vec4f dimensionless_four_position, vec4f covariant_vector, float dimensionless_spin_parameter)
     {
         vec4f output;
 
-        float r = kerr_schild_r(dimensionless_x, dimensionless_y, dimensionless_z, dimensionless_spin_parameter);
-        float f = kerr_schild_f(dimensionless_y, r, dimensionless_spin_parameter);
-        float k_x = kerr_schild_k_x(dimensionless_x, dimensionless_z, r, dimensionless_spin_parameter);
-        float k_y = kerr_schild_k_y(dimensionless_y, r);
-        float k_z = kerr_schild_k_z(dimensionless_x, dimensionless_z, r, dimensionless_spin_parameter);
+        float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
+        float f = kerr_schild_f(dimensionless_four_position.y, r, dimensionless_spin_parameter);
+        float k_x = kerr_schild_k_x(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
+        float k_y = kerr_schild_k_y(dimensionless_four_position.y, r);
+        float k_z = kerr_schild_k_z(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
             
         output.t = kerr_g_inv_tt(f)*covariant_vector.t + kerr_g_inv_txyz(f, k_x)*covariant_vector.x + kerr_g_inv_txyz(f, k_y)*covariant_vector.y + kerr_g_inv_txyz(f, k_z)*covariant_vector.z;
         output.x = kerr_g_inv_txyz(f, k_x)*covariant_vector.t + kerr_g_inv_xx(f, k_x)*covariant_vector.x + kerr_g_inv_xy(f, k_x, k_y)*covariant_vector.y + kerr_g_inv_xz(f, k_x, k_z)*covariant_vector.z;
@@ -153,97 +153,63 @@ namespace magik
 
 
     /* Rest frame to global */
-    struct kerr_inner_product_contravariant_t
+    MAGIK_DEVICE_HOST static constexpr float kerr_inner_product_contravariant(vec4f dimensionless_four_position, vec4f u_contravariant, vec4f v_contravariant, float dimensionless_spin_parameter)
     {
-        float dimensionless_x{};
-        float dimensionless_y{};
-        float dimensionless_z{};
-        vec4f u_contravariant{};
-        vec4f v_contravariant{};
-        float dimensionless_spin_parameter{};
-    };
+        float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
+        float f = kerr_schild_f(dimensionless_four_position.y, r, dimensionless_spin_parameter);
+        float k_x = kerr_schild_k_x(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
+        float k_y = kerr_schild_k_y(dimensionless_four_position.y, r);
+        float k_z = kerr_schild_k_z(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_inner_product_contravariant(kerr_inner_product_contravariant_t args)
-    {
-        float r = kerr_schild_r(args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.dimensionless_spin_parameter);
-        float f = kerr_schild_f(args.dimensionless_y, r, args.dimensionless_spin_parameter);
-        float k_x = kerr_schild_k_x(args.dimensionless_x, args.dimensionless_z, r, args.dimensionless_spin_parameter);
-        float k_y = kerr_schild_k_y(args.dimensionless_y, r);
-        float k_z = kerr_schild_k_z(args.dimensionless_x, args.dimensionless_z, r, args.dimensionless_spin_parameter);
-
-        return kerr_g_tt(f)*args.u_contravariant.t*args.v_contravariant.t \
-             + kerr_g_txyz(f, k_x)*(args.u_contravariant.t*args.v_contravariant.x + args.u_contravariant.x*args.v_contravariant.t) \
-             + kerr_g_txyz(f, k_y)*(args.u_contravariant.t*args.v_contravariant.y + args.u_contravariant.y*args.v_contravariant.t) \
-             + kerr_g_txyz(f, k_z)*(args.u_contravariant.t*args.v_contravariant.z + args.u_contravariant.z*args.v_contravariant.t) \
-             + kerr_g_xx(f, k_x)*args.u_contravariant.x*args.v_contravariant.x \
-             + kerr_g_xy(f, k_x, k_y)*(args.u_contravariant.x*args.v_contravariant.y + args.u_contravariant.y*args.v_contravariant.x) \
-             + kerr_g_xz(f, k_x, k_z)*(args.u_contravariant.x*args.v_contravariant.z + args.u_contravariant.z*args.v_contravariant.x) \
-             + kerr_g_yy(f, k_y)*args.u_contravariant.y*args.v_contravariant.y \
-             + kerr_g_yz(f, k_y, k_z)*(args.u_contravariant.y*args.v_contravariant.z + args.u_contravariant.z*args.v_contravariant.y) \
-             + kerr_g_zz(f, k_z)*args.u_contravariant.z*args.v_contravariant.z;
+        return kerr_g_tt(f)*u_contravariant.t*v_contravariant.t \
+             + kerr_g_txyz(f, k_x)*(u_contravariant.t*v_contravariant.x + u_contravariant.x*v_contravariant.t) \
+             + kerr_g_txyz(f, k_y)*(u_contravariant.t*v_contravariant.y + u_contravariant.y*v_contravariant.t) \
+             + kerr_g_txyz(f, k_z)*(u_contravariant.t*v_contravariant.z + u_contravariant.z*v_contravariant.t) \
+             + kerr_g_xx(f, k_x)*u_contravariant.x*v_contravariant.x \
+             + kerr_g_xy(f, k_x, k_y)*(u_contravariant.x*v_contravariant.y + u_contravariant.y*v_contravariant.x) \
+             + kerr_g_xz(f, k_x, k_z)*(u_contravariant.x*v_contravariant.z + u_contravariant.z*v_contravariant.x) \
+             + kerr_g_yy(f, k_y)*u_contravariant.y*v_contravariant.y \
+             + kerr_g_yz(f, k_y, k_z)*(u_contravariant.y*v_contravariant.z + u_contravariant.z*v_contravariant.y) \
+             + kerr_g_zz(f, k_z)*u_contravariant.z*v_contravariant.z;
     }
 
-    struct kerr_inner_product_covariant_t
+    MAGIK_DEVICE_HOST static constexpr float kerr_inner_product_covariant(vec4f dimensionless_four_position, vec4f u_covariant, vec4f v_covariant, float dimensionless_spin_parameter)
     {
-        float dimensionless_x{};
-        float dimensionless_y{};
-        float dimensionless_z{};
-        vec4f u_covariant{};
-        vec4f v_covariant{};
-        float dimensionless_spin_parameter{};
-    };
+        float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
+        float f = kerr_schild_f(dimensionless_four_position.y, r, dimensionless_spin_parameter);
+        float k_x = kerr_schild_k_x(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
+        float k_y = kerr_schild_k_y(dimensionless_four_position.y, r);
+        float k_z = kerr_schild_k_z(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_inner_product_covariant(kerr_inner_product_covariant_t args)
-    {
-        float r = kerr_schild_r(args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.dimensionless_spin_parameter);
-        float f = kerr_schild_f(args.dimensionless_y, r, args.dimensionless_spin_parameter);
-        float k_x = kerr_schild_k_x(args.dimensionless_x, args.dimensionless_z, r, args.dimensionless_spin_parameter);
-        float k_y = kerr_schild_k_y(args.dimensionless_y, r);
-        float k_z = kerr_schild_k_z(args.dimensionless_x, args.dimensionless_z, r, args.dimensionless_spin_parameter);
-
-        return kerr_g_inv_tt(f)*args.u_covariant.t*args.v_covariant.t \
-             + kerr_g_inv_txyz(f, k_x)*(args.u_covariant.t*args.v_covariant.x + args.u_covariant.x*args.v_covariant.t) \
-             + kerr_g_inv_txyz(f, k_y)*(args.u_covariant.t*args.v_covariant.y + args.u_covariant.y*args.v_covariant.t) \
-             + kerr_g_inv_txyz(f, k_z)*(args.u_covariant.t*args.v_covariant.z + args.u_covariant.z*args.v_covariant.t) \
-             + kerr_g_inv_xx(f, k_x)*args.u_covariant.x*args.v_covariant.x \
-             + kerr_g_inv_xy(f, k_x, k_y)*(args.u_covariant.x*args.v_covariant.y + args.u_covariant.y*args.v_covariant.x) \
-             + kerr_g_inv_xz(f, k_x, k_z)*(args.u_covariant.x*args.v_covariant.z + args.u_covariant.z*args.v_covariant.x) \
-             + kerr_g_inv_yy(f, k_y)*args.u_covariant.y*args.v_covariant.y \
-             + kerr_g_inv_yz(f, k_y, k_z)*(args.u_covariant.y*args.v_covariant.z + args.u_covariant.z*args.v_covariant.y) \
-             + kerr_g_inv_zz(f, k_z)*args.u_covariant.z*args.v_covariant.z;
+        return kerr_g_inv_tt(f)*u_covariant.t*v_covariant.t \
+             + kerr_g_inv_txyz(f, k_x)*(u_covariant.t*v_covariant.x + u_covariant.x*v_covariant.t) \
+             + kerr_g_inv_txyz(f, k_y)*(u_covariant.t*v_covariant.y + u_covariant.y*v_covariant.t) \
+             + kerr_g_inv_txyz(f, k_z)*(u_covariant.t*v_covariant.z + u_covariant.z*v_covariant.t) \
+             + kerr_g_inv_xx(f, k_x)*u_covariant.x*v_covariant.x \
+             + kerr_g_inv_xy(f, k_x, k_y)*(u_covariant.x*v_covariant.y + u_covariant.y*v_covariant.x) \
+             + kerr_g_inv_xz(f, k_x, k_z)*(u_covariant.x*v_covariant.z + u_covariant.z*v_covariant.x) \
+             + kerr_g_inv_yy(f, k_y)*u_covariant.y*v_covariant.y \
+             + kerr_g_inv_yz(f, k_y, k_z)*(u_covariant.y*v_covariant.z + u_covariant.z*v_covariant.y) \
+             + kerr_g_inv_zz(f, k_z)*u_covariant.z*v_covariant.z;
     }
 
-    struct kerr_observer_rest_frame_to_global_t
+    MAGIK_DEVICE_HOST static constexpr vec4f kerr_observer_rest_frame_to_global(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_spatial_vector, vec4f dimensionless_observer_four_velocity, float dimensionless_spin_parameter, float squared_norm)
     {
-        float dimensionless_x{};
-        float dimensionless_y{};
-        float dimensionless_z{};
-        vec4f contravariant_seed_vector_x{};
-        vec4f contravariant_seed_vector_y{};
-        vec4f contravariant_seed_vector_z{};
-        vec3f dimensionless_spatial_vector{};
-        vec4f dimensionless_observer_four_velocity{};
-        float dimensionless_spin_parameter{};
-        float squared_norm{}; 
-    };
+        vec4f four_momentum = vec4f{dimensionless_spatial_vector.x, dimensionless_spatial_vector.y, dimensionless_spatial_vector.z, compute_local_timelike_component(dimensionless_spatial_vector, squared_norm)};
 
-    MAGIK_DEVICE_HOST static constexpr vec4f kerr_observer_rest_frame_to_global(kerr_observer_rest_frame_to_global_t args)
-    {
-        vec4f four_momentum = vec4f{args.dimensionless_spatial_vector.x, args.dimensionless_spatial_vector.y, args.dimensionless_spatial_vector.z, compute_local_timelike_component(args.dimensionless_spatial_vector, args.squared_norm)};
+        vec4f e_t = dimensionless_observer_four_velocity;
 
-        vec4f e_t = args.dimensionless_observer_four_velocity;
+        vec4f e_z = seed_vectors.Z + kerr_inner_product_contravariant(dimensionless_four_position, seed_vectors.Z, e_t, dimensionless_spin_parameter)*e_t;
+        e_z = e_z / sqrtf(kerr_inner_product_contravariant(dimensionless_four_position, e_z, e_z, dimensionless_spin_parameter));
 
-        vec4f e_z = args.contravariant_seed_vector_z + kerr_inner_product_contravariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.contravariant_seed_vector_z, e_t, args.dimensionless_spin_parameter})*e_t;
-        e_z = e_z / sqrtf(kerr_inner_product_contravariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, e_z, e_z, args.dimensionless_spin_parameter}));
+        vec4f e_x = seed_vectors.X + kerr_inner_product_contravariant(dimensionless_four_position, seed_vectors.X, e_t, dimensionless_spin_parameter)*e_t \
+                                                - kerr_inner_product_contravariant(dimensionless_four_position, seed_vectors.X, e_z, dimensionless_spin_parameter)*e_z;
+        e_x = e_x / sqrtf(kerr_inner_product_contravariant(dimensionless_four_position, e_x, e_x, dimensionless_spin_parameter));
 
-        vec4f e_x = args.contravariant_seed_vector_x + kerr_inner_product_contravariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.contravariant_seed_vector_x, e_t, args.dimensionless_spin_parameter})*e_t \
-                                                     - kerr_inner_product_contravariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.contravariant_seed_vector_x, e_z, args.dimensionless_spin_parameter})*e_z;
-        e_x = e_x / sqrtf(kerr_inner_product_contravariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, e_x, e_x, args.dimensionless_spin_parameter}));
-
-        vec4f e_y = args.contravariant_seed_vector_y + kerr_inner_product_contravariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.contravariant_seed_vector_y, e_t, args.dimensionless_spin_parameter})*e_t \
-                                                     - kerr_inner_product_contravariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.contravariant_seed_vector_y, e_z, args.dimensionless_spin_parameter})*e_z \
-                                                     - kerr_inner_product_contravariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.contravariant_seed_vector_y, e_x, args.dimensionless_spin_parameter})*e_x;
-        e_y = e_y / sqrtf(kerr_inner_product_contravariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, e_y, e_y, args.dimensionless_spin_parameter}));
+        vec4f e_y = seed_vectors.Y + kerr_inner_product_contravariant(dimensionless_four_position, seed_vectors.Y, e_t, dimensionless_spin_parameter)*e_t \
+                                                - kerr_inner_product_contravariant(dimensionless_four_position, seed_vectors.Y, e_z, dimensionless_spin_parameter)*e_z \
+                                                - kerr_inner_product_contravariant(dimensionless_four_position, seed_vectors.Y, e_x, dimensionless_spin_parameter)*e_x;
+        e_y = e_y / sqrtf(kerr_inner_product_contravariant(dimensionless_four_position, e_y, e_y, dimensionless_spin_parameter));
 
         vec4f result;
 
@@ -258,136 +224,100 @@ namespace magik
 
 
     /* Rest frame velocity */
-    struct kerr_compute_timelike_component_t
+    MAGIK_DEVICE_HOST static constexpr float kerr_compute_timelike_component_contravariant(vec4f dimensionless_four_position, vec3f dimensionless_observer_three_vector, float dimensionless_spin_parameter, float squared_norm)
     {
-        float dimensionless_x{};
-        float dimensionless_y{};
-        float dimensionless_z{};
-        vec3f dimensionless_observer_three_vector{};
-        float dimensionless_spin_parameter{};
-        float squard_norm{};
-    };
-
-    MAGIK_DEVICE_HOST static constexpr float kerr_compute_timelike_component_contravariant(kerr_compute_timelike_component_t args)
-    {
-        float r = kerr_schild_r(args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.dimensionless_spin_parameter);
-        float f = kerr_schild_f(args.dimensionless_y, r, args.dimensionless_spin_parameter);
-        float k_x = kerr_schild_k_x(args.dimensionless_x, args.dimensionless_z, r, args.dimensionless_spin_parameter);
-        float k_y = kerr_schild_k_y(args.dimensionless_y, r);
-        float k_z = kerr_schild_k_z(args.dimensionless_x, args.dimensionless_z, r, args.dimensionless_spin_parameter);
+        float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
+        float f = kerr_schild_f(dimensionless_four_position.y, r, dimensionless_spin_parameter);
+        float k_x = kerr_schild_k_x(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
+        float k_y = kerr_schild_k_y(dimensionless_four_position.y, r);
+        float k_z = kerr_schild_k_z(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
 
         float A = kerr_g_tt(f);
-        float B = 2.0f*(kerr_g_txyz(f, k_x)*args.dimensionless_observer_three_vector.x + kerr_g_txyz(f, k_y)*args.dimensionless_observer_three_vector.y + kerr_g_txyz(f, k_z)*args.dimensionless_observer_three_vector.z);
-        float C = kerr_g_xx(f, k_x)*args.dimensionless_observer_three_vector.x*args.dimensionless_observer_three_vector.x \
-              + 2.0f*kerr_g_xy(f, k_x, k_y)*args.dimensionless_observer_three_vector.x*args.dimensionless_observer_three_vector.y \
-              + 2.0f*kerr_g_xz(f, k_x, k_z)*args.dimensionless_observer_three_vector.x*args.dimensionless_observer_three_vector.z \
-              + kerr_g_yy(f, k_y)*args.dimensionless_observer_three_vector.y*args.dimensionless_observer_three_vector.y \
-              + 2.0f*kerr_g_yz(f, k_y, k_z)*args.dimensionless_observer_three_vector.y*args.dimensionless_observer_three_vector.z \
-              + kerr_g_zz(f, k_z)*args.dimensionless_observer_three_vector.z*args.dimensionless_observer_three_vector.z \
-              - args.squard_norm;
+        float B = 2.0f*(kerr_g_txyz(f, k_x)*dimensionless_observer_three_vector.x + kerr_g_txyz(f, k_y)*dimensionless_observer_three_vector.y + kerr_g_txyz(f, k_z)*dimensionless_observer_three_vector.z);
+        float C = kerr_g_xx(f, k_x)*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.x \
+              + 2.0f*kerr_g_xy(f, k_x, k_y)*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.y \
+              + 2.0f*kerr_g_xz(f, k_x, k_z)*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.z \
+              + kerr_g_yy(f, k_y)*dimensionless_observer_three_vector.y*dimensionless_observer_three_vector.y \
+              + 2.0f*kerr_g_yz(f, k_y, k_z)*dimensionless_observer_three_vector.y*dimensionless_observer_three_vector.z \
+              + kerr_g_zz(f, k_z)*dimensionless_observer_three_vector.z*dimensionless_observer_three_vector.z \
+              - squared_norm;
 
         return (-B - sqrtf(B*B - 4.0f*A*C))/(2.0f*A);
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_compute_timelike_component_covariant(kerr_compute_timelike_component_t args)
+    MAGIK_DEVICE_HOST static constexpr float kerr_compute_timelike_component_covariant(vec4f dimensionless_four_position, vec3f dimensionless_observer_three_vector, float dimensionless_spin_parameter, float squared_norm)
     {
-        float r = kerr_schild_r(args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.dimensionless_spin_parameter);
-        float f = kerr_schild_f(args.dimensionless_y, r, args.dimensionless_spin_parameter);
-        float k_x = kerr_schild_k_x(args.dimensionless_x, args.dimensionless_z, r, args.dimensionless_spin_parameter);
-        float k_y = kerr_schild_k_y(args.dimensionless_y, r);
-        float k_z = kerr_schild_k_z(args.dimensionless_x, args.dimensionless_z, r, args.dimensionless_spin_parameter);
+        float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
+        float f = kerr_schild_f(dimensionless_four_position.y, r, dimensionless_spin_parameter);
+        float k_x = kerr_schild_k_x(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
+        float k_y = kerr_schild_k_y(dimensionless_four_position.y, r);
+        float k_z = kerr_schild_k_z(dimensionless_four_position.x, dimensionless_four_position.z, r, dimensionless_spin_parameter);
 
         float A = kerr_g_inv_tt(f);
-        float B = 2.0f*(kerr_g_inv_txyz(f, k_x)*args.dimensionless_observer_three_vector.x + kerr_g_inv_txyz(f, k_y)*args.dimensionless_observer_three_vector.y + kerr_g_inv_txyz(f, k_z)*args.dimensionless_observer_three_vector.z);
-        float C = kerr_g_inv_xx(f, k_x)*args.dimensionless_observer_three_vector.x*args.dimensionless_observer_three_vector.x \
-              + 2.0f*kerr_g_inv_xy(f, k_x, k_y)*args.dimensionless_observer_three_vector.x*args.dimensionless_observer_three_vector.y \
-              + 2.0f*kerr_g_inv_xz(f, k_x, k_z)*args.dimensionless_observer_three_vector.x*args.dimensionless_observer_three_vector.z \
-              + kerr_g_inv_yy(f, k_y)*args.dimensionless_observer_three_vector.y*args.dimensionless_observer_three_vector.y \
-              + 2.0f*kerr_g_inv_yz(f, k_y, k_z)*args.dimensionless_observer_three_vector.y*args.dimensionless_observer_three_vector.z \
-              + kerr_g_inv_zz(f, k_z)*args.dimensionless_observer_three_vector.z*args.dimensionless_observer_three_vector.z \
-              - args.squard_norm;
+        float B = 2.0f*(kerr_g_inv_txyz(f, k_x)*dimensionless_observer_three_vector.x + kerr_g_inv_txyz(f, k_y)*dimensionless_observer_three_vector.y + kerr_g_inv_txyz(f, k_z)*dimensionless_observer_three_vector.z);
+        float C = kerr_g_inv_xx(f, k_x)*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.x \
+              + 2.0f*kerr_g_inv_xy(f, k_x, k_y)*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.y \
+              + 2.0f*kerr_g_inv_xz(f, k_x, k_z)*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.z \
+              + kerr_g_inv_yy(f, k_y)*dimensionless_observer_three_vector.y*dimensionless_observer_three_vector.y \
+              + 2.0f*kerr_g_inv_yz(f, k_y, k_z)*dimensionless_observer_three_vector.y*dimensionless_observer_three_vector.z \
+              + kerr_g_inv_zz(f, k_z)*dimensionless_observer_three_vector.z*dimensionless_observer_three_vector.z \
+              - squared_norm;
 
         return (-B - sqrtf(B*B - 4.0f*A*C))/(2.0f*A);
     }
 
-    struct kerr_object_velocity_from_ZAMO_to_global_t
+    MAGIK_DEVICE_HOST static constexpr vec4f kerr_object_velocity_from_ZAMO_to_global(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_three_velocity, float dimensionless_spin_parameter)
     {
-        float dimensionless_x{};
-        float dimensionless_y{};
-        float dimensionless_z{};
-        vec4f contravariant_seed_vector_x{};
-        vec4f contravariant_seed_vector_y{};
-        vec4f contravariant_seed_vector_z{};
-        vec3f dimensionless_three_velocity{};
-        float dimensionless_spin_parameter{};
-    };
-
-    MAGIK_DEVICE_HOST static constexpr vec4f kerr_object_velocity_from_ZAMO_to_global(kerr_object_velocity_from_ZAMO_to_global_t args)
-    {
-        float r = kerr_schild_r(args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.dimensionless_spin_parameter);
+        float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
         float r_sq = r * r;
-        float a_sq = args.dimensionless_spin_parameter * args.dimensionless_spin_parameter;
+        float a_sq = dimensionless_spin_parameter * dimensionless_spin_parameter;
 
-        float cos_theta = args.dimensionless_y/r;
+        float cos_theta = dimensionless_four_position.y/r;
         float sin2_theta = 1.0f - cos_theta*cos_theta;
         float sigma = r_sq + a_sq*cos_theta*cos_theta;
         float delta = r_sq - 2.0f*r + a_sq;
         float Lambda = (r_sq + a_sq)*(r_sq + a_sq) - a_sq*delta*sin2_theta;
         float u_t = sqrtf(Lambda/(delta*sigma));
-        float u_phi = 2.0f*args.dimensionless_spin_parameter*r/sqrtf(Lambda*delta*sigma);
+        float u_phi = 2.0f*dimensionless_spin_parameter*r/sqrtf(Lambda*delta*sigma);
 
-        float u_x = args.dimensionless_z*u_phi;
+        float u_x = dimensionless_four_position.z*u_phi;
         float u_y = 0.0f;
-        float u_z = -args.dimensionless_x*u_phi;
+        float u_z = -dimensionless_four_position.x*u_phi;
 
         float squared_norm = -1.0f;
         vec4f ZAMO_four_velocity = vec4f{u_x, u_y, u_z, u_t};
 
-        return kerr_observer_rest_frame_to_global({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.contravariant_seed_vector_x, args.contravariant_seed_vector_y, args.contravariant_seed_vector_z, args.dimensionless_three_velocity, ZAMO_four_velocity, args.dimensionless_spin_parameter, squared_norm});
+        return kerr_observer_rest_frame_to_global(dimensionless_four_position, seed_vectors, dimensionless_three_velocity, ZAMO_four_velocity, dimensionless_spin_parameter, squared_norm);
     }
 
 
 
     /* Global to rest frame */
-    struct kerr_global_to_observer_rest_frame_t
+    MAGIK_DEVICE_HOST static constexpr vec4f kerr_global_to_observer_rest_frame(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec4f dimensionless_four_vector, vec4f dimensionless_observer_four_velocity, float dimensionless_spin_parameter)
     {
-        float dimensionless_x{};
-        float dimensionless_y{};
-        float dimensionless_z{};
-        vec4f contravariant_seed_vector_x{};
-        vec4f contravariant_seed_vector_y{};
-        vec4f contravariant_seed_vector_z{};
-        vec4f dimensionless_four_vector{};
-        vec4f dimensionless_observer_four_velocity{};
-        float dimensionless_spin_parameter{};
-        float squared_norm{};
-    };
+        vec4f covariant_seed_vectors_x = kerr_lower_index(dimensionless_four_position, seed_vectors.X, dimensionless_spin_parameter);
+        vec4f covariant_seed_vectors_y = kerr_lower_index(dimensionless_four_position, seed_vectors.Y, dimensionless_spin_parameter);
+        vec4f covariant_seed_vectors_z = kerr_lower_index(dimensionless_four_position, seed_vectors.Z, dimensionless_spin_parameter);
 
-    MAGIK_DEVICE_HOST static constexpr vec4f kerr_global_to_observer_rest_frame(kerr_global_to_observer_rest_frame_t args)
-    {
-        vec4f covariant_seed_vectors_x = kerr_lower_index(args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.contravariant_seed_vector_x, args.dimensionless_spin_parameter);
-        vec4f covariant_seed_vectors_y = kerr_lower_index(args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.contravariant_seed_vector_y, args.dimensionless_spin_parameter);
-        vec4f covariant_seed_vectors_z = kerr_lower_index(args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.contravariant_seed_vector_z, args.dimensionless_spin_parameter);
+        vec4f e_t = -kerr_lower_index(dimensionless_four_position, dimensionless_observer_four_velocity, dimensionless_spin_parameter);
 
-        vec4f e_t = -kerr_lower_index(args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, args.dimensionless_observer_four_velocity, args.dimensionless_spin_parameter);
+        vec4f e_z = covariant_seed_vectors_z + kerr_inner_product_covariant(dimensionless_four_position, covariant_seed_vectors_z, e_t, dimensionless_spin_parameter)*e_t;
+        e_z = e_z / sqrtf(kerr_inner_product_covariant(dimensionless_four_position, e_z, e_z, dimensionless_spin_parameter));
 
-        vec4f e_z = covariant_seed_vectors_z + kerr_inner_product_covariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, covariant_seed_vectors_z, e_t, args.dimensionless_spin_parameter})*e_t;
-        e_z = e_z / sqrtf(kerr_inner_product_covariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, e_z, e_z, args.dimensionless_spin_parameter}));
+        vec4f e_x = covariant_seed_vectors_x + kerr_inner_product_covariant(dimensionless_four_position, covariant_seed_vectors_x, e_t, dimensionless_spin_parameter)*e_t \
+                                             - kerr_inner_product_covariant(dimensionless_four_position, covariant_seed_vectors_x, e_z, dimensionless_spin_parameter)*e_z;
+        e_x = e_x / sqrtf(kerr_inner_product_covariant(dimensionless_four_position, e_x, e_x, dimensionless_spin_parameter));
 
-        vec4f e_x = covariant_seed_vectors_x + kerr_inner_product_covariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, covariant_seed_vectors_x, e_t, args.dimensionless_spin_parameter})*e_t \
-                                             - kerr_inner_product_covariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, covariant_seed_vectors_x, e_z, args.dimensionless_spin_parameter})*e_z;
-        e_x = e_x / sqrtf(kerr_inner_product_covariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, e_x, e_x, args.dimensionless_spin_parameter}));
-
-        vec4f e_y = covariant_seed_vectors_y + kerr_inner_product_covariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, covariant_seed_vectors_y, e_t, args.dimensionless_spin_parameter})*e_t \
-                                             - kerr_inner_product_covariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, covariant_seed_vectors_y, e_z, args.dimensionless_spin_parameter})*e_z \
-                                             - kerr_inner_product_covariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, covariant_seed_vectors_y, e_x, args.dimensionless_spin_parameter})*e_x;
-        e_y = e_y / sqrtf(kerr_inner_product_covariant({args.dimensionless_x, args.dimensionless_y, args.dimensionless_z, e_y, e_y, args.dimensionless_spin_parameter}));
+        vec4f e_y = covariant_seed_vectors_y + kerr_inner_product_covariant(dimensionless_four_position, covariant_seed_vectors_y, e_t, dimensionless_spin_parameter)*e_t \
+                                             - kerr_inner_product_covariant(dimensionless_four_position, covariant_seed_vectors_y, e_z, dimensionless_spin_parameter)*e_z \
+                                             - kerr_inner_product_covariant(dimensionless_four_position, covariant_seed_vectors_y, e_x, dimensionless_spin_parameter)*e_x;
+        e_y = e_y / sqrtf(kerr_inner_product_covariant(dimensionless_four_position, e_y, e_y, dimensionless_spin_parameter));
 
         vec4f result;
-        result.t = e_t.t*args.dimensionless_four_vector.t + e_t.x*args.dimensionless_four_vector.x + e_t.y*args.dimensionless_four_vector.y + e_t.z*args.dimensionless_four_vector.z;
-        result.x = e_x.t*args.dimensionless_four_vector.t + e_x.x*args.dimensionless_four_vector.x + e_x.y*args.dimensionless_four_vector.y + e_x.z*args.dimensionless_four_vector.z;
-        result.y = e_y.t*args.dimensionless_four_vector.t + e_y.x*args.dimensionless_four_vector.x + e_y.y*args.dimensionless_four_vector.y + e_y.z*args.dimensionless_four_vector.z;
-        result.z = e_z.t*args.dimensionless_four_vector.t + e_z.x*args.dimensionless_four_vector.x + e_z.y*args.dimensionless_four_vector.y + e_z.z*args.dimensionless_four_vector.z;
+        result.t = e_t.t*dimensionless_four_position.t + e_t.x*dimensionless_four_position.x + e_t.y*dimensionless_four_position.y + e_t.z*dimensionless_four_position.z;
+        result.x = e_x.t*dimensionless_four_position.t + e_x.x*dimensionless_four_position.x + e_x.y*dimensionless_four_position.y + e_x.z*dimensionless_four_position.z;
+        result.y = e_y.t*dimensionless_four_position.t + e_y.x*dimensionless_four_position.x + e_y.y*dimensionless_four_position.y + e_y.z*dimensionless_four_position.z;
+        result.z = e_z.t*dimensionless_four_position.t + e_z.x*dimensionless_four_position.x + e_z.y*dimensionless_four_position.y + e_z.z*dimensionless_four_position.z;
         return result;
     }
 
@@ -461,5 +391,61 @@ namespace magik
         vec4f dpdt_lambda{ half_kTp_sq * dfdq_.x + f_kTp * beta.x, half_kTp_sq * dfdq_.y + f_kTp * beta.y, half_kTp_sq * dfdq_.z + f_kTp * beta.z, 0.0f };
 
         return geodesic_step_values{dqdt_lambda, dpdt_lambda};
+    }
+
+
+
+    /* Specialization */
+    using kerr_metric = metric<e_magik_spacetime_metric_types::KERR>;
+
+    template<> struct kerr_metric::params_t
+    {
+        float mass_parameter;
+        float dimensionless_spin_parameter;
+        float event_horizon_scalar;
+    };
+
+    template<> inline MAGIK_DEVICE_HOST float kerr_metric::length_scale(params_t p)
+    {
+        return magik::gravitational_constant * p.mass_parameter / (magik::speed_of_light*magik::speed_of_light);
+    }
+
+    template<> inline MAGIK_DEVICE_HOST geodesic_step_values kerr_metric::solve_step(geodesic_step_values y0, params_t p)
+    {
+        return kerr_geodesic_eq_rhs(y0, p.dimensionless_spin_parameter);
+    }
+
+    template<> inline MAGIK_DEVICE_HOST bool kerr_metric::in_domain(vec4f dimensionless_four_position, params_t p)
+    {
+        if(fabsf(p.dimensionless_spin_parameter) > 1.0f) return false;
+        float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, p.dimensionless_spin_parameter);
+        if(((1.0f + sqrtf(1.0f - p.dimensionless_spin_parameter*p.dimensionless_spin_parameter)) * p.event_horizon_scalar) < r) return false;
+        return true;
+    }
+
+    template<> inline MAGIK_DEVICE_HOST float kerr_metric::contravariant_timelike_component(vec4f dimensionless_four_position, vec3f dimensionless_observer_three_vector, float squared_norm, params_t p)
+    {
+        return kerr_compute_timelike_component_contravariant(dimensionless_four_position, dimensionless_observer_three_vector, p.dimensionless_spin_parameter, squared_norm);
+    }
+
+    template<> inline MAGIK_DEVICE_HOST vec4f kerr_metric::raise_index(vec4f dimensionless_four_position, vec4f covariant_vector, params_t p)
+    {
+        return kerr_raise_index(dimensionless_four_position, covariant_vector, p.dimensionless_spin_parameter);
+    }
+
+    template<> inline MAGIK_DEVICE_HOST vec4f kerr_metric::rest_frame_four_velocity(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_three_velocity, params_t p)
+    {
+        return kerr_object_velocity_from_ZAMO_to_global(dimensionless_four_position, seed_vectors, dimensionless_three_velocity, p.dimensionless_spin_parameter);
+    }
+
+    template<> inline MAGIK_DEVICE_HOST vec4f kerr_metric::global_to_observer_rest_frame(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec4f dimensionless_four_vector, vec4f dimensionless_observer_four_velocity, params_t p)
+    {
+        return kerr_global_to_observer_rest_frame(dimensionless_four_position, seed_vectors, dimensionless_four_vector, dimensionless_observer_four_velocity, p.dimensionless_spin_parameter);
+    }
+
+    template<> inline MAGIK_DEVICE_HOST vec4f kerr_metric::rest_frame_direction_to_global_four_momentum(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_spatial_vector, vec4f dimensionless_observer_four_velocity, float squared_norm, params_t p)
+    {
+        vec4f vector = kerr_observer_rest_frame_to_global(dimensionless_four_position, seed_vectors, dimensionless_spatial_vector, dimensionless_observer_four_velocity, p.dimensionless_spin_parameter, squared_norm);
+        return kerr_raise_index(dimensionless_four_position, vector, p.dimensionless_spin_parameter);
     }
 }
