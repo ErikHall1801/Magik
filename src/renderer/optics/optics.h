@@ -33,6 +33,7 @@ namespace magik
         uint32_t y_resolution = 1860;
 
         vec3f position = vec3f{2.0f, 5.0f, 9.0f};
+        vec3f local_three_velocity;
         mat3f orientation;
     };
 }

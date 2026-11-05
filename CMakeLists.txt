@@ -27,7 +27,8 @@ add_library(magik SHARED
         # kernels
         src/renderer/kernels/kernel_generate_thin_lens_ray.cu
         src/renderer/kernels/kernel_splat_to_renderbuffer.cu
-        src/renderer/kernels/kernel_tmp_advance.cu
+        src/renderer/kernels/kernel_generate_initial_conditions.cu
+        src/renderer/kernels/kernel_advance_geodesic.cu
         src/renderer/kernels/kernel_intersect.cu
         src/renderer/kernels/kernel_bxdf.cu
         src/renderer/kernels/kernel_enforce_ray_limits.cu

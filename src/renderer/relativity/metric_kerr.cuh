@@ -5,116 +5,116 @@
 namespace magik
 {
     /* Metric - Components */
-    MAGIK_DEVICE_HOST static constexpr float kerr_schild_r(float dimensionless_x, float dimensionless_y, float dimensionless_z, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static float kerr_schild_r(float dimensionless_x, float dimensionless_y, float dimensionless_z, float dimensionless_spin_parameter)
     {
         float R = (dimensionless_x*dimensionless_x + dimensionless_y*dimensionless_y + dimensionless_z*dimensionless_z - dimensionless_spin_parameter*dimensionless_spin_parameter);
         float r_squared = 0.5f*R + 0.5f*sqrtf(R*R + 4.0f*dimensionless_spin_parameter*dimensionless_spin_parameter*dimensionless_y*dimensionless_y);
         return sqrtf(r_squared);
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_schild_f(float dimensionless_y, float r, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static float kerr_schild_f(float dimensionless_y, float r, float dimensionless_spin_parameter)
     {
         return 2.0f*r*r*r / (r*r*r*r + dimensionless_spin_parameter*dimensionless_spin_parameter*dimensionless_y*dimensionless_y);
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_schild_k_x(float null_congruence_k_x, float null_congruence_k_z, float r, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static float kerr_schild_k_x(float null_congruence_k_x, float null_congruence_k_z, float r, float dimensionless_spin_parameter)
     {
         return (r*null_congruence_k_x - dimensionless_spin_parameter*null_congruence_k_z)/(r*r + dimensionless_spin_parameter*dimensionless_spin_parameter);
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_schild_k_y(float null_congruence_k_y, float r)
+    MAGIK_DEVICE_HOST static float kerr_schild_k_y(float null_congruence_k_y, float r)
     {
         return null_congruence_k_y/r;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_schild_k_z(float null_congruence_k_x, float null_congruence_k_z, float r, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static float kerr_schild_k_z(float null_congruence_k_x, float null_congruence_k_z, float r, float dimensionless_spin_parameter)
     {
         return (r*null_congruence_k_z + dimensionless_spin_parameter*null_congruence_k_x)/(r*r + dimensionless_spin_parameter*dimensionless_spin_parameter);
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_tt(float f)
+    MAGIK_DEVICE_HOST static float kerr_g_tt(float f)
     {
         return -1.0f+f;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_txyz(float f, float null_congruence_k_x)
+    MAGIK_DEVICE_HOST static float kerr_g_txyz(float f, float null_congruence_k_x)
     {
         return f*null_congruence_k_x;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_xx(float f, float null_congruence_k_x)
+    MAGIK_DEVICE_HOST static float kerr_g_xx(float f, float null_congruence_k_x)
     {
         return 1.0f+f*null_congruence_k_x*null_congruence_k_x;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_xy(float f, float null_congruence_k_x, float null_congruence_k_y)
+    MAGIK_DEVICE_HOST static float kerr_g_xy(float f, float null_congruence_k_x, float null_congruence_k_y)
     {
         return f*null_congruence_k_x*null_congruence_k_y;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_xz(float f, float null_congruence_k_x, float null_congruence_k_z)
+    MAGIK_DEVICE_HOST static float kerr_g_xz(float f, float null_congruence_k_x, float null_congruence_k_z)
     {
         return f*null_congruence_k_x*null_congruence_k_z;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_yy(float f, float null_congruence_k_y)
+    MAGIK_DEVICE_HOST static float kerr_g_yy(float f, float null_congruence_k_y)
     {
         return 1.0f+f*null_congruence_k_y*null_congruence_k_y;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_yz(float f, float null_congruence_k_y, float null_congruence_k_z)
+    MAGIK_DEVICE_HOST static float kerr_g_yz(float f, float null_congruence_k_y, float null_congruence_k_z)
     {
         return f*null_congruence_k_y*null_congruence_k_z;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_zz(float f, float null_congruence_k_z)
+    MAGIK_DEVICE_HOST static float kerr_g_zz(float f, float null_congruence_k_z)
     {
         return 1.0f+f*null_congruence_k_z*null_congruence_k_z;
     }
 
     /* Metric - Inverse components */
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_inv_tt(float f)
+    MAGIK_DEVICE_HOST static float kerr_g_inv_tt(float f)
     {
         return -1.0f-f;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_inv_txyz(float f, float null_congruence_k_x)
+    MAGIK_DEVICE_HOST static float kerr_g_inv_txyz(float f, float null_congruence_k_x)
     {
         return f*null_congruence_k_x;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_inv_xx(float f, float null_congruence_k_x)
+    MAGIK_DEVICE_HOST static float kerr_g_inv_xx(float f, float null_congruence_k_x)
     {
         return 1.0f-f*null_congruence_k_x*null_congruence_k_x;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_inv_xy(float f, float null_congruence_k_x, float null_congruence_k_y)
+    MAGIK_DEVICE_HOST static float kerr_g_inv_xy(float f, float null_congruence_k_x, float null_congruence_k_y)
     {
         return -f*null_congruence_k_x*null_congruence_k_y;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_inv_xz(float f, float null_congruence_k_x, float null_congruence_k_z)
+    MAGIK_DEVICE_HOST static float kerr_g_inv_xz(float f, float null_congruence_k_x, float null_congruence_k_z)
     {
         return -f*null_congruence_k_x*null_congruence_k_z;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_inv_yy(float f, float null_congruence_k_y)
+    MAGIK_DEVICE_HOST static float kerr_g_inv_yy(float f, float null_congruence_k_y)
     {
         return 1.0f-f*null_congruence_k_y*null_congruence_k_y;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_inv_yz(float f, float null_congruence_k_y, float null_congruence_k_z)
+    MAGIK_DEVICE_HOST static float kerr_g_inv_yz(float f, float null_congruence_k_y, float null_congruence_k_z)
     {
         return -f*null_congruence_k_y*null_congruence_k_z;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_g_inv_zz(float f, float null_congruence_k_z)
+    MAGIK_DEVICE_HOST static float kerr_g_inv_zz(float f, float null_congruence_k_z)
     {
         return 1.0f-f*null_congruence_k_z*null_congruence_k_z;
     }
 
     /* Metric - Index */
-    MAGIK_DEVICE_HOST static constexpr vec4f kerr_lower_index(vec4f dimensionless_four_position, vec4f contravariant_vector, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static vec4f kerr_lower_index(vec4f dimensionless_four_position, vec4f contravariant_vector, float dimensionless_spin_parameter)
     {
         vec4f output;
 
@@ -132,7 +132,7 @@ namespace magik
         return output;
     }
 
-    MAGIK_DEVICE_HOST static constexpr vec4f kerr_raise_index(vec4f dimensionless_four_position, vec4f covariant_vector, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static vec4f kerr_raise_index(vec4f dimensionless_four_position, vec4f covariant_vector, float dimensionless_spin_parameter)
     {
         vec4f output;
 
@@ -153,7 +153,7 @@ namespace magik
 
 
     /* Rest frame to global */
-    MAGIK_DEVICE_HOST static constexpr float kerr_inner_product_contravariant(vec4f dimensionless_four_position, vec4f u_contravariant, vec4f v_contravariant, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static float kerr_inner_product_contravariant(vec4f dimensionless_four_position, vec4f u_contravariant, vec4f v_contravariant, float dimensionless_spin_parameter)
     {
         float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
         float f = kerr_schild_f(dimensionless_four_position.y, r, dimensionless_spin_parameter);
@@ -173,7 +173,7 @@ namespace magik
              + kerr_g_zz(f, k_z)*u_contravariant.z*v_contravariant.z;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_inner_product_covariant(vec4f dimensionless_four_position, vec4f u_covariant, vec4f v_covariant, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static float kerr_inner_product_covariant(vec4f dimensionless_four_position, vec4f u_covariant, vec4f v_covariant, float dimensionless_spin_parameter)
     {
         float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
         float f = kerr_schild_f(dimensionless_four_position.y, r, dimensionless_spin_parameter);
@@ -193,7 +193,7 @@ namespace magik
              + kerr_g_inv_zz(f, k_z)*u_covariant.z*v_covariant.z;
     }
 
-    MAGIK_DEVICE_HOST static constexpr vec4f kerr_observer_rest_frame_to_global(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_spatial_vector, vec4f dimensionless_observer_four_velocity, float dimensionless_spin_parameter, float squared_norm)
+    MAGIK_DEVICE_HOST static vec4f kerr_observer_rest_frame_to_global(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_spatial_vector, vec4f dimensionless_observer_four_velocity, float dimensionless_spin_parameter, float squared_norm)
     {
         vec4f four_momentum = vec4f{dimensionless_spatial_vector.x, dimensionless_spatial_vector.y, dimensionless_spatial_vector.z, compute_local_timelike_component(dimensionless_spatial_vector, squared_norm)};
 
@@ -224,7 +224,7 @@ namespace magik
 
 
     /* Rest frame velocity */
-    MAGIK_DEVICE_HOST static constexpr float kerr_compute_timelike_component_contravariant(vec4f dimensionless_four_position, vec3f dimensionless_observer_three_vector, float dimensionless_spin_parameter, float squared_norm)
+    MAGIK_DEVICE_HOST static float kerr_compute_timelike_component_contravariant(vec4f dimensionless_four_position, vec3f dimensionless_observer_three_vector, float dimensionless_spin_parameter, float squared_norm)
     {
         float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
         float f = kerr_schild_f(dimensionless_four_position.y, r, dimensionless_spin_parameter);
@@ -245,7 +245,7 @@ namespace magik
         return (-B - sqrtf(B*B - 4.0f*A*C))/(2.0f*A);
     }
 
-    MAGIK_DEVICE_HOST static constexpr float kerr_compute_timelike_component_covariant(vec4f dimensionless_four_position, vec3f dimensionless_observer_three_vector, float dimensionless_spin_parameter, float squared_norm)
+    MAGIK_DEVICE_HOST static float kerr_compute_timelike_component_covariant(vec4f dimensionless_four_position, vec3f dimensionless_observer_three_vector, float dimensionless_spin_parameter, float squared_norm)
     {
         float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
         float f = kerr_schild_f(dimensionless_four_position.y, r, dimensionless_spin_parameter);
@@ -266,7 +266,7 @@ namespace magik
         return (-B - sqrtf(B*B - 4.0f*A*C))/(2.0f*A);
     }
 
-    MAGIK_DEVICE_HOST static constexpr vec4f kerr_object_velocity_from_ZAMO_to_global(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_three_velocity, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static vec4f kerr_object_velocity_from_ZAMO_to_global(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_three_velocity, float dimensionless_spin_parameter)
     {
         float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, dimensionless_spin_parameter);
         float r_sq = r * r;
@@ -293,7 +293,7 @@ namespace magik
 
 
     /* Global to rest frame */
-    MAGIK_DEVICE_HOST static constexpr vec4f kerr_global_to_observer_rest_frame(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec4f dimensionless_four_vector, vec4f dimensionless_observer_four_velocity, float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static vec4f kerr_global_to_observer_rest_frame(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec4f dimensionless_four_vector, vec4f dimensionless_observer_four_velocity, float dimensionless_spin_parameter)
     {
         vec4f covariant_seed_vectors_x = kerr_lower_index(dimensionless_four_position, seed_vectors.X, dimensionless_spin_parameter);
         vec4f covariant_seed_vectors_y = kerr_lower_index(dimensionless_four_position, seed_vectors.Y, dimensionless_spin_parameter);
@@ -324,7 +324,7 @@ namespace magik
 
 
     /* Step function */
-    MAGIK_DEVICE_HOST static constexpr geodesic_step_values kerr_geodesic_eq_rhs(const geodesic_step_values y0, const float dimensionless_spin_parameter)
+    MAGIK_DEVICE_HOST static geodesic_step_values kerr_geodesic_eq_rhs(const geodesic_step_values y0, const float dimensionless_spin_parameter)
     {
         float x = y0.four_position.x;
         float y = y0.four_position.y;
@@ -403,14 +403,40 @@ namespace magik
         float mass_parameter;
         float dimensionless_spin_parameter;
         float event_horizon_scalar;
+
+        float h_max;
+        float abs_tol;
+        float rel_tol;
+        uint32_t n_max;
     };
+
+    template<> inline kerr_metric::params_t kerr_metric::make_params(magik_render_manager* manager)
+    {
+        return {    manager->stage.kerr_mass, 
+                    manager->stage.kerr_spin, 
+                    manager->stage.event_horizon_scalar, 
+                    1000.0f, 
+                    manager->stage.settings.integrator_absolute_error_tolerance, 
+                    manager->stage.settings.integrator_relative_error_tolerance, 
+                    manager->stage.settings.n_integrator_max_substep}; 
+    }
+
+    template<> inline MAGIK_DEVICE_HOST float kerr_metric::initial_h_step()
+    {
+        return 1.0f;
+    }
 
     template<> inline MAGIK_DEVICE_HOST float kerr_metric::length_scale(params_t p)
     {
         return magik::gravitational_constant * p.mass_parameter / (magik::speed_of_light*magik::speed_of_light);
     }
 
-    template<> inline MAGIK_DEVICE_HOST geodesic_step_values kerr_metric::solve_step(geodesic_step_values y0, params_t p)
+    template<> inline MAGIK_DEVICE_HOST geodesic_step_values kerr_metric::solve_step(geodesic_step_values y0, params_t p, float* h_step)
+    {
+        return solve_runge_kutta_fehlberg_45_step(kerr_geodesic_eq_rhs, y0, h_step, p.h_max, p.n_max, p.abs_tol, p.rel_tol, -p.dimensionless_spin_parameter);
+    }
+
+    template<> inline MAGIK_DEVICE_HOST geodesic_step_values kerr_metric::geodesic_rhs(geodesic_step_values y0, params_t p)
     {
         return kerr_geodesic_eq_rhs(y0, p.dimensionless_spin_parameter);
     }

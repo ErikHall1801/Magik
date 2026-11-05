@@ -55,47 +55,6 @@ namespace magik
 		return geodesic_step_values{ v0.four_position / scalar, v0.four_momentum / scalar };
 	}
 
-    struct metric_scale_t
-    {
-        e_magik_spacetime_metric_types metric_type = MINKOWSKI;
-        float schwarzschild_mass_parameter = 6.7329546075E26f;
-        float kerr_mass_parameter = 6.7329546075E26f;
-        float time_scale_scalar = 1.0f;
-    };
-
-    MAGIK_DEVICE_HOST static float compute_length_scale(metric_scale_t metric_scale)
-    {
-        float result;
-
-        switch(metric_scale.metric_type)
-        {
-            case MINKOWSKI:
-            {
-                result = 1.0f;
-                break;
-            };
-
-            case SCHWARZSCHILD:
-            {
-                result = (magik::gravitational_constant * metric_scale.schwarzschild_mass_parameter) / (magik::speed_of_light*magik::speed_of_light);
-                break;
-            };
-
-            case KERR:
-            {
-                result = (magik::gravitational_constant * metric_scale.kerr_mass_parameter) / (magik::speed_of_light*magik::speed_of_light);
-                break;
-            };
-        }
-
-        return result;
-    }
-
-    MAGIK_DEVICE_HOST static float compute_time_scale(metric_scale_t metric_scale)
-    {
-        return (compute_length_scale(metric_scale) / magik::speed_of_light)*metric_scale.time_scale_scalar;
-    }
-
     MAGIK_DEVICE_HOST static float compute_local_timelike_component(vec3f vector, float input_vector_norm)
     {
         return sqrtf(vector.length2() - input_vector_norm);
@@ -108,7 +67,7 @@ namespace magik
         return z;
     }
 
-    MAGIK_DEVICE_HOST static vec4f convert_si_position_to_dimensionless_coordinate_system(vec3f spatial_si_coordinates, float global_time, float length_scale, float time_scale)
+    MAGIK_DEVICE_HOST static vec4f convert_si_position_to_dimensionless_coordinate_system(vec4f spatial_si_coordinates, float global_time, float length_scale, float time_scale)
     {
         return vec4f{spatial_si_coordinates.x / length_scale, spatial_si_coordinates.y / length_scale, spatial_si_coordinates.z / length_scale, global_time / time_scale};
     }
@@ -124,9 +83,15 @@ namespace magik
     {
         struct params_t;
 
+        static params_t make_params(magik_render_manager* manager); // This is somewhat iffy. Sure, it works but we probably want a whole struct passed by reference. For other parameters. 
+
+        static MAGIK_DEVICE_HOST float initial_h_step();
+
         static MAGIK_DEVICE_HOST float length_scale(params_t p);
 
-        static MAGIK_DEVICE_HOST geodesic_step_values solve_step(geodesic_step_values y0, params_t p);
+        static MAGIK_DEVICE_HOST geodesic_step_values solve_step(geodesic_step_values y0, params_t p, float* h_step);
+
+        static MAGIK_DEVICE_HOST geodesic_step_values geodesic_rhs(geodesic_step_values y0, params_t p);
 
         static MAGIK_DEVICE_HOST bool in_domain(vec4f dimensionless_four_position, params_t p);
 
@@ -138,9 +103,28 @@ namespace magik
 
         static MAGIK_DEVICE_HOST vec4f rest_frame_four_velocity(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_three_velocity, params_t p);
 
-        // Squared norm is not needed
         static MAGIK_DEVICE_HOST vec4f global_to_observer_rest_frame(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec4f dimensionless_four_vector, vec4f dimensionless_observer_four_velocity, params_t p);
 
         static MAGIK_DEVICE_HOST vec4f rest_frame_direction_to_global_four_momentum(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_spatial_vector, vec4f dimensionless_observer_four_velocity, float squared_norm, params_t p);
     };
+
+    template<e_magik_spacetime_metric_types... Ts> struct metric_list {};
+
+    using supported_metrics = metric_list
+    <
+    e_magik_spacetime_metric_types::MINKOWSKI,
+    e_magik_spacetime_metric_types::SCHWARZSCHILD,
+    e_magik_spacetime_metric_types::KERR
+    >;
+
+    // match_metrc ?
+    template<class F, e_magik_spacetime_metric_types... Ts> bool match_metrc(e_magik_spacetime_metric_types type, F&& f, metric_list<Ts...>)
+    {
+        return ((type == Ts ? (f(std::integral_constant<e_magik_spacetime_metric_types, Ts>{}), true) : false) || ...);
+    }
+
+    template<class F> bool dispatch_metric(e_magik_spacetime_metric_types type, F&& f)
+    {
+        return match_metrc(type, std::forward<F>(f), supported_metrics{});
+    }
 }

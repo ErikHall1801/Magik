@@ -31,12 +31,21 @@ namespace magik
         spectral_radiance_t,
         intrinsic_spectral_irradiance_t,
         random_device_t,
-        position_t,
-        direction_t,
-        step_distance_t,
-        n_step_t,
+        initial_observer_three_direction_t,
+        initial_observer_three_position_t,
+        initial_four_vector_contraction_t,
+        affine_parameter_t,
+        delta_affine_parameter_t,
+        current_four_position_t,
+        current_four_momentum_t,
+        next_four_position_t,
+        next_four_momentum_t,
+        momentum_derivative_start_t,
+        momentum_derivative_end_t,
         hit_id_t,
-        hit_normal_t> 
+        hit_normal_t,
+        n_geodesic_step_t,
+        n_bounce_t> 
         ray_pool;
 
         // Align up

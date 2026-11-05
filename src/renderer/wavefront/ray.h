@@ -82,6 +82,7 @@ namespace magik
         }
     };
 
+    // Spectral 
     struct sensor_wavelength_nm_t { using type = float; uint32_t n_dimension = 1; };
 
     struct monte_carlo_weight_t { using type = float; uint32_t n_dimension = 1; };
@@ -90,19 +91,41 @@ namespace magik
 
     struct intrinsic_spectral_irradiance_t { using type = float; uint32_t n_dimension = 1; };
 
+    // Randomness
     struct random_device_t { using type = curandState_t; uint32_t n_dimension = 1; };
 
-    struct position_t { using type = vec4f; uint32_t n_dimension = 1; };
+    // Geodesic
+    struct initial_observer_three_direction_t { using type = vec4f; uint32_t n_dimension = 1; };
 
-    struct direction_t { using type = vec4f; uint32_t n_dimension = 1; };
+    struct initial_observer_three_position_t { using type = vec4f; uint32_t n_dimension = 1; };
 
-    struct step_distance_t { using type = float; uint32_t n_dimension = 1; };
+    struct initial_four_vector_contraction_t { using type = float; uint32_t n_dimension = 1; };
 
-    struct n_step_t { using type = uint32_t; uint32_t n_dimension = 1; };
+    struct affine_parameter_t { using type = float; uint32_t n_dimension = 1; };
 
+    struct delta_affine_parameter_t { using type = float; uint32_t n_dimension = 1; };
+
+    struct current_four_position_t { using type = vec4f; uint32_t n_dimension = 1; };
+
+    struct current_four_momentum_t { using type = vec4f; uint32_t n_dimension = 1; };
+
+    struct next_four_position_t { using type = vec4f; uint32_t n_dimension = 1; };
+
+    struct next_four_momentum_t { using type = vec4f; uint32_t n_dimension = 1; };
+
+    struct momentum_derivative_start_t { using type = vec4f; uint32_t n_dimension = 1; };
+
+    struct momentum_derivative_end_t { using type = vec4f; uint32_t n_dimension = 1; };
+
+    // Hit
     struct hit_id_t { using type = uint32_t; uint32_t n_dimension = 1; };
 
     struct hit_normal_t { using type = vec4f; uint32_t n_dimension = 1; }; 
+
+    // Statistics
+    struct n_geodesic_step_t { using type = uint32_t; uint32_t n_dimension = 1; };
+
+    struct n_bounce_t { using type = uint32_t; uint32_t n_dimension = 1; };
 
     template<typename R> struct pool_member_t : R // This is important, this inherets the dimension
     {

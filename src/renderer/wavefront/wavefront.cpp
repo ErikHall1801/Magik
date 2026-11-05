@@ -1,7 +1,8 @@
 #include "wavefront.h"
 #include "kernel_generate_thin_lens_ray.cuh"
 #include "kernel_splat_to_renderbuffer.cuh"
-#include "kernel_tmp_advance.cuh"
+#include "kernel_generate_initial_conditions.cuh"
+#include "kernel_advance_geodesic.cuh"
 #include "kernel_intersect.cuh"
 #include "kernel_bxdf.cuh"
 #include "kernel_enforce_ray_limits.cuh"
@@ -59,8 +60,13 @@ namespace magik
         wavefront_buffer->queue_pool.reset_all_counts(user_stream);
 
         wavefront_buffer->ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<step_distance_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<n_step_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+
+        wavefront_buffer->ray_pool.memset_async<initial_four_vector_contraction_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        wavefront_buffer->ray_pool.memset_async<affine_parameter_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        wavefront_buffer->ray_pool.memset_async<delta_affine_parameter_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+
+        wavefront_buffer->ray_pool.memset_async<n_geodesic_step_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        wavefront_buffer->ray_pool.memset_async<n_bounce_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
 
         wavefront_buffer->queue_pool.set_count_async<advance_A_queue_t>(wavefront_buffer->x_resolution*wavefront_buffer->y_resolution, user_stream);
         wavefront_buffer->queue_ceiling = wavefront_buffer->x_resolution*wavefront_buffer->y_resolution;
@@ -68,6 +74,13 @@ namespace magik
 
     void wavefront_sample(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
+        /*
+        - The spin will be wrong, or at least inconsistent. 
+
+        Yeah well, the bxdf has to be templated right away. And computing reflections will be involved. 
+        As in, i dont want to do that rn xD 
+        */
+
         bool working = true;
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
 
@@ -75,17 +88,11 @@ namespace magik
 
         launch_kernel_generate_thin_lens_ray_async(manager, wavefront_buffer);
 
-        // launch_kernel_generate_initial_geodesic_async
+        launch_kernel_generate_initial_conditions_async(manager, wavefront_buffer);
 
         while(working)
         {
-            // launch_kernel_advance_minkowski_async
-
-            // launch_kernel_advance_schwarzschild_async
-
-            // launch_kernel_advance_kerr_async
-
-            launch_kernel_tmp_advance_async(manager, wavefront_buffer); // To replace this
+            launch_kernel_advance_geodesic_async(manager, wavefront_buffer);
 
             // launch_kernel_intersect_tlas_affine_async
 
@@ -95,7 +102,7 @@ namespace magik
 
             // launch_kernel_intersect_blas_hermite_async
 
-            launch_kernel_intersect_async(manager, wavefront_buffer); // To replace this
+            launch_kernel_intersect_async(manager, wavefront_buffer);
 
             launch_kernel_bxdf_async(manager, wavefront_buffer);
 

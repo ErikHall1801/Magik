@@ -5,29 +5,29 @@
 namespace magik
 {
     /* Metric - Components */
-    MAGIK_DEVICE_HOST static constexpr float minkowski_g_tt()
+    MAGIK_DEVICE_HOST static float minkowski_g_tt()
     {
         return -1.0f;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float minkowski_g_xxyyzz()
+    MAGIK_DEVICE_HOST static float minkowski_g_xxyyzz()
     {
         return 1.0f;
     }
 
     /* Metric - Inverse components */
-    MAGIK_DEVICE_HOST static constexpr float minkowski_g_inv_tt()
+    MAGIK_DEVICE_HOST static float minkowski_g_inv_tt()
     {
-        -1.0f;
+        return -1.0f;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float minkowski_g_inv_xxyyzz()
+    MAGIK_DEVICE_HOST static float minkowski_g_inv_xxyyzz()
     {
         return 1.0f;
     }
 
     /* Metric - Index */
-    MAGIK_DEVICE_HOST static constexpr vec4f minkowski_lower_index(vec4f contravariant_vector)
+    MAGIK_DEVICE_HOST static vec4f minkowski_lower_index(vec4f contravariant_vector)
     {
         vec4f output;
         output.t = minkowski_g_tt()*contravariant_vector.t;
@@ -37,7 +37,7 @@ namespace magik
         return output;
     }
 
-    MAGIK_DEVICE_HOST static constexpr vec4f minkowski_raise_index(vec4f covariant_vector)
+    MAGIK_DEVICE_HOST static vec4f minkowski_raise_index(vec4f covariant_vector)
     {
         vec4f output;
         output.t = minkowski_g_inv_tt()*covariant_vector.t;
@@ -50,7 +50,7 @@ namespace magik
 
 
     /* Rest frame to global frame */
-    MAGIK_DEVICE_HOST static constexpr float minkowski_inner_product_contravariant(vec4f u_contravariant, vec4f v_contravariant)
+    MAGIK_DEVICE_HOST static float minkowski_inner_product_contravariant(vec4f u_contravariant, vec4f v_contravariant)
     {
         return minkowski_g_tt()*u_contravariant.t*v_contravariant.t \
              + minkowski_g_xxyyzz()*u_contravariant.x*v_contravariant.x \
@@ -58,25 +58,15 @@ namespace magik
              + minkowski_g_xxyyzz()*u_contravariant.z*v_contravariant.z;
     }
 
-    MAGIK_DEVICE_HOST static constexpr float minkowski_inner_product_covariant(vec4f u_covariant, vec4f v_covariant)
+    MAGIK_DEVICE_HOST static float minkowski_inner_product_covariant(vec4f u_covariant, vec4f v_covariant)
     {
         return minkowski_g_inv_tt()*u_covariant.t*v_covariant.t \
              + minkowski_g_inv_xxyyzz()*u_covariant.x*v_covariant.x \
              + minkowski_g_inv_xxyyzz()*u_covariant.y*v_covariant.y \
              + minkowski_g_inv_xxyyzz()*u_covariant.z*v_covariant.z;
     }
-
-    struct minkowski_observer_rest_frame_to_global_t
-    {
-        vec4f contravariant_seed_vector_x{}; 
-        vec4f contravariant_seed_vector_y{};
-        vec4f contravariant_seed_vector_z{};
-        vec3f dimensionless_spatial_vector{};
-        vec4f dimensionless_observer_four_velocity{}; 
-        float input_vector_norm{};
-    };
     
-    MAGIK_DEVICE_HOST static constexpr vec4f minkowski_observer_rest_frame_to_global(contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_spatial_vector, vec4f dimensionless_observer_four_velocity, float squared_norm)
+    MAGIK_DEVICE_HOST static vec4f minkowski_observer_rest_frame_to_global(contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_spatial_vector, vec4f dimensionless_observer_four_velocity, float squared_norm)
     {
         vec4f four_momentum = vec4f{dimensionless_spatial_vector.x, dimensionless_spatial_vector.y, dimensionless_spatial_vector.z, compute_local_timelike_component(dimensionless_spatial_vector, squared_norm)};
         
@@ -105,7 +95,7 @@ namespace magik
 
 
     /* Rest frame velocity */
-    MAGIK_DEVICE_HOST static constexpr float minkowski_compute_timelike_component_contravariant(vec3f dimensionless_observer_three_vector, float squard_norm)
+    MAGIK_DEVICE_HOST static float minkowski_compute_timelike_component_contravariant(vec3f dimensionless_observer_three_vector, float squard_norm)
     {
         float A = minkowski_g_tt();
         float C = minkowski_g_xxyyzz()*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.x \
@@ -116,7 +106,7 @@ namespace magik
         return (-sqrtf(-4.0f*A*C))/(2.0f*A);
     }
 
-    MAGIK_DEVICE_HOST static constexpr float minkowski_compute_timelike_component_covariant(vec3f dimensionless_observer_three_vector, float squard_norm)
+    MAGIK_DEVICE_HOST static float minkowski_compute_timelike_component_covariant(vec3f dimensionless_observer_three_vector, float squard_norm)
     { 
         float A = minkowski_g_inv_tt();
         float C = minkowski_g_inv_xxyyzz()*dimensionless_observer_three_vector.x*dimensionless_observer_three_vector.x \
@@ -127,7 +117,7 @@ namespace magik
         return (-sqrtf(-4.0f*A*C))/(2.0f*A);
     }
 
-    MAGIK_DEVICE_HOST static constexpr vec4f minkowski_object_velocity_from_ZAMO_to_global(contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_three_velocity)
+    MAGIK_DEVICE_HOST static vec4f minkowski_object_velocity_from_ZAMO_to_global(contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_three_velocity)
     {
         float squared_norm = -1.0f;
         vec4f ZAMO_four_velocity = vec4f{0.0f, 0.0f, 0.0f, 1.0f};
@@ -137,7 +127,7 @@ namespace magik
 
 
     /* Global to rest frame */
-    MAGIK_DEVICE_HOST static constexpr vec4f minkowski_global_to_observer_rest_frame(contravariant_seed_vectors_t seed_vectors, vec4f dimensionless_four_vector, vec4f dimensionless_observer_four_velocity)
+    MAGIK_DEVICE_HOST static vec4f minkowski_global_to_observer_rest_frame(contravariant_seed_vectors_t seed_vectors, vec4f dimensionless_four_vector, vec4f dimensionless_observer_four_velocity)
     {
         vec4f covariant_seed_vectors_x = minkowski_lower_index(seed_vectors.X);
         vec4f covariant_seed_vectors_y = minkowski_lower_index(seed_vectors.Y);
@@ -168,7 +158,7 @@ namespace magik
 
 
     /* Step function */
-    MAGIK_DEVICE_HOST static constexpr geodesic_step_values minkowski_geodesic_eq_rhs(geodesic_step_values y0)
+    MAGIK_DEVICE_HOST static geodesic_step_values minkowski_geodesic_eq_rhs(geodesic_step_values y0)
     {
         vec4f d_four_momentum = vec4f{0.0f, 0.0f, 0.0f, 0.0f};
         vec4f d_four_position = minkowski_raise_index(y0.four_momentum);
@@ -180,14 +170,32 @@ namespace magik
     /* Specialization */
     using minkowski_metric = metric<e_magik_spacetime_metric_types::MINKOWSKI>;
 
-    template<> struct minkowski_metric::params_t { };
+    template<> struct minkowski_metric::params_t 
+    { 
+
+    };
+
+    template<> inline MAGIK_DEVICE_HOST float minkowski_metric::initial_h_step()
+    {
+        return 1000.0f;
+    }
+
+    template<> inline minkowski_metric::params_t minkowski_metric::make_params(magik_render_manager* managerp)
+    {
+        return {};
+    }
 
     template<> inline MAGIK_DEVICE_HOST float minkowski_metric::length_scale(params_t p)
     {
         return 1.0f;
     }
 
-    template<> inline MAGIK_DEVICE_HOST geodesic_step_values minkowski_metric::solve_step(geodesic_step_values y0, params_t p)
+    template<> inline MAGIK_DEVICE_HOST geodesic_step_values minkowski_metric::solve_step(geodesic_step_values y0, params_t p, float* h_step)
+    {
+        return solve_explicit_euler_step(minkowski_geodesic_eq_rhs, y0, *h_step);
+    }
+
+    template<> inline MAGIK_DEVICE_HOST geodesic_step_values minkowski_metric::geodesic_rhs(geodesic_step_values y0, params_t p)
     {
         return minkowski_geodesic_eq_rhs(y0);
     }
