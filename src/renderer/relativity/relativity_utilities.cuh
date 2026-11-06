@@ -4,7 +4,6 @@
 #include "cuda_host_device_utilities.h"
 #include "internal_math.h"
 #include <cuda_runtime.h>
-#include <concepts>
 
 namespace magik
 {
@@ -83,13 +82,13 @@ namespace magik
     {
         struct params_t;
 
-        static params_t make_params(magik_render_manager* manager); // This is somewhat iffy. Sure, it works but we probably want a whole struct passed by reference. For other parameters. 
+        static params_t make_params(magik_render_manager* manager);
 
         static MAGIK_DEVICE_HOST float initial_h_step();
 
         static MAGIK_DEVICE_HOST float length_scale(params_t p);
 
-        static MAGIK_DEVICE_HOST geodesic_step_values solve_step(geodesic_step_values y0, params_t p, float* h_step);
+        static MAGIK_DEVICE_HOST geodesic_step_values solve_step(geodesic_step_values y0, params_t p, float* h_step, float* h_taken);
 
         static MAGIK_DEVICE_HOST geodesic_step_values geodesic_rhs(geodesic_step_values y0, params_t p);
 
@@ -117,14 +116,13 @@ namespace magik
     e_magik_spacetime_metric_types::KERR
     >;
 
-    // match_metrc ?
-    template<class F, e_magik_spacetime_metric_types... Ts> bool match_metrc(e_magik_spacetime_metric_types type, F&& f, metric_list<Ts...>)
+    template<class F, e_magik_spacetime_metric_types... Ts> bool match_metric(e_magik_spacetime_metric_types type, F&& f, metric_list<Ts...>)
     {
         return ((type == Ts ? (f(std::integral_constant<e_magik_spacetime_metric_types, Ts>{}), true) : false) || ...);
     }
 
     template<class F> bool dispatch_metric(e_magik_spacetime_metric_types type, F&& f)
     {
-        return match_metrc(type, std::forward<F>(f), supported_metrics{});
+        return match_metric(type, std::forward<F>(f), supported_metrics{});
     }
 }

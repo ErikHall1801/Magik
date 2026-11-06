@@ -21,6 +21,6 @@ namespace magik
         float kerr_mass = 6.7329546075E26f;
         float kerr_spin = 0.999f;
 
-        float event_horizon_scalar = 1.0001f;
+        float event_horizon_scalar = 1.001f;
     };
 }

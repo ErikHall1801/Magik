@@ -2157,7 +2157,7 @@ namespace magik
 
         // Numerical ode step solvers
             // Runge Kutta Fehlberg 45 Step
-            template<typename T_function, typename T_state, typename... function_args> MAGIK_DEVICE_HOST constexpr auto solve_runge_kutta_fehlberg_45_step(T_function f, T_state y0, float* h, float h_max, unsigned int n_max, float abs_tol, float rel_tol, function_args... f_args)
+            template<typename T_function, typename T_state, typename... function_args> MAGIK_DEVICE_HOST constexpr auto solve_runge_kutta_fehlberg_45_step(T_function f, T_state y0, float* h, float* h_taken, float h_max, unsigned int n_max, float abs_tol, float rel_tol, function_args... f_args)
             {
                 using ::pow;
 
@@ -2177,7 +2177,7 @@ namespace magik
                     error = -1.0f/360.0f*temp_h*k1 + 128.0f/4275.0f*temp_h*k3 + 2197.0f/75240.0f*temp_h*k4 - 1.0f/50.0f*temp_h*k5 - 2.0f/55.0f*temp_h*k6;
 
                     rms_error = error.compute_rms_error(error, y0, y1, abs_tol, rel_tol);
-                    
+
                     if(rms_error > 1e-30f)
                     {
                         rms_error_safe = rms_error;
@@ -2194,6 +2194,7 @@ namespace magik
                         h_new = h_max;
                     }
 
+                    *h_taken = temp_h; 
                     temp_h = h_new;
 
                     if(rms_error_safe < 1.0f) break;

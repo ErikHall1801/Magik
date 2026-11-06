@@ -404,9 +404,9 @@ namespace magik
         return magik::gravitational_constant * p.mass_parameter / (magik::speed_of_light*magik::speed_of_light);
     }
 
-    template<> inline MAGIK_DEVICE_HOST geodesic_step_values schwarzschild_metric::solve_step(geodesic_step_values y0, params_t p, float* h_step)
+    template<> inline MAGIK_DEVICE_HOST geodesic_step_values schwarzschild_metric::solve_step(geodesic_step_values y0, params_t p, float* h_step, float* h_taken)
     {
-        return solve_runge_kutta_fehlberg_45_step(schwarzschild_geodesic_eq_rhs, y0, h_step, p.h_max, p.n_max, p.abs_tol, p.rel_tol);
+        return solve_runge_kutta_fehlberg_45_step(schwarzschild_geodesic_eq_rhs, y0, h_step, h_taken, p.h_max, p.n_max, p.abs_tol, p.rel_tol);
     }
 
     template<> inline MAGIK_DEVICE_HOST geodesic_step_values schwarzschild_metric::geodesic_rhs(geodesic_step_values y0, params_t p)

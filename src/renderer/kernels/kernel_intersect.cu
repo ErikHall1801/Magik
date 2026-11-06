@@ -118,6 +118,11 @@ namespace magik
 
         wavefront_buffer->queue_pool.zero_count_async<intersect_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
 
-        if(!successful) return; // Error !
+        if(!successful)
+        {
+            e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_ERROR_UNKNOWN_METRIC;
+            manager->atomic_last_error_type.compare_exchange_strong(expected, result);
+            manager->is_running.store(false, std::memory_order_release);
+        }
     }
 }

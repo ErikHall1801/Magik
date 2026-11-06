@@ -190,7 +190,7 @@ namespace magik
         return 1.0f;
     }
 
-    template<> inline MAGIK_DEVICE_HOST geodesic_step_values minkowski_metric::solve_step(geodesic_step_values y0, params_t p, float* h_step)
+    template<> inline MAGIK_DEVICE_HOST geodesic_step_values minkowski_metric::solve_step(geodesic_step_values y0, params_t p, float* h_step, float* h_taken)
     {
         return solve_explicit_euler_step(minkowski_geodesic_eq_rhs, y0, *h_step);
     }

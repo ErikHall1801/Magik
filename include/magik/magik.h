@@ -79,6 +79,7 @@ typedef enum e_magik_result_types
     MAGIK_ERROR_POSITIVE_NORM_TIMELIKE_FOUR_VECTOR = 704,
     MAGIK_ERROR_INCORRECT_PHOTON_NORM_FOUR_VECTOR = 705,
     MAGIK_ERROR_INCORRECT_PARTICLE_NORM_FOUR_VECTOR = 706,
+    MAGIK_ERROR_UNKNOWN_METRIC = 707,
 
     // Lens simulation 800 - 899
     MAGIK_ERROR_LENSLETS_OUT_OF_ORDER = 801,
@@ -593,6 +594,35 @@ typedef enum e_magik_cqs_command_types
     // #######################
     // ### 4000-4999 Scene ###
     // #######################
+    /**
+    * @brief Changes metric to Minkowski
+    */
+   MAGIK_COMMAND_SET_METRIC_MINKOWSKI = 4100,
+
+    /**
+    * @brief Changes metric to Schwarzschild
+    */
+   MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD = 4101,
+
+    /**
+    * @brief Changes metric to Kerr
+    */
+   MAGIK_COMMAND_SET_METRIC_KERR = 4102,
+
+    /**
+    * @brief Set Schwarzschild mass (M >= 0)
+    */
+   MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS = 4103,
+
+    /**
+    * @brief Set Kerr mass (M >= 0)
+    */
+   MAGIK_COMMAND_SET_KERR_MASS = 4104,
+
+    /**
+    * @brief Set Kerr spin (|a| > 0)
+    */
+   MAGIK_COMMAND_SET_KERR_SPIN = 4105,
 
 
     
@@ -699,6 +729,44 @@ typedef struct MAGIK_ALIGN4 magik_command_printf_t
 // #######################
 // ### 4000-4999 Scene ###
 // #######################
+typedef struct MAGIK_ALIGN4 magik_command_set_metric_minkowski_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_MINKOWSKI;
+    uint32_t id = 0;
+} magik_command_set_metric_minkowski_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_metric_schwarzschild_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD;
+    uint32_t id = 0;
+} magik_command_set_metric_schwarzschild_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_metric_kerr_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_KERR;
+    uint32_t id = 0;
+} magik_command_set_metric_kerr_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_schwarzschild_mass_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS;
+    float mass_parameter = 6.7329546075E26f;
+    uint32_t id = 0;
+} magik_command_set_schwarzschild_mass_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_kerr_mass_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_MASS;
+    float mass_parameter = 6.7329546075E26f;
+    uint32_t id = 0;
+} magik_command_set_kerr_mass_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_kerr_spin_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_SPIN;
+    float spin_parameter = 0.999f;
+    uint32_t id = 0;
+} magik_command_set_kerr_spin_t;
 
 
 

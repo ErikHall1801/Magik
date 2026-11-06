@@ -17,15 +17,15 @@ namespace magik
         uint32_t ray_id = d_advance_queue_id[queue_index];
 
         geodesic_step_values y1, y0{d_next_four_position[ray_id], d_next_four_momentum[ray_id]};
-        float h_step = d_delta_affine_parameter[ray_id];
+        float h_step = d_delta_affine_parameter[ray_id], h_taken;
 
-        y1 = metric<T>::solve_step(y0, parameters, &h_step);
+        y1 = metric<T>::solve_step(y0, parameters, &h_step, &h_taken);
 
         d_current_four_position[ray_id] = y0.four_position;
         d_current_four_momentum[ray_id] = y0.four_momentum;
         d_next_four_position[ray_id] = y1.four_position;
         d_next_four_momentum[ray_id] = y1.four_momentum;
-        d_affine_parameter[ray_id] += h_step;
+        d_affine_parameter[ray_id] += h_taken;
         d_delta_affine_parameter[ray_id] = h_step;
 
         geodesic_step_values ys;
@@ -72,6 +72,11 @@ namespace magik
 
         wavefront_buffer->queue_pool.zero_count_async<advance_A_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
 
-        if(!successful) return; // Error 
+        if(!successful)
+        {
+            e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_ERROR_UNKNOWN_METRIC;
+            manager->atomic_last_error_type.compare_exchange_strong(expected, result);
+            manager->is_running.store(false, std::memory_order_release);
+        }
     }
 }

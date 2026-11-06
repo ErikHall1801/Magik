@@ -76,9 +76,7 @@ namespace magik
     {
         /*
         - The spin will be wrong, or at least inconsistent. 
-
-        Yeah well, the bxdf has to be templated right away. And computing reflections will be involved. 
-        As in, i dont want to do that rn xD 
+        - When kernels throw errors, they should save them to the last error eh ! 
         */
 
         bool working = true;
