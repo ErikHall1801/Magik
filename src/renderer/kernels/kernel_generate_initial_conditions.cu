@@ -24,7 +24,7 @@ namespace magik
         float m_length_scale = metric<T>::length_scale(parameters);
         vec4f initial_four_position = convert_si_position_to_dimensionless_coordinate_system(observer_three_position, 1.0f, m_length_scale, m_length_scale/magik::speed_of_light);
         vec4f four_velocity = metric<T>::rest_frame_four_velocity(initial_four_position, seed_vector, global_three_velocity/magik::speed_of_light, parameters);
-        vec4f initial_four_momentum = metric<T>::rest_frame_direction_to_global_four_momentum(initial_four_position, seed_vector, vec3f{observer_three_position.x, observer_three_position.y, observer_three_position.z}/m_length_scale, four_velocity, 0.0f, parameters);
+        vec4f initial_four_momentum = metric<T>::rest_frame_direction_to_global_four_momentum(initial_four_position, seed_vector, vec3f{observer_three_direction.x, observer_three_direction.y, observer_three_direction.z}/m_length_scale, four_velocity, 0.0f, parameters);
 
         d_current_four_position[thread_id] = initial_four_position;
         d_current_four_momentum[thread_id] = initial_four_momentum;

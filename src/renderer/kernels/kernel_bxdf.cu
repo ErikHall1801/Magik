@@ -103,7 +103,7 @@ namespace magik
 
             to_advance = true;*/
 
-            d_spectral_radiance[ray_id] = magik::sample_plancks_law<float>(d_sensor_wavelength_nm[ray_id], 1600.0f) * 0.5f;
+            d_spectral_radiance[ray_id] = magik::sample_plancks_law<float>(d_sensor_wavelength_nm[ray_id], 2600.0f) * 0.5f;
             to_advance = false;
         }
         else if(hit_id == 2)

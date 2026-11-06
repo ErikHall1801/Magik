@@ -19,7 +19,7 @@ namespace magik
         float redistribution_standard_deviation = 10.0f;
 
         // Relativistic integration
-        e_magik_spacetime_metric_types metric_type = e_magik_spacetime_metric_types::MINKOWSKI;
+        e_magik_spacetime_metric_types metric_type = e_magik_spacetime_metric_types::KERR;
         float integrator_absolute_error_tolerance = 1e-2f;
         float integrator_relative_error_tolerance = 1e-10f;
         uint32_t n_integrator_max_substep = 56;

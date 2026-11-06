@@ -472,6 +472,6 @@ namespace magik
     template<> inline MAGIK_DEVICE_HOST vec4f kerr_metric::rest_frame_direction_to_global_four_momentum(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_spatial_vector, vec4f dimensionless_observer_four_velocity, float squared_norm, params_t p)
     {
         vec4f vector = kerr_observer_rest_frame_to_global(dimensionless_four_position, seed_vectors, dimensionless_spatial_vector, dimensionless_observer_four_velocity, p.dimensionless_spin_parameter, squared_norm);
-        return kerr_raise_index(dimensionless_four_position, vector, p.dimensionless_spin_parameter);
+        return kerr_lower_index(dimensionless_four_position, vector, p.dimensionless_spin_parameter);
     }
 }

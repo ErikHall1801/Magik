@@ -228,6 +228,6 @@ namespace magik
     template<> inline MAGIK_DEVICE_HOST vec4f minkowski_metric::rest_frame_direction_to_global_four_momentum(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_spatial_vector, vec4f dimensionless_observer_four_velocity, float squared_norm, params_t p)
     {
         vec4f vector = minkowski_observer_rest_frame_to_global(seed_vectors, dimensionless_spatial_vector, dimensionless_observer_four_velocity, squared_norm);
-        return minkowski_raise_index(vector);
+        return minkowski_lower_index(vector);
     }
 }

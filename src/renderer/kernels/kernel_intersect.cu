@@ -30,7 +30,7 @@ namespace magik
         vec4f next_four_position = d_next_four_position[ray_id] * length_scale;
 
         vec3f origin = vec3f{current_four_position.x, current_four_position.y, current_four_position.z};
-        vec3f direction = vec3f{current_four_position.x - next_four_position.x, current_four_position.y - next_four_position.y, current_four_position.z - next_four_position.z}.norm();
+        vec3f direction = vec3f{next_four_position.x - current_four_position.x, next_four_position.y - current_four_position.y, next_four_position.z - current_four_position.z}.norm();
         float step_euclidian = vector_distance(vec3f{current_four_position.x, current_four_position.y, current_four_position.z}, vec3f{next_four_position.x, next_four_position.y, next_four_position.z});
 
         // 3. Do work
@@ -63,7 +63,7 @@ namespace magik
             }
         }
 
-        if(!hit_any && metric<T>::in_domain(current_four_position/length_scale, parameters))
+        if(!hit_any && metric<T>::in_domain(next_four_position/length_scale, parameters))
         {
             hit_any = true;
             closest_hit = 1.0f;
