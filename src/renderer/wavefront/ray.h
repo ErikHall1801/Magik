@@ -118,14 +118,14 @@ namespace magik
     struct momentum_derivative_end_t { using type = vec4f; uint32_t n_dimension = 1; };
 
     // Hit
-    struct hit_id_t { using type = uint32_t; uint32_t n_dimension = 1; };
+    struct hit_matter_slot_t { using type = uint32_t; uint32_t n_dimension = 1; };
 
     struct hit_normal_t { using type = vec4f; uint32_t n_dimension = 1; }; 
 
     // Statistics
     struct n_geodesic_step_t { using type = uint32_t; uint32_t n_dimension = 1; };
 
-    struct n_bounce_t { using type = uint32_t; uint32_t n_dimension = 1; };
+    struct n_reflected_t { using type = uint32_t; uint32_t n_dimension = 1; };
 
     template<typename R> struct pool_member_t : R // This is important, this inherets the dimension
     {

@@ -67,6 +67,8 @@ namespace magik
 
             case MAGIK_COMMAND_SET_CAMERA_RESOLUTION: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_resolution_t); break; }
 
+            case MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_three_velocity_t); break; }
+
 
 
             // #################################
@@ -269,6 +271,17 @@ namespace magik
 
                 manager->stage.optical_systen.x_resolution = cmd.x_resolution;
                 manager->stage.optical_systen.y_resolution = cmd.y_resolution;
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY:
+            {
+                magik_command_set_camera_three_velocity_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.optical_systen.local_three_velocity = vec3f{cmd.velocity_x, cmd.velocity_y, cmd.velocity_z};
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;

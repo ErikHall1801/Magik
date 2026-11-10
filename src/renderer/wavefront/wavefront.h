@@ -42,10 +42,10 @@ namespace magik
         next_four_momentum_t,
         momentum_derivative_start_t,
         momentum_derivative_end_t,
-        hit_id_t,
+        hit_matter_slot_t,
         hit_normal_t,
         n_geodesic_step_t,
-        n_bounce_t> 
+        n_reflected_t> 
         ray_pool;
 
         // Align up

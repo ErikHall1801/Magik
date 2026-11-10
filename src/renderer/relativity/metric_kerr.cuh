@@ -314,10 +314,10 @@ namespace magik
         e_y = e_y / sqrtf(kerr_inner_product_covariant(dimensionless_four_position, e_y, e_y, dimensionless_spin_parameter));
 
         vec4f result;
-        result.t = e_t.t*dimensionless_four_position.t + e_t.x*dimensionless_four_position.x + e_t.y*dimensionless_four_position.y + e_t.z*dimensionless_four_position.z;
-        result.x = e_x.t*dimensionless_four_position.t + e_x.x*dimensionless_four_position.x + e_x.y*dimensionless_four_position.y + e_x.z*dimensionless_four_position.z;
-        result.y = e_y.t*dimensionless_four_position.t + e_y.x*dimensionless_four_position.x + e_y.y*dimensionless_four_position.y + e_y.z*dimensionless_four_position.z;
-        result.z = e_z.t*dimensionless_four_position.t + e_z.x*dimensionless_four_position.x + e_z.y*dimensionless_four_position.y + e_z.z*dimensionless_four_position.z;
+        result.t = e_t.t*dimensionless_four_vector.t + e_t.x*dimensionless_four_vector.x + e_t.y*dimensionless_four_vector.y + e_t.z*dimensionless_four_vector.z;
+        result.x = e_x.t*dimensionless_four_vector.t + e_x.x*dimensionless_four_vector.x + e_x.y*dimensionless_four_vector.y + e_x.z*dimensionless_four_vector.z;
+        result.y = e_y.t*dimensionless_four_vector.t + e_y.x*dimensionless_four_vector.x + e_y.y*dimensionless_four_vector.y + e_y.z*dimensionless_four_vector.z;
+        result.z = e_z.t*dimensionless_four_vector.t + e_z.x*dimensionless_four_vector.x + e_z.y*dimensionless_four_vector.y + e_z.z*dimensionless_four_vector.z;
         return result;
     }
 

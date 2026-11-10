@@ -10,7 +10,7 @@
 
 namespace magik
 {
-    template<e_magik_spacetime_metric_types T> static __global__ void kernel_intersect(typename metric<T>::params_t parameters, vec4f* d_current_four_position, vec4f* d_next_four_position, uint32_t* hit_id, vec4f* hit_normal, uint32_t* d_intersect_queue_count, uint32_t* d_intersect_queue_id, uint32_t* d_advance_queue_A_count, uint32_t* d_advance_queue_A_id, uint32_t* d_bxdf_queue_count, uint32_t* d_bxdf_queue_id, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max)
+    template<e_magik_spacetime_metric_types T> static __global__ void kernel_intersect(typename metric<T>::params_t parameters, vec4f* d_current_four_position, vec4f* d_next_four_position, uint32_t* d_hit_matter_slot, vec4f* d_hit_normal, uint32_t* d_intersect_queue_count, uint32_t* d_intersect_queue_id, uint32_t* d_advance_queue_A_count, uint32_t* d_advance_queue_A_id, uint32_t* d_bxdf_queue_count, uint32_t* d_bxdf_queue_id, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max, float celestial_sphere_radius, vec3f observer_origin)
     {
         // Reads "intersect queue"
         // Writes "advance queue" or "bxdf queue"
@@ -18,12 +18,6 @@ namespace magik
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
         if(queue_index >= *d_intersect_queue_count) return;
         uint32_t ray_id = d_intersect_queue_id[queue_index];
-
-        // What is the strategy ? Well, we have to find the closest intersection. 
-        // Being inside the domaine means the ray hit it. Or, at least, the next four
-        // position is inside. So if anything is closer, its closer. Meaning, we check
-        // the domaine last, since if we know something is closer, we dont need to
-        // check. 
 
         float length_scale = metric<T>::length_scale(parameters);
         vec4f current_four_position = d_current_four_position[ray_id] * length_scale;
@@ -35,7 +29,7 @@ namespace magik
 
         // 3. Do work
         bool hit_any = false;
-        uint32_t local_hit_id = 0;
+        uint32_t local_hit_id = 0; // That is ok, if nothing is hit the implication is null-matter. 
 
         float closest_hit = 1e30f;
         vec3f closest_normal;
@@ -47,7 +41,7 @@ namespace magik
             closest_hit = candidate_hit_parameter;
             closest_normal = candidate_hit_normal;
             hit_any = true;
-            local_hit_id = 1;
+            local_hit_id = 1; // Diffuse
         }
 
         candidate_hit_parameter = 1e30f;
@@ -59,7 +53,20 @@ namespace magik
                 closest_hit = candidate_hit_parameter;
                 closest_normal = candidate_hit_normal;
                 hit_any = true;
-                local_hit_id = 2;
+                local_hit_id = 2; // Illuminant
+            }
+        }
+
+        candidate_hit_parameter = 1e30f;
+
+        if(affine_celestial_sphere_intersection(&candidate_hit_parameter, &candidate_hit_normal, length_scale, d_current_four_position[ray_id], d_next_four_position[ray_id], celestial_sphere_radius, observer_origin))
+        {
+            if(candidate_hit_parameter < closest_hit)
+            {
+                closest_hit = candidate_hit_parameter;
+                closest_normal = candidate_hit_normal;
+                hit_any = true;
+                local_hit_id = 3;
             }
         }
 
@@ -67,7 +74,7 @@ namespace magik
         {
             hit_any = true;
             closest_hit = 1.0f;
-            local_hit_id = 3;
+            local_hit_id = 3; // 0th slot is reservered for the horizon !
         }
 
         // 4. Append to queues
@@ -79,9 +86,8 @@ namespace magik
             d_bxdf_queue_id[slot] = ray_id;
 
             d_next_four_position[ray_id] = lerp(current_four_position, next_four_position, closest_hit)/length_scale;
-
-            hit_id[ray_id] = local_hit_id;
-            hit_normal[ray_id] = vec4f{closest_normal.x, closest_normal.y, closest_normal.z, 0.0f};
+            d_hit_matter_slot[ray_id] = local_hit_id;
+            d_hit_normal[ray_id] = vec4f{closest_normal.x, closest_normal.y, closest_normal.z, 0.0f};
         }
         else
         {
@@ -98,7 +104,7 @@ namespace magik
         vec4f* d_current_four_position = wavefront_buffer->ray_pool.get<current_four_position_t>();
         vec4f* d_next_four_position = wavefront_buffer->ray_pool.get<next_four_position_t>();
 
-        uint32_t* d_hit_id = wavefront_buffer->ray_pool.get<hit_id_t>();
+        uint32_t* d_hit_matter_slot = wavefront_buffer->ray_pool.get<hit_matter_slot_t>();
         vec4f* d_hit_normal = wavefront_buffer->ray_pool.get<hit_normal_t>();
 
         uint32_t* d_intersect_queue_count = wavefront_buffer->queue_pool.get_count_ptr<intersect_queue_t>();
@@ -111,7 +117,7 @@ namespace magik
         bool successful = dispatch_metric(manager->stage.settings.metric_type, [&](auto tag)
         {
             constexpr auto T = decltype(tag)::value;
-            kernel_intersect<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager), d_current_four_position, d_next_four_position, d_hit_id, d_hit_normal, d_intersect_queue_count, d_intersect_queue_id, d_advance_queue_A_count, d_advance_queue_A_id, d_bxdf_queue_count, d_bxdf_queue_id, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
+            kernel_intersect<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager), d_current_four_position, d_next_four_position, d_hit_matter_slot, d_hit_normal, d_intersect_queue_count, d_intersect_queue_id, d_advance_queue_A_count, d_advance_queue_A_id, d_bxdf_queue_count, d_bxdf_queue_id, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max, manager->stage.celestial_sphere_radius, manager->stage.optical_systen.position);
         });
 
         check_cuda_errors(cudaGetLastError());

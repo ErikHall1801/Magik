@@ -649,6 +649,12 @@ typedef enum e_magik_cqs_command_types
     */
     MAGIK_COMMAND_SET_CAMERA_RESOLUTION = 5003,
 
+    /**
+    * @brief Set the cameras local three velocity. The velocity is naturally bound to 
+    * the speed of light.      
+    */
+    MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY = 5004,
+
 
 
     // #################################
@@ -803,6 +809,14 @@ typedef struct MAGIK_ALIGN4 magik_command_set_camera_resolution_t
     uint32_t x_resolution = 2;
     uint32_t y_resolution = 2;
 } magik_command_set_camera_resolution_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_camera_three_velocity_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY;
+    float velocity_x = 0.0f;
+    float velocity_y = 0.0f;
+    float velocity_z = 0.0f;
+} magik_command_set_camera_three_velocity_t;
 
 
 

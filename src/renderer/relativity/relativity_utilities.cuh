@@ -73,9 +73,9 @@ namespace magik
 
     struct contravariant_seed_vectors_t
     {
-        vec4f X{};
-        vec4f Y{};
-        vec4f Z{};
+        vec4f X{1.0f, 0.0f, 0.0f, 0.0f};
+        vec4f Y{0.0f, 1.0f, 0.0f, 0.0f};
+        vec4f Z{0.0f, 0.0f, 1.0f, 0.0f};
     };
 
     template<e_magik_spacetime_metric_types T_metric> struct metric
