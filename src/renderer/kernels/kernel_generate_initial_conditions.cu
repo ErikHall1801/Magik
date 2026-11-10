@@ -59,7 +59,7 @@ namespace magik
         seed_vector.Y = { local_basis_y.x, local_basis_y.y, local_basis_y.z, 0.0f };
         seed_vector.Z = { local_basis_z.x, local_basis_z.y, local_basis_z.z, 0.0f };
 
-        global_three_velocity = manager->stage.optical_systen.orientation * -manager->stage.optical_systen.local_three_velocity;
+        global_three_velocity = -manager->stage.optical_systen.local_proper_velocity;
 
         bool successful = dispatch_metric(manager->stage.settings.metric_type, [&](auto tag)
         {

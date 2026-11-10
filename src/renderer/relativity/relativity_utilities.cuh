@@ -62,7 +62,7 @@ namespace magik
     MAGIK_DEVICE_HOST static float compute_redshift_factor(float initial_four_vector_contraction, vec4f four_velocity, vec4f four_momentum)
     {
         float z = initial_four_vector_contraction / vector_dot_product(four_velocity, four_momentum);
-        if(isnan(z) || isinf(z)) z = 100000.0f;
+        if(isnan(z) || isinf(z)) z = 1e-10f;
         return z;
     }
 

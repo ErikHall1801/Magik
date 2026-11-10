@@ -32,7 +32,7 @@ namespace magik
     static void is_work_done_sync(bool* working, uint32_t* queue_ceiling, uint32_t* advance_d_count, void** user_stream)
     {
         memcpy_device_to_host_async(advance_d_count, queue_ceiling, sizeof(uint32_t), user_stream);
-        check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
+        // check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
         check_cuda_errors(cudaGetLastError());
 
         if(*queue_ceiling == 0)
@@ -75,39 +75,13 @@ namespace magik
     void wavefront_sample(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
         /*
-        # Remaining items #
+        ### Goal for tomorrow
         - Wavefront performance metrics 
-        - Russian roulette 
+        - Update the various kernels to use structs and .create() member functions for the arguments 
         - Host API functions 
-        - h_step sorting
-        - Bucket sort is simple enough to implement ourselves, so that should be next. 
-
-        5. Sort the bxdf queue by hit-matter type slot. We want to sort the queue such that adjacent 
-           elements in it point to rays which hit the same matter type. 
-           We want something simple here, Bucket sort seems to be the answer. How does this work ? It
-           involves several steps. First, lets define the buffers;
-           - d_bxdf_queue_id & d_bxdf_queue_count; Same as we have now 
-           - d_bxdf_queue_sorted
-           - d_hit_matter_slot; A ray-pool member
-           Then there are some related to the sort. All of these are the same size as the number of 
-           matter types. 
-           - d_matter_count; Rays per slot, that is how many rays hit this matter type  
-           - d_matter_offset; Where each slot group starts in the sorted queue
-           - d_matter_cursor; Write position during the scatter. 
-           Now we can consider the three steps. The first happens during the intersection. We use 
-           the matter slot from the hit object to index into the d_matter_count and increment the
-           number using atomics.
-           Then we generate the offsets. Now note, these offsets are only valid for the sorted 
-           queue ! 
-           The scatter is very simple too. We basically just look at the ray pool for each item
-           of the unsorted queue and insert it based on the cursor. Which is to say, the cursor
-           for each matter type starts at the first element of the sorted array, then we can 
-           just use atomics to add it.  
-
-        6. We will not get around having to launch # queue ceiling many threads and all matter kernels. 
-           But we can be smarter about the rejection. We can give each kernel some info about the 
-           sorted queue, most pressingly which slots there are and their range. This way the kernels 
-           can pull less memory and potentially terminate faster. 
+        
+        - h_step sorting (Radix sort ?)
+        - Matter slot sorting (Bucket sort)
         */
 
         bool working = true;

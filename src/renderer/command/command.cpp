@@ -281,7 +281,7 @@ namespace magik
                 magik_command_set_camera_three_velocity_t cmd;
                 memcpy(&cmd, playhead, command_size);
 
-                manager->stage.optical_systen.local_three_velocity = vec3f{cmd.velocity_x, cmd.velocity_y, cmd.velocity_z};
+                manager->stage.optical_systen.local_proper_velocity = vec3f{cmd.velocity_x, cmd.velocity_y, cmd.velocity_z};
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;

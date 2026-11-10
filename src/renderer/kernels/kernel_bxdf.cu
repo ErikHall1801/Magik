@@ -75,9 +75,9 @@ namespace magik
         if(matter_slot != kernel_matter_slot) return;
 
         bxdf_velocity_context v_context = generate_velocity_context(args.d_sensor_wavelength_nm[ray_id], metric<T>::length_scale(metric_parameters), args.d_initial_four_vector_contraction[ray_id], args.d_affine_parameter[ray_id], args.d_delta_affine_parameter[ray_id], args.d_monte_carlo_weight[ray_id], args.d_current_four_position[ray_id], args.d_current_four_momentum[ray_id], args.d_next_four_position[ray_id], args.d_next_four_momentum[ray_id], args.d_momentum_derivative_start[ray_id], args.d_momentum_derivative_end[ray_id], vec3f{args.d_hit_normal[ray_id].x, args.d_hit_normal[ray_id].y, args.d_hit_normal[ray_id].z}, &args.d_random_device[ray_id]);
-        vec3f result_three_velocity = bxdf_matter::velocity_function(v_context);
+        vec3f result_three_velocity = -bxdf_matter::local_proper_velocity_function(v_context); // Negated so authors direct physical velocities
 
-        bxdf_material_context m_context = generate_material_context<T>(metric_parameters, v_context, result_three_velocity);
+        bxdf_material_context m_context = generate_material_context<T>(metric_parameters, v_context, -result_three_velocity / magik::speed_of_light);
         bxdf_result result_material = bxdf_matter::material_function(m_context);
 
         apply_bxdf_result<T>(metric_parameters, result_material, ray_id, args.d_n_reflected, args.d_spectral_radiance, args.d_current_four_position, args.d_current_four_momentum, args.d_next_four_position, args.d_next_four_momentum, args.d_initial_four_vector_contraction, args.d_monte_carlo_weight, m_context.redshift_factor, m_context.dimensionless_four_velocity, m_context.global_frame_facing_normal);

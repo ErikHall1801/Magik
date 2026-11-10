@@ -433,7 +433,7 @@ namespace magik
 
     template<> inline MAGIK_DEVICE_HOST geodesic_step_values kerr_metric::solve_step(geodesic_step_values y0, params_t p, float* h_step, float* h_taken)
     {
-        return solve_runge_kutta_fehlberg_45_step(kerr_geodesic_eq_rhs, y0, h_step, h_taken, p.h_max, p.n_max, p.abs_tol, p.rel_tol, -p.dimensionless_spin_parameter);
+        return solve_runge_kutta_fehlberg_45_step(kerr_geodesic_eq_rhs, y0, h_step, h_taken, p.h_max, p.n_max, p.abs_tol, p.rel_tol, p.dimensionless_spin_parameter);
     }
 
     template<> inline MAGIK_DEVICE_HOST geodesic_step_values kerr_metric::geodesic_rhs(geodesic_step_values y0, params_t p)

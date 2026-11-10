@@ -19,7 +19,7 @@ namespace magik
 
     struct bxdf_null_matter_t
     {
-        static __device__ vec3f velocity_function(const bxdf_velocity_context& v_context)
+        static __device__ vec3f local_proper_velocity_function(const bxdf_velocity_context& v_context)
         {
             return vec3f{0.0f, 0.0f, 0.0f};
         }
@@ -32,7 +32,7 @@ namespace magik
 
     struct bxdf_diffuse_matter_t
     {
-        static __device__ vec3f velocity_function(const bxdf_velocity_context& v_context)
+        static __device__ vec3f local_proper_velocity_function(const bxdf_velocity_context& v_context)
         {
             return vec3f{0.0f, 0.0f, 0.0f};
         }
@@ -50,7 +50,7 @@ namespace magik
 
     struct bxdf_illuminant_matter_t
     {
-        static __device__ vec3f velocity_function(const bxdf_velocity_context& v_context)
+        static __device__ vec3f local_proper_velocity_function(const bxdf_velocity_context& v_context)
         {
             return vec3f{0.0f, 0.0f, 0.0f};
         }
@@ -69,7 +69,7 @@ namespace magik
 
     struct bxdf_horizon_matter_t
     {
-        static __device__ vec3f velocity_function(const bxdf_velocity_context& v_context)
+        static __device__ vec3f local_proper_velocity_function(const bxdf_velocity_context& v_context)
         {
             return vec3f{0.0f, 0.0f, 0.0f};
         }

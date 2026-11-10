@@ -155,7 +155,7 @@ namespace magik
 
     template<e_magik_spacetime_metric_types T> static __device__ __inline__ void apply_absorbed(uint32_t ray_id, float* d_spectral_radiance, float* d_monte_carlo_weight, float redshift_factor, bxdf_result result)
     {
-        float boosted_spectral_radiance = result.spectral_radiance / (redshift_factor*redshift_factor*redshift_factor*redshift_factor*redshift_factor);
+        float boosted_spectral_radiance = result.spectral_radiance * (redshift_factor*redshift_factor*redshift_factor*redshift_factor*redshift_factor);
         if(isnan(boosted_spectral_radiance) || isinf(boosted_spectral_radiance) || boosted_spectral_radiance < 0.0f) boosted_spectral_radiance = 0.0f;
 
         d_spectral_radiance[ray_id] = boosted_spectral_radiance;
