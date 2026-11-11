@@ -95,9 +95,9 @@ namespace magik
     struct random_device_t { using type = curandState_t; uint32_t n_dimension = 1; };
 
     // Geodesic
-    struct initial_observer_three_direction_t { using type = vec4f; uint32_t n_dimension = 1; };
+    struct initial_observer_spatial_direction_t { using type = vec4f; uint32_t n_dimension = 1; };
 
-    struct initial_observer_three_position_t { using type = vec4f; uint32_t n_dimension = 1; };
+    struct initial_observer_spatial_position_t { using type = vec4f; uint32_t n_dimension = 1; };
 
     struct initial_four_vector_contraction_t { using type = float; uint32_t n_dimension = 1; };
 

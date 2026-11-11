@@ -77,11 +77,17 @@ namespace magik
         /*
         ### Goal for tomorrow
         - Wavefront performance metrics 
-        - Update the various kernels to use structs and .create() member functions for the arguments 
+            - We should use implot to visualize the data
+            - One important question is how we will actually send the data to the DCC. The async
+              nature makes this tricky. The DCC could give the host memory for the data, then the 
+              renderer writes to it. But that is iffy as hell. 
+              Note that this issue does not apply to the API functions. Those do not run on Magik's
+              thread. 
         - Host API functions 
+            - These are likely much easier to do first. 
         
         - h_step sorting (Radix sort ?)
-        - Matter slot sorting (Bucket sort)
+        - Matter slot sorting (Bucket sort) 
         */
 
         bool working = true;
