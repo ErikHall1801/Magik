@@ -26,24 +26,48 @@
 
 namespace magik
 {
+    // In the future we will want to expand this logic to accept user-defined malloc and free 
+    // alternatives. 
+
     struct host_mem_arena
     {
-        uint64_t reserve_size; // This does not change once the arena has been created. 
-        uint64_t commit_size; // But this is also not changing ? 
-
-        uint64_t pos; // Where the actual memory is 
-        uint64_t commit_pos; // Where the committed memory is 
+        uint8_t* h_base = nullptr;
+        uint64_t base_offset = 0;
+        uint64_t capacity = 0;
     };
 
-    e_magik_result_types arena_create(magik_render_manager* manager, host_mem_arena** arena, uint64_t reserve_size, uint64_t commit_size, host_mem_reserve_function user_host_mem_reserve_func, host_mem_commit_function user_host_mem_commit_func);
+    static inline host_mem_arena host_arena_create(uint64_t size)
+    {
+        host_mem_arena arena{};
+        void* p = nullptr;
+        p = std::malloc(size);
+        arena.h_base = static_cast<uint8_t*>(p);
+        arena.base_offset = 0;
+        arena.capacity = size;
+        return arena;
+    }
 
-    void arena_destroy(magik_render_manager* manager, host_mem_arena* host_arena, host_mem_release_function user_host_mem_release_func);
+    static inline void host_arena_destroy(host_mem_arena* arena)
+    {
+        if(arena->h_base == nullptr) return;
 
-    e_magik_result_types arena_push(magik_render_manager* manager, host_mem_arena* host_arena, void** dst_ptr, uint64_t size, host_mem_commit_function user_host_mem_commit_func, bool non_zero);
+        std::free(arena->h_base);
+        *arena = {};
+    }
 
-    void arena_pop(magik_render_manager* manager, host_mem_arena* host_arena, uint64_t size);
+    static inline void* host_arena_push(host_mem_arena* arena, uint64_t size, uint64_t align = 256)
+    {
+        uint64_t addr = (uint64_t)arena->h_base + arena->base_offset;
+        uint64_t start = (((addr + align - 1) & ~(align - 1)) - (uint64_t)arena->h_base);
 
-    void arean_pop_to(magik_render_manager* manager, host_mem_arena* host_arena, uint64_t pos);
+        if (start > arena->capacity || size > arena->capacity - start) return nullptr;
 
-    void arena_clear(magik_render_manager* manager, host_mem_arena* host_arena); 
+        arena->base_offset = start + size;
+        return arena->h_base + start;
+    }
+
+    static inline void host_arena_clear(host_mem_arena* arena)
+    {
+        arena->base_offset = 0;
+    }
 }

@@ -47,7 +47,7 @@ namespace magik
             seed_vector.Y = { local_basis_y.x, local_basis_y.y, local_basis_y.z, 0.0f };
             seed_vector.Z = { local_basis_z.x, local_basis_z.y, local_basis_z.z, 0.0f };
 
-            local_proper_velocity = -manager->stage.optical_systen.local_proper_velocity;
+            local_proper_velocity = manager->stage.optical_systen.local_proper_velocity;
         }
     };
 
@@ -64,7 +64,7 @@ namespace magik
 
         float m_length_scale = metric<T>::length_scale(metric_parameters);
         vec4f initial_four_position = convert_si_position_to_dimensionless_coordinate_system(observer_three_position, 1.0f, m_length_scale, m_length_scale/magik::speed_of_light);
-        vec4f four_velocity = metric<T>::rest_frame_four_velocity(initial_four_position, args.seed_vector, args.local_proper_velocity/magik::speed_of_light, metric_parameters);
+        vec4f four_velocity = metric<T>::rest_frame_four_velocity(initial_four_position, contravariant_seed_vectors_t{}, args.local_proper_velocity/magik::speed_of_light, metric_parameters);
         vec4f initial_four_momentum = metric<T>::rest_frame_direction_to_global_four_momentum(initial_four_position, args.seed_vector, vec3f{observer_three_direction.x, observer_three_direction.y, observer_three_direction.z}/m_length_scale, four_velocity, 0.0f, metric_parameters);
 
         args.d_current_four_position[thread_id] = initial_four_position;
@@ -82,11 +82,12 @@ namespace magik
 
         kernel_generate_initial_conditions_args_t args;
         args.create(manager, wavefront_buffer);
+        bool time_reversed = true;
 
         bool successful = dispatch_metric(manager->stage.settings.metric_type, [&](auto tag)
         {
             constexpr auto T = decltype(tag)::value;
-            kernel_generate_initial_conditions<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager), args);
+            kernel_generate_initial_conditions<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager, time_reversed), args);
         });
 
         check_cuda_errors(cudaGetLastError());

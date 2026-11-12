@@ -119,11 +119,12 @@ namespace magik
 
         kernel_bxdf_args_t args;
         args.create(wavefront_buffer);
+        bool time_reversed = true;
 
         bool successful = dispatch_metric(manager->stage.settings.metric_type, [&](auto tag)
         {
             constexpr auto T = decltype(tag)::value;
-            launch_all_matter_types<T>(metric<T>::make_params(manager), threads_per_block, n_block, static_cast<cudaStream_t>(manager->cuda_stream), args, registered_matter{});
+            launch_all_matter_types<T>(metric<T>::make_params(manager, time_reversed), threads_per_block, n_block, static_cast<cudaStream_t>(manager->cuda_stream), args, registered_matter{});
         });
 
         check_cuda_errors(cudaGetLastError());

@@ -84,8 +84,17 @@ namespace magik
               Note that this issue does not apply to the API functions. Those do not run on Magik's
               thread. 
         - Host API functions 
-            - These are likely much easier to do first. 
-        
+            1. We have to make sure the logic is equivilant between device and host
+            2. The device logic needs to use the test particle type enum as well ! 
+                - In particular, we need to encode which way time moves in the metric itself. 
+                  that is, the squared norm determines if we trace forwards or backwards. 
+                - More precisely, i think we should augument the various metric functions to 
+                  take the information about the squared norm to deduce if a velocity or 
+                  spin need to be inverted. 
+                  So the metric would always take physical parameters, then the squared norm
+                  decides if we need to negate them. 
+                - It might be better to explicitly expose the time-reversed parameter. 
+
         - h_step sorting (Radix sort ?)
         - Matter slot sorting (Bucket sort) 
         */
@@ -94,7 +103,7 @@ namespace magik
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
 
         prepair_wavefront_buffer_async(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer);
-
+ 
         launch_kernel_generate_thin_lens_ray_async(manager, wavefront_buffer);
 
         launch_kernel_generate_initial_conditions_async(manager, wavefront_buffer);

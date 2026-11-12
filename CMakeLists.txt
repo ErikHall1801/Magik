@@ -37,9 +37,9 @@ add_library(magik SHARED
         src/renderer/kernels/kernel_utility.cu
 
         # memory
-        src/renderer/memory/host_arena.cpp
 
-        # metrics
+        # Relativity
+        src/renderer/relativity/host_trace_geodesic.cu
 
         # optics
 

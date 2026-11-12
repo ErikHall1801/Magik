@@ -82,7 +82,9 @@ namespace magik
     {
         struct params_t;
 
-        static params_t make_params(magik_render_manager* manager);
+        static params_t make_params(magik_render_manager* manager, bool time_reversed);
+
+        static params_t make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed);
 
         static MAGIK_DEVICE_HOST float initial_h_step();
 

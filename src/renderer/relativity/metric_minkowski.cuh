@@ -172,7 +172,7 @@ namespace magik
 
     template<> struct minkowski_metric::params_t 
     { 
-
+        bool time_reversed;
     };
 
     template<> inline MAGIK_DEVICE_HOST float minkowski_metric::initial_h_step()
@@ -180,9 +180,18 @@ namespace magik
         return 1000.0f;
     }
 
-    template<> inline minkowski_metric::params_t minkowski_metric::make_params(magik_render_manager* managerp)
+    template<> inline minkowski_metric::params_t minkowski_metric::make_params(magik_render_manager* manager, bool time_reversed)
     {
-        return {};
+        minkowski_metric::params_t p;
+        p.time_reversed = time_reversed;
+        return p;
+    }
+
+    template<> inline minkowski_metric::params_t minkowski_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)
+    {
+        minkowski_metric::params_t p;
+        p.time_reversed = time_reversed;
+        return p;
     }
 
     template<> inline MAGIK_DEVICE_HOST float minkowski_metric::length_scale(params_t p)
@@ -217,7 +226,8 @@ namespace magik
 
     template<> inline MAGIK_DEVICE_HOST vec4f minkowski_metric::rest_frame_four_velocity(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_three_velocity, params_t p)
     {
-        return minkowski_object_velocity_from_ZAMO_to_global(seed_vectors, dimensionless_three_velocity);
+        vec3f w = p.time_reversed ? -dimensionless_three_velocity : dimensionless_three_velocity;
+        return minkowski_object_velocity_from_ZAMO_to_global(seed_vectors, w);
     }
 
     template<> inline MAGIK_DEVICE_HOST vec4f minkowski_metric::global_to_observer_rest_frame(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec4f dimensionless_four_vector, vec4f dimensionless_observer_four_velocity, params_t p)

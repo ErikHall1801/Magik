@@ -400,6 +400,7 @@ namespace magik
 
     template<> struct kerr_metric::params_t
     {
+        bool time_reversed;
         float mass_parameter;
         float dimensionless_spin_parameter;
         float event_horizon_scalar;
@@ -410,15 +411,28 @@ namespace magik
         uint32_t n_max;
     };
 
-    template<> inline kerr_metric::params_t kerr_metric::make_params(magik_render_manager* manager)
+    template<> inline kerr_metric::params_t kerr_metric::make_params(magik_render_manager* manager, bool time_reversed)
     {
-        return {    manager->stage.kerr_mass, 
-                    manager->stage.kerr_spin, 
+        return {    time_reversed,
+                    manager->stage.kerr_mass, 
+                    time_reversed ? -manager->stage.kerr_spin : manager->stage.kerr_spin, 
                     manager->stage.event_horizon_scalar, 
                     1000.0f, 
                     manager->stage.settings.integrator_absolute_error_tolerance, 
                     manager->stage.settings.integrator_relative_error_tolerance, 
                     manager->stage.settings.n_integrator_max_substep}; 
+    }
+
+    template<> inline kerr_metric::params_t kerr_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)
+    {
+        return {    time_reversed,
+                    metric_parameters.kerr_mass, 
+                    time_reversed ? -metric_parameters.kerr_spin : metric_parameters.kerr_spin, 
+                    metric_parameters.event_horizon_scalar, 
+                    1000.0f, 
+                    integrator_parameters.integrator_absolute_error_tolerance, 
+                    integrator_parameters.integrator_relative_error_tolerance, 
+                    integrator_parameters.n_integrator_max_substep}; 
     }
 
     template<> inline MAGIK_DEVICE_HOST float kerr_metric::initial_h_step()
@@ -461,7 +475,8 @@ namespace magik
 
     template<> inline MAGIK_DEVICE_HOST vec4f kerr_metric::rest_frame_four_velocity(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec3f dimensionless_three_velocity, params_t p)
     {
-        return kerr_object_velocity_from_ZAMO_to_global(dimensionless_four_position, seed_vectors, dimensionless_three_velocity, p.dimensionless_spin_parameter);
+        vec3f w = p.time_reversed ? -dimensionless_three_velocity : dimensionless_three_velocity;
+        return kerr_object_velocity_from_ZAMO_to_global(dimensionless_four_position, seed_vectors, w, p.dimensionless_spin_parameter);
     }
 
     template<> inline MAGIK_DEVICE_HOST vec4f kerr_metric::global_to_observer_rest_frame(vec4f dimensionless_four_position, contravariant_seed_vectors_t seed_vectors, vec4f dimensionless_four_vector, vec4f dimensionless_observer_four_velocity, params_t p)

@@ -47,6 +47,7 @@ typedef enum e_magik_result_types
     // Host 200 - 299
     MAGIK_ERROR_HOST_OUT_OF_MEMORY = 100,
     MAGIK_ERROR_HOST_MEMORY_ALLOCATION_FAILED = 101,
+    MAGIK_ERROR_HOST_TRACE_ALLOCATED_STEPS_AND_CAPACITY_MISMATCH = 102,
 
     // Device 300 - 399
     MAGIK_ERROR_DEVICE_OUT_OF_MEMORY = 200,
@@ -517,6 +518,74 @@ typedef enum e_magik_spacetime_metric_types
     SCHWARZSCHILD = 1,
     KERR = 2
 } e_magik_spacetime_metric_types;
+
+typedef enum e_magik_test_particle_types
+{
+    MASSIVE = 0,
+    MASSLESS = 1
+} e_magik_test_particle_types;
+
+typedef struct magik_trace_geodesic_metric_parameters_t
+{
+    e_magik_spacetime_metric_types metric_type;
+    bool time_reversed;
+    float event_horizon_scalar; // > 1 
+    float schwarzschild_mass; // In kg
+    float kerr_mass; // In kg
+    float kerr_spin;
+} magik_trace_geodesic_metric_parameters_t;
+
+typedef struct magik_trace_geodesic_integrator_parameters_t
+{
+    unsigned int n_integrator_max_substep;
+    float integrator_absolute_error_tolerance;
+    float integrator_relative_error_tolerance;
+} magik_trace_geodesic_integrator_parameters_t;
+
+typedef struct magik_trace_geodesic_inital_conditions_t
+{
+    e_magik_test_particle_types test_particle_type;
+
+    float spatial_position_x;
+    float spatial_position_y;
+    float spatial_position_z;
+
+    float x_rotation;
+    float y_rotation;
+    float z_rotation;
+
+    float local_proper_velocity_x;
+    float local_proper_velocity_y;
+    float local_proper_velocity_z;
+
+    float massive_particle_speed;
+} magik_trace_geodesic_inital_conditions_t;
+
+typedef struct magik_trace_geodesic_step_t
+{
+    float four_position[4];
+    float four_momentum[4];
+    float moment_derivative[4];
+    float four_vector_contraction;
+    float affine_parameter;
+    float delta_affine_parameter;
+} magik_trace_geodesic_step_t;
+
+typedef struct magik_trace_geodesic_container_t
+{
+    uint64_t capacity;
+    uint32_t n_allocated_step;
+    uint32_t n_written;
+    magik_trace_geodesic_step_t* steps;
+} magik_trace_geodesic_container_t; 
+
+/**
+* @brief This function enables the DCC to trace geodesics of a test particle in a chosen spacetime metric and set of initial conditions. 
+* 
+* @warning Magik does not allocate the memory requiered to store the geodesic. The user is responsible for providing the host memory and 
+* correctly indicate the number of available slots. This function runs on the caller thread and is not async. 
+*/
+MAGIK_API e_magik_result_types magik_trace_geodesic(magik_trace_geodesic_container_t* container, magik_trace_geodesic_inital_conditions_t initial_conditions, magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters);
 
 
 

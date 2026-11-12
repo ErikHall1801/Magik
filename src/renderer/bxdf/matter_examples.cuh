@@ -41,7 +41,16 @@ namespace magik
         {
             bxdf_result result;
 
-            sample_lambertian_brdf(&result.outgoing_rest_frame_direction, &result.monte_carlo_weight_adjustment, m_context.random_device, m_context.rest_frame_facing_normal);
+            if((m_context.global_frame_geometric_normal.x*m_context.global_frame_geometric_normal.x) > 0.0f)
+            {
+                result.outgoing_rest_frame_direction = vector_reflect(m_context.rest_frame_incoming_direction, m_context.rest_frame_facing_normal).make_norm();
+                result.monte_carlo_weight_adjustment = 1.0f;
+            }
+            else
+            {
+                sample_lambertian_brdf(&result.outgoing_rest_frame_direction, &result.monte_carlo_weight_adjustment, m_context.random_device, m_context.rest_frame_facing_normal);
+            }
+
             result.type = REFLECTED;
 
             return result;

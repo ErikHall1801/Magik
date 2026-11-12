@@ -5,6 +5,7 @@
 #include "magik.h"
 #include "magik_error.h"
 #include "renderer.h"
+#include "host_trace_geodesic.h"
 
 /**
 * [SECTION] Error handling & result types
@@ -201,6 +202,25 @@ MAGIK_API e_magik_result_types magik_extract_config_opengl_interop(magik_render_
 MAGIK_API e_magik_result_types magik_destroy_framebuffer_collection(magik_framebuffer_collection_external_t framebuffer)
 {
     return magik::destroy_external_framebuffer_collection(framebuffer);
+}
+
+
+
+/**
+* [SECTION] Relativity
+*/
+
+MAGIK_API e_magik_result_types magik_trace_geodesic(magik_trace_geodesic_container_t* container, magik_trace_geodesic_inital_conditions_t initial_conditions, magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters)
+{
+    if(!container || !container->steps) return MAGIK_ERROR_INVALID_POINTER;
+
+    if(container->capacity != (sizeof(magik_trace_geodesic_step_t)*container->n_allocated_step)) return MAGIK_ERROR_HOST_TRACE_ALLOCATED_STEPS_AND_CAPACITY_MISMATCH;
+
+    bool successful = magik::host_trace_geodesic(container, initial_conditions, metric_parameters, integrator_parameters);
+
+    if(!successful) return MAGIK_ERROR_UNKNOWN;
+
+    return MAGIK_SUCCESS;
 }
 
 
