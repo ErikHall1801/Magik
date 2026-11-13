@@ -101,6 +101,7 @@ namespace magik
         kernel_redistribute_radiance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(args);
         check_cuda_errors(cudaGetLastError());
 
+        wavefront_buffer->queue_pool.store_count_in_history<redistribute_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.settings.n_geodesic_step_limit);
         wavefront_buffer->queue_pool.zero_count_async<redistribute_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
     }
 }

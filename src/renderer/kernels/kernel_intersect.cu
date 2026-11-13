@@ -154,6 +154,7 @@ namespace magik
 
         check_cuda_errors(cudaGetLastError());
 
+        wavefront_buffer->queue_pool.store_count_in_history<intersect_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.settings.n_geodesic_step_limit);
         wavefront_buffer->queue_pool.zero_count_async<intersect_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
 
         if(!successful)

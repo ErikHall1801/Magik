@@ -12,7 +12,7 @@
 
 namespace magik
 {
-    void realloc_wavefront_buffer(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t n_bin, uint32_t x_resolution_target, uint32_t y_resolution_target)
+    void realloc_wavefront_buffer(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t n_bin, uint32_t x_resolution_target, uint32_t y_resolution_target, uint32_t n_geodesic_step_limit)
     {
         if(wavefront_buffer->x_resolution == x_resolution_target && wavefront_buffer->y_resolution == y_resolution_target) return;
 
@@ -21,7 +21,7 @@ namespace magik
 
         wavefront_buffer->release_async(static_cast<cudaStream_t>(user_stream));
 
-        wavefront_buffer->allocate_async(user_stream, n_bin, x_resolution_target, y_resolution_target, true);
+        wavefront_buffer->allocate_async(user_stream, n_bin, x_resolution_target, y_resolution_target, n_geodesic_step_limit, true);
 
         launch_kernel_initialize_random_device_async(user_stream, wavefront_buffer, x_resolution_target, y_resolution_target);
 
@@ -55,9 +55,10 @@ namespace magik
         manager->x_sample.store(0, std::memory_order_release);
     }
 
-    static void prepair_wavefront_buffer_async(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer)
+    static void prepair_wavefront_buffer_async(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t n_geodesic_step_limit)
     {
         wavefront_buffer->queue_pool.reset_all_counts(user_stream);
+        wavefront_buffer->queue_pool.reset_all_count_histories(user_stream, n_geodesic_step_limit);
 
         wavefront_buffer->ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
 
@@ -70,6 +71,8 @@ namespace magik
 
         wavefront_buffer->queue_pool.set_count_async<advance_A_queue_t>(wavefront_buffer->x_resolution*wavefront_buffer->y_resolution, user_stream);
         wavefront_buffer->queue_ceiling = wavefront_buffer->x_resolution*wavefront_buffer->y_resolution;
+
+        wavefront_buffer->iteration = 0;
     }
 
     void wavefront_sample(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
@@ -77,32 +80,38 @@ namespace magik
         /*
         ### Goal for tomorrow
         - Wavefront performance metrics 
-            - We should use implot to visualize the data
-            - One important question is how we will actually send the data to the DCC. The async
-              nature makes this tricky. The DCC could give the host memory for the data, then the 
-              renderer writes to it. But that is iffy as hell. 
-              Note that this issue does not apply to the API functions. Those do not run on Magik's
-              thread. 
-        - Host API functions 
-            1. We have to make sure the logic is equivilant between device and host
-            2. The device logic needs to use the test particle type enum as well ! 
-                - In particular, we need to encode which way time moves in the metric itself. 
-                  that is, the squared norm determines if we trace forwards or backwards. 
-                - More precisely, i think we should augument the various metric functions to 
-                  take the information about the squared norm to deduce if a velocity or 
-                  spin need to be inverted. 
-                  So the metric would always take physical parameters, then the squared norm
-                  decides if we need to negate them. 
-                - It might be better to explicitly expose the time-reversed parameter. 
+            - The data will be supplied to the DCC in a similar manner to the framebuffer. Magik 
+              writes to a tripple buffered queue and the DCC can request the latest capture. 
+            - What data do we actually want to capture ? 
+            - The biggest one is how quickly each queue drains. So we ideally want to have a 
+              histogram of the ID count in each queue over all iterations. Not even an average, 
+              as that is kinda meaningless with a moving camera.
+            - This should be part of the queue pool itself. We can make a function that stores 
+              the count to a parallel array created for each queue. Then we can gobble up the 
+              history at the end and send it to the buffer. 
 
         - h_step sorting (Radix sort ?)
+
         - Matter slot sorting (Bucket sort) 
+            - We can move the sync point to just before the bxdf kernels are launched. This way the 
+              Host can only launch kernels which are present in the queue. 
+            - What is the idea ? 
+            - We start with a scrambled bxdf queue. 
+            - A small kernel scans through the queue and records how many times each matter type is 
+              present. It is literally an array of size M (M = N matter slots) where each element 
+              represents the slot's count. 
+            - This data has to be sent to the scheduler as any slot with 0 members means "No launch". 
+            - The next step is to scatter. Another kernel the size of the bxdf queue reads the unsorted
+              queue and atomically adds it to a sorted one. Where we use the number of elements as an
+              offset. So for example if there are 200 0th elements, then the first "1" slot starts at
+              id 200. 
+              This way the bxdf queue gets sorted. 
         */
 
         bool working = true;
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
 
-        prepair_wavefront_buffer_async(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer);
+        prepair_wavefront_buffer_async(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer, manager->stage.settings.n_geodesic_step_limit);
  
         launch_kernel_generate_thin_lens_ray_async(manager, wavefront_buffer);
 
@@ -132,7 +141,9 @@ namespace magik
 
             launch_kernel_splat_to_renderbuffer_async(manager, wavefront_buffer, tmp_element->second.d_data);
 
-            is_work_done_sync(&working, &wavefront_buffer->queue_ceiling, wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>(), &manager->cuda_stream); 
+            is_work_done_sync(&working, &wavefront_buffer->queue_ceiling, wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>(), &manager->cuda_stream);
+
+            wavefront_buffer->iteration++; // This is safe despite the Async kernels for two reasons. 1. The sync point is above us; 2. When a kernel is launched all arguments are captured. 
         }
 
         manager->x_sample.fetch_add(1, std::memory_order_relaxed);

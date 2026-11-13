@@ -9,7 +9,7 @@
 
 namespace magik
 {
-    struct ray_queue_base_t { uint32_t* d_count = nullptr; uint32_t* d_id = nullptr; };
+    struct ray_queue_base_t { uint32_t* d_count = nullptr; uint32_t* d_id = nullptr; uint32_t* d_count_history = nullptr; };
 
     struct advance_A_queue_t : ray_queue_base_t {};
 
@@ -30,10 +30,12 @@ namespace magik
             return (x + 255) & ~(255);
         }
 
-        size_t total_bytes(const uint32_t x_resolution, const uint32_t y_resolution)
+        size_t total_bytes(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t n_geodesic_step_limit)
         {
-            size_t n = (size_t)x_resolution * y_resolution;
-            return sizeof...(T_queue) * (align_up(sizeof(uint32_t)) + align_up(n * sizeof(uint32_t)));
+            size_t bytes_id = align_up((size_t)x_resolution * y_resolution * sizeof(uint32_t));
+            size_t bytes_count = align_up(sizeof(uint32_t));
+            size_t bytes_count_history = align_up(sizeof(uint32_t) * n_geodesic_step_limit);
+            return sizeof...(T_queue) * (bytes_id + bytes_count + bytes_count_history);
         }
 
         template<typename Q> uint32_t* get_count_ptr()
@@ -46,7 +48,21 @@ namespace magik
             return static_cast<const Q&>(*this).d_id;
         }
 
-        template<typename Q> void zero_count_async(cudaStream_t user_stream) // zero_count_async
+        template<typename Q> uint32_t* get_count_history_ptr()
+        {
+            return static_cast<const Q&>(*this).d_count_history;
+        }
+
+        template<typename Q> void store_count_in_history(cudaStream_t user_stream, uint32_t n_iteration, uint32_t n_geodesic_step_limit)
+        {
+            if(n_iteration > n_geodesic_step_limit) return; // Big error
+
+            uint32_t* dst = this->get_count_history_ptr<Q>() + n_iteration;
+            uint32_t* src = this->get_count_ptr<Q>();
+            check_cuda_errors(cudaMemcpyAsync(dst, src, sizeof(uint32_t), cudaMemcpyDeviceToDevice, user_stream));
+        }
+
+        template<typename Q> void zero_count_async(cudaStream_t user_stream)
         {
             check_cuda_errors(cudaMemsetAsync(get_count_ptr<Q>(), 0x0, sizeof(uint32_t), user_stream));
         }
@@ -61,22 +77,28 @@ namespace magik
             (check_cuda_errors(cudaMemsetAsync(get_count_ptr<T_queue>(), 0x0, sizeof(uint32_t), user_stream)), ...);
         }
 
+        void reset_all_count_histories(cudaStream_t user_stream, uint32_t n_geodesic_step_limit)
+        {
+            (check_cuda_errors(cudaMemsetAsync(get_count_history_ptr<T_queue>(), 0x0, sizeof(uint32_t)*n_geodesic_step_limit, user_stream)), ...);
+        }
+
         void swap_advance_queues()
         {
             auto& a = static_cast<advance_A_queue_t&>(*this);
             auto& b = static_cast<advance_B_queue_t&>(*this);
             std::swap(a.d_count, b.d_count);
-            std::swap(a.d_id,    b.d_id);
+            std::swap(a.d_id, b.d_id);
         }
 
-        void assign(device_mem_arena* arena, const uint32_t x_resolution, const uint32_t y_resolution)
+        void assign(device_mem_arena* arena, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t n_geodesic_step_limit)
         {
             // It might, in the future, make sense to put all counts next to each other. 
             size_t n_pixel = (size_t)x_resolution * y_resolution;
             auto push = [&](ray_queue_base_t& q)
             {
                 q.d_count = static_cast<uint32_t*>(device_arena_push(arena, sizeof(uint32_t)));
-                q.d_id    = static_cast<uint32_t*>(device_arena_push(arena, n_pixel * sizeof(uint32_t)));
+                q.d_id = static_cast<uint32_t*>(device_arena_push(arena, n_pixel * sizeof(uint32_t)));
+                q.d_count_history = static_cast<uint32_t*>(device_arena_push(arena, sizeof(uint32_t) * (size_t)n_geodesic_step_limit));
             };
             (push(static_cast<T_queue&>(*this)), ...);
         }
@@ -134,8 +156,6 @@ namespace magik
 
     template<typename... T> struct ray_pool_t : pool_member_t<T>...
     {
-        device_mem_arena arena;
-
         static constexpr size_t align_up(size_t x)
         {
             return (x + 255) & ~(255);
