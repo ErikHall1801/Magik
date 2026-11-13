@@ -55,8 +55,6 @@ namespace magik
     {
         if(!magik::is_valid_thread(args.x_resolution, args.y_resolution)) return;
 
-        uint32_t i_x = threadIdx.x + blockIdx.x * blockDim.x;
-        uint32_t i_y = threadIdx.y + blockIdx.y * blockDim.y;
         uint32_t thread_id = magik::get_n_dimensional_thread_id(args.x_resolution, 1);
 
         vec4f observer_three_direction = args.d_initial_observer_spatial_direction[thread_id];
@@ -64,8 +62,8 @@ namespace magik
 
         float m_length_scale = metric<T>::length_scale(metric_parameters);
         vec4f initial_four_position = convert_si_position_to_dimensionless_coordinate_system(observer_three_position, 1.0f, m_length_scale, m_length_scale/magik::speed_of_light);
-        vec4f four_velocity = metric<T>::rest_frame_four_velocity(initial_four_position, contravariant_seed_vectors_t{}, args.local_proper_velocity/magik::speed_of_light, metric_parameters);
-        vec4f initial_four_momentum = metric<T>::rest_frame_direction_to_global_four_momentum(initial_four_position, args.seed_vector, vec3f{observer_three_direction.x, observer_three_direction.y, observer_three_direction.z}/m_length_scale, four_velocity, 0.0f, metric_parameters);
+        vec4f four_velocity = rest_frame_four_velocity<T>(initial_four_position, contravariant_seed_vectors_t{}, args.local_proper_velocity/magik::speed_of_light, metric_parameters);
+        vec4f initial_four_momentum = rest_frame_direction_to_global_four_momentum<T>(initial_four_position, args.seed_vector, vec3f{observer_three_direction.x, observer_three_direction.y, observer_three_direction.z}/m_length_scale, four_velocity, 0.0f, metric_parameters);
 
         args.d_current_four_position[thread_id] = initial_four_position;
         args.d_current_four_momentum[thread_id] = initial_four_momentum;

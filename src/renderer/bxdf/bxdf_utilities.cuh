@@ -91,17 +91,17 @@ namespace magik
         bxdf_material_context result;
         static_cast<bxdf_velocity_context&>(result) = v_context;
         result.dimensionless_three_velocity = dimensionless_three_velocity;
-        result.dimensionless_four_velocity = metric<T>::rest_frame_four_velocity(result.next_dimensionless_four_position, contravariant_seed_vectors_t{}, dimensionless_three_velocity, metric_parameters);
+        result.dimensionless_four_velocity = rest_frame_four_velocity<T>(result.next_dimensionless_four_position, contravariant_seed_vectors_t{}, dimensionless_three_velocity, metric_parameters);
 
-        vec4f next_four_momentum_contravariant = metric<T>::raise_index(result.next_dimensionless_four_position, result.next_dimensionless_four_momentum, metric_parameters);
-        result.next_dimensionless_rest_frame_four_momentum = metric<T>::global_to_observer_rest_frame(result.next_dimensionless_four_position, contravariant_seed_vectors_t{}, next_four_momentum_contravariant, result.dimensionless_four_velocity, metric_parameters);
+        vec4f next_four_momentum_contravariant = contract(metric<T>::compute_inv_g(v_context.next_dimensionless_four_position, metric_parameters), result.next_dimensionless_four_momentum);
+        result.next_dimensionless_rest_frame_four_momentum = global_to_observer_rest_frame<T>(result.next_dimensionless_four_position, contravariant_seed_vectors_t{}, next_four_momentum_contravariant, result.dimensionless_four_velocity, metric_parameters);
 
         result.rest_frame_incoming_direction = vec3f{result.next_dimensionless_rest_frame_four_momentum.x, result.next_dimensionless_rest_frame_four_momentum.y, result.next_dimensionless_rest_frame_four_momentum.z}.norm();
         result.redshift_factor = compute_redshift_factor(result.initial_four_vector_contraction, result.dimensionless_four_velocity, result.next_dimensionless_four_momentum);
         result.redshifted_wavelength_nm = v_context.sensor_wavelength_nm * result.redshift_factor;
 
-        vec4f geometric_normal_contravarient = metric<T>::raise_index(result.next_dimensionless_four_position, vec4f{result.global_frame_geometric_normal.x, result.global_frame_geometric_normal.y, result.global_frame_geometric_normal.z, 0.0f}, metric_parameters);
-        vec4f four_vector_rest_frame_geometric_normal = metric<T>::global_to_observer_rest_frame(result.next_dimensionless_four_position, contravariant_seed_vectors_t{}, geometric_normal_contravarient, result.dimensionless_four_velocity, metric_parameters);
+        vec4f geometric_normal_contravarient = contract(metric<T>::compute_inv_g(v_context.next_dimensionless_four_position, metric_parameters), vec4f{result.global_frame_geometric_normal.x, result.global_frame_geometric_normal.y, result.global_frame_geometric_normal.z, 0.0f});
+        vec4f four_vector_rest_frame_geometric_normal = global_to_observer_rest_frame<T>(result.next_dimensionless_four_position, contravariant_seed_vectors_t{}, geometric_normal_contravarient, result.dimensionless_four_velocity, metric_parameters);
         result.rest_frame_geometric_normal = vec3f{four_vector_rest_frame_geometric_normal.x, four_vector_rest_frame_geometric_normal.y, four_vector_rest_frame_geometric_normal.z}.norm();
 
         result.rest_frame_facing_normal = vector_dot_product(result.rest_frame_geometric_normal, result.rest_frame_incoming_direction) > 0.0f ? -result.rest_frame_geometric_normal : result.rest_frame_geometric_normal;
@@ -141,7 +141,7 @@ namespace magik
         contravariant_seed_vectors_t seed_vectors;
         vec4f next_four_position = d_next_four_position[ray_id];
 
-        vec4f outgoing_global_frame_four_momentum = metric<T>::rest_frame_direction_to_global_four_momentum(next_four_position, seed_vectors, result.outgoing_rest_frame_direction, four_velocity, 0.0f, metric_parameters);
+        vec4f outgoing_global_frame_four_momentum = rest_frame_direction_to_global_four_momentum<T>(next_four_position, seed_vectors, result.outgoing_rest_frame_direction, four_velocity, 0.0f, metric_parameters);
         vec4f offset_next_four_position = offset_geodesic(next_four_position, facing_global_frame_normal);
 
         d_initial_four_vector_contraction[ray_id] = vector_dot_product(four_velocity, outgoing_global_frame_four_momentum) * redshift_factor;

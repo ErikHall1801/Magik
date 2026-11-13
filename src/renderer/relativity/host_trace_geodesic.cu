@@ -43,11 +43,11 @@ namespace magik
         }
 
         vec4f initial_four_position = convert_si_position_to_dimensionless_coordinate_system(vec4f{initial_conditions.spatial_position_x, initial_conditions.spatial_position_y, initial_conditions.spatial_position_z, 0.0f}, 0.0f, metric<T>::length_scale(metric_parameters), metric<T>::length_scale(metric_parameters)/magik::speed_of_light);
-        vec4f four_velocity = metric<T>::rest_frame_four_velocity(initial_four_position, seed_vectors, local_proper_velocity/magik::speed_of_light, metric_parameters);
-        vec4f initial_four_momentum = metric<T>::rest_frame_direction_to_global_four_momentum(initial_four_position, contravariant_seed_vectors_t{}, initial_spatial_direction/metric<T>::length_scale(metric_parameters), four_velocity, squared_norm, metric_parameters);
+        vec4f four_velocity = rest_frame_four_velocity<T>(initial_four_position, seed_vectors, local_proper_velocity/magik::speed_of_light, metric_parameters);
+        vec4f initial_four_momentum = rest_frame_direction_to_global_four_momentum<T>(initial_four_position, contravariant_seed_vectors_t{}, initial_spatial_direction/metric<T>::length_scale(metric_parameters), four_velocity, squared_norm, metric_parameters);
 
-        geodesic_step_values y0 = { initial_four_position, initial_four_momentum };
-        geodesic_step_values ys = metric<T>::geodesic_rhs(y0, metric_parameters);
+        geodesic_step_values_t y0 = { initial_four_position, initial_four_momentum };
+        geodesic_step_values_t ys = metric<T>::geodesic_rhs(y0, metric_parameters);
 
         container->n_written = 0;
         container->steps[container->n_written].four_position[0] = initial_four_position.x;
@@ -73,7 +73,7 @@ namespace magik
 
     template<e_magik_spacetime_metric_types T> static __host__ void trace_geodesic(typename metric<T>::params_t metric_parameters, magik_trace_geodesic_container_t* container)
     {
-        geodesic_step_values y0, y1, ys;
+        geodesic_step_values_t y0, y1, ys;
         float h_step, h_taken;
 
         while(container->n_written < container->n_allocated_step)

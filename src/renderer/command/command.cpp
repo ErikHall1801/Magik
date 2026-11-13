@@ -191,10 +191,7 @@ namespace magik
                 magik_command_set_schwarzschild_mass_t cmd;
                 memcpy(&cmd, playhead, command_size);
 
-                if(cmd.mass_parameter > 0.0f)
-                {
-                    manager->stage.schwarzschild_mass = cmd.mass_parameter;
-                }
+                manager->stage.schwarzschild_mass = cmd.mass_parameter;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;

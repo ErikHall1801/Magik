@@ -52,7 +52,7 @@ namespace magik
         if(queue_index >= *args.d_advance_queue_count) return;
         uint32_t ray_id = args.d_advance_queue_id[queue_index];
 
-        geodesic_step_values y1, y0{args.d_next_four_position[ray_id], args.d_next_four_momentum[ray_id]};
+        geodesic_step_values_t y1, y0{args.d_next_four_position[ray_id], args.d_next_four_momentum[ray_id]};
         float h_step = args.d_delta_affine_parameter[ray_id], h_taken;
 
         y1 = metric<T>::solve_step(y0, metric_parameters, &h_step, &h_taken);
@@ -64,7 +64,7 @@ namespace magik
         args.d_affine_parameter[ray_id] += h_taken;
         args.d_delta_affine_parameter[ray_id] = h_step;
 
-        geodesic_step_values ys;
+        geodesic_step_values_t ys;
         ys = metric<T>::geodesic_rhs(y0, metric_parameters);
         args.d_momentum_derivative_start[ray_id] = ys.four_momentum;
 
