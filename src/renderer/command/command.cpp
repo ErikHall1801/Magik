@@ -42,6 +42,17 @@ namespace magik
             // #######################
             // ### 4000-4999 Scene ###
             // #######################
+            case MAGIK_COMMAND_SET_METRIC_MINKOWSKI: { is_valid_ = true; size_ = sizeof(magik_command_set_metric_minkowski_t); break; }
+
+            case MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD: { is_valid_ = true; size_ = sizeof(magik_command_set_metric_schwarzschild_t); break; }
+
+            case MAGIK_COMMAND_SET_METRIC_KERR: { is_valid_ = true; size_ = sizeof(magik_command_set_metric_kerr_t); break; }
+
+            case MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS: { is_valid_ = true; size_ = sizeof(magik_command_set_schwarzschild_mass_t); break; }
+
+            case MAGIK_COMMAND_SET_KERR_MASS: { is_valid_ = true; size_ = sizeof(magik_command_set_kerr_mass_t); break; }
+
+            case MAGIK_COMMAND_SET_KERR_SPIN: { is_valid_ = true; size_ = sizeof(magik_command_set_kerr_spin_t); break; }
 
 
             
@@ -55,6 +66,8 @@ namespace magik
             case MAGIK_COMMAND_SET_CAMERA_ORIENTATION: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_orientation_t); break; }
 
             case MAGIK_COMMAND_SET_CAMERA_RESOLUTION: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_resolution_t); break; }
+
+            case MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_three_velocity_t); break; }
 
 
 
@@ -143,6 +156,70 @@ namespace magik
             // #######################
             // ### 4000-4999 Scene ###
             // #######################
+            case MAGIK_COMMAND_SET_METRIC_MINKOWSKI:
+            {
+                magik_command_set_metric_minkowski_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->stage.settings.metric_type = MINKOWSKI;
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD:
+            {
+                magik_command_set_metric_schwarzschild_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->stage.settings.metric_type = SCHWARZSCHILD;
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_METRIC_KERR:
+            {
+                magik_command_set_metric_kerr_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->stage.settings.metric_type = KERR;
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS:
+            {
+                magik_command_set_schwarzschild_mass_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.schwarzschild_mass = cmd.mass_parameter;
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_KERR_MASS:
+            {
+                magik_command_set_kerr_mass_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                if(cmd.mass_parameter > 0.0f)
+                {
+                    manager->stage.kerr_mass = cmd.mass_parameter;
+                }
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_KERR_SPIN:
+            {
+                magik_command_set_kerr_spin_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->stage.kerr_spin = cmd.spin_parameter;
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
 
 
             
@@ -191,6 +268,17 @@ namespace magik
 
                 manager->stage.optical_systen.x_resolution = cmd.x_resolution;
                 manager->stage.optical_systen.y_resolution = cmd.y_resolution;
+
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY:
+            {
+                magik_command_set_camera_three_velocity_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.optical_systen.local_proper_velocity = vec3f{cmd.velocity_x, cmd.velocity_y, cmd.velocity_z};
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;

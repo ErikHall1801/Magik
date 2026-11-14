@@ -5,6 +5,7 @@
 #include "magik.h"
 #include "magik_error.h"
 #include "renderer.h"
+#include "host_trace_geodesic.h"
 
 /**
 * [SECTION] Error handling & result types
@@ -124,11 +125,6 @@ MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_
     new_manager->command_context.front->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
     new_manager->command_context.back->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
 
-    new_manager->user_host_mem_reserve_func = descriptor.host_reserve_func;
-    new_manager->user_host_mem_commit_func = descriptor.host_commit_func;
-    new_manager->user_host_mem_decommit_func = descriptor.host_decommit_func;
-    new_manager->user_host_mem_release_func = descriptor.host_release_func;
-
     new_manager->worker_thread = std::thread(magik::run, new_manager);
 
     *manager = new_manager;
@@ -160,18 +156,6 @@ MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_man
 * [SECTION] Renderer statistics
 */
 
-MAGIK_API e_magik_result_types magik_fetch_renderer_statistics(magik_render_manager_t manager, magik_renderer_statistics_t* statistics)
-{
-    if(!manager || !statistics) return MAGIK_ERROR_INVALID_POINTER;
-
-    statistics->sampled_time_point_seconds = manager->sampled_time_point_seconds.load(std::memory_order_relaxed);
-    statistics->average_sample_time_seconds = manager->average_sample_time_seconds.load(std::memory_order_relaxed);
-    statistics->latest_sample_time_seconds = manager->latest_sample_time_seconds.load(std::memory_order_relaxed);
-    statistics->total_render_time_seconds = manager->total_render_time_seconds.load(std::memory_order_relaxed);
-
-    return MAGIK_SUCCESS;
-}
-
 
 
 /**
@@ -201,6 +185,25 @@ MAGIK_API e_magik_result_types magik_extract_config_opengl_interop(magik_render_
 MAGIK_API e_magik_result_types magik_destroy_framebuffer_collection(magik_framebuffer_collection_external_t framebuffer)
 {
     return magik::destroy_external_framebuffer_collection(framebuffer);
+}
+
+
+
+/**
+* [SECTION] Relativity
+*/
+
+MAGIK_API e_magik_result_types magik_trace_geodesic(magik_trace_geodesic_container_t* container, magik_trace_geodesic_inital_conditions_t initial_conditions, magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters)
+{
+    if(!container || !container->steps) return MAGIK_ERROR_INVALID_POINTER;
+
+    if(container->capacity != (sizeof(magik_trace_geodesic_step_t)*container->n_allocated_step)) return MAGIK_ERROR_HOST_TRACE_ALLOCATED_STEPS_AND_CAPACITY_MISMATCH;
+
+    bool successful = magik::host_trace_geodesic(container, initial_conditions, metric_parameters, integrator_parameters);
+
+    if(!successful) return MAGIK_ERROR_UNKNOWN;
+
+    return MAGIK_SUCCESS;
 }
 
 

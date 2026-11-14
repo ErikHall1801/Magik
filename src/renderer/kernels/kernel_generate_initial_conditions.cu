@@ -1,0 +1,100 @@
+#include "kernel_generate_initial_conditions.cuh"
+#include "cuda_device_utilities.cuh"
+#include "cuda_host_utilities.h"
+
+#include "kernel_advance_geodesic.cuh"
+#include "relativity_utilities.cuh"
+#include "metric_minkowski.cuh"
+#include "metric_schwarzschild.cuh"
+#include "metric_kerr.cuh"
+
+namespace magik
+{   
+    struct kernel_generate_initial_conditions_args_t
+    {
+        vec4f* d_initial_observer_spatial_direction = nullptr;
+        vec4f* d_initial_observer_spatial_position = nullptr;
+        vec4f* d_current_four_position = nullptr;
+        vec4f* d_current_four_momentum = nullptr;
+        vec4f* d_next_four_position = nullptr;
+        vec4f* d_next_four_momentum = nullptr;
+        float* d_initial_four_vector_contraction = nullptr;
+        float* d_delta_affine_parameter = nullptr;
+
+        uint32_t x_resolution;
+        uint32_t y_resolution;
+        contravariant_seed_vectors_t seed_vector;
+        vec3f local_proper_velocity;
+
+        __host__ void create(magik_render_manager* manager, wavefront_buffer_t* wb)
+        {
+            d_initial_observer_spatial_direction = wb->ray_pool.get<initial_observer_spatial_direction_t>();
+            d_initial_observer_spatial_position = wb->ray_pool.get<initial_observer_spatial_position_t>();
+            d_current_four_position = wb->ray_pool.get<current_four_position_t>();
+            d_current_four_momentum = wb->ray_pool.get<current_four_momentum_t>();
+            d_next_four_position = wb->ray_pool.get<next_four_position_t>();
+            d_next_four_momentum = wb->ray_pool.get<next_four_momentum_t>();
+            d_initial_four_vector_contraction = wb->ray_pool.get<initial_four_vector_contraction_t>();
+            d_delta_affine_parameter = wb->ray_pool.get<delta_affine_parameter_t>();
+
+            x_resolution = wb->x_resolution;
+            y_resolution = wb->y_resolution;
+
+            vec3f local_basis_x = manager->stage.optical_systen.orientation * vec3f{1.0f, 0.0f, 0.0f};
+            vec3f local_basis_y = manager->stage.optical_systen.orientation * vec3f{0.0f, 1.0f, 0.0f};
+            vec3f local_basis_z = manager->stage.optical_systen.orientation * vec3f{0.0f, 0.0f, 1.0f};
+            seed_vector.X = { local_basis_x.x, local_basis_x.y, local_basis_x.z, 0.0f };
+            seed_vector.Y = { local_basis_y.x, local_basis_y.y, local_basis_y.z, 0.0f };
+            seed_vector.Z = { local_basis_z.x, local_basis_z.y, local_basis_z.z, 0.0f };
+
+            local_proper_velocity = manager->stage.optical_systen.local_proper_velocity;
+        }
+    };
+
+    template<e_magik_spacetime_metric_types T> static __global__ void kernel_generate_initial_conditions(typename metric<T>::params_t metric_parameters, kernel_generate_initial_conditions_args_t args)
+    {
+        if(!magik::is_valid_thread(args.x_resolution, args.y_resolution)) return;
+
+        uint32_t thread_id = magik::get_n_dimensional_thread_id(args.x_resolution, 1);
+
+        vec4f observer_three_direction = args.d_initial_observer_spatial_direction[thread_id];
+        vec4f observer_three_position = args.d_initial_observer_spatial_position[thread_id];
+
+        float m_length_scale = metric<T>::length_scale(metric_parameters);
+        vec4f initial_four_position = convert_si_position_to_dimensionless_coordinate_system(observer_three_position, 1.0f, m_length_scale, m_length_scale/magik::speed_of_light);
+        vec4f four_velocity = rest_frame_four_velocity<T>(initial_four_position, contravariant_seed_vectors_t{}, args.local_proper_velocity/magik::speed_of_light, metric_parameters);
+        vec4f initial_four_momentum = rest_frame_direction_to_global_four_momentum<T>(initial_four_position, args.seed_vector, vec3f{observer_three_direction.x, observer_three_direction.y, observer_three_direction.z}/m_length_scale, four_velocity, 0.0f, metric_parameters);
+
+        args.d_current_four_position[thread_id] = initial_four_position;
+        args.d_current_four_momentum[thread_id] = initial_four_momentum;
+        args.d_next_four_position[thread_id] = initial_four_position;
+        args.d_next_four_momentum[thread_id] = initial_four_momentum;
+        args.d_initial_four_vector_contraction[thread_id] = vector_dot_product(four_velocity, initial_four_momentum);
+        args.d_delta_affine_parameter[thread_id] = metric<T>::initial_h_step();
+    }
+
+    void launch_kernel_generate_initial_conditions_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
+    {
+        dim3 threads_per_block = dim3(manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y, 1);
+        dim3 n_block = magik::compute_n_blocks(wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y);
+
+        kernel_generate_initial_conditions_args_t args;
+        args.create(manager, wavefront_buffer);
+        bool time_reversed = true;
+
+        bool successful = dispatch_metric(manager->stage.settings.metric_type, [&](auto tag)
+        {
+            constexpr auto T = decltype(tag)::value;
+            kernel_generate_initial_conditions<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager, time_reversed), args);
+        });
+
+        check_cuda_errors(cudaGetLastError());
+
+        if(!successful)
+        {
+            e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_ERROR_UNKNOWN_METRIC;
+            manager->atomic_last_error_type.compare_exchange_strong(expected, result);
+            manager->is_running.store(false, std::memory_order_release);
+        }
+    }
+}

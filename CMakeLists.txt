@@ -5,8 +5,11 @@ project(Magik VERSION 0.1.0 LANGUAGES CXX C CUDA)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
+set(CMAKE_CUDA_ARCHITECTURES 89)
 
 # Link static libraries
 
@@ -25,7 +28,8 @@ add_library(magik SHARED
         # kernels
         src/renderer/kernels/kernel_generate_thin_lens_ray.cu
         src/renderer/kernels/kernel_splat_to_renderbuffer.cu
-        src/renderer/kernels/kernel_tmp_advance.cu
+        src/renderer/kernels/kernel_generate_initial_conditions.cu
+        src/renderer/kernels/kernel_advance_geodesic.cu
         src/renderer/kernels/kernel_intersect.cu
         src/renderer/kernels/kernel_bxdf.cu
         src/renderer/kernels/kernel_enforce_ray_limits.cu
@@ -34,9 +38,9 @@ add_library(magik SHARED
         src/renderer/kernels/kernel_utility.cu
 
         # memory
-        src/renderer/memory/host_arena.cpp
 
-        # metrics
+        # Relativity
+        src/renderer/relativity/host_trace_geodesic.cu
 
         # optics
 
@@ -76,7 +80,7 @@ target_include_directories(magik
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/framebuffer
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/kernels
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/memory
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/metrics
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/relativity
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/optics
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/stage
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/traceables
@@ -103,7 +107,7 @@ target_compile_definitions(magik PRIVATE MAGIK_BUILD_DLL)
 target_compile_options(magik PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>)
 
 # Set properties
-target_compile_features(magik PRIVATE cxx_std_20)
+target_compile_features(magik PRIVATE cxx_std_20 cuda_std_20)
 set_target_properties(magik PROPERTIES
     CXX_EXTENSIONS OFF
     POSITION_INDEPENDENT_CODE ON

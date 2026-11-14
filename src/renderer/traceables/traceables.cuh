@@ -72,4 +72,16 @@ namespace magik
 
         return true;
     }
+
+    __device__ static bool affine_celestial_sphere_intersection(float* hit_interpolation_parameter, vec3f* hit_normal, float length_scale, vec4f dimensionless_current_four_position, vec4f dimensionless_next_four_position, float celestial_sphere_radius, vec3f observer_origin)
+    {
+        vec3f x1 = (vec3f{dimensionless_next_four_position.x, dimensionless_next_four_position.y, dimensionless_next_four_position.z} * length_scale) - observer_origin;
+
+        if(x1.length2() < (celestial_sphere_radius*celestial_sphere_radius)) return false;
+
+        *hit_interpolation_parameter = 1.0f;
+        return true;
+
+        // vec3f x0 = (vec3f{dimensionless_current_four_position.x, dimensionless_current_four_position.y, dimensionless_current_four_position.z} * length_scale) - observer_origin;
+    }
 }

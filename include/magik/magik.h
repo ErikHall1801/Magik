@@ -26,7 +26,7 @@ extern "C" {
 */
 #define MAGIK_VERSION_NAME "Rhapsody"   // Codename
 #define MAGIK_VERSION_MAJOR 0           // New features (In our case before the API switch)
-#define MAGIK_VERSION_MINOR 5           // Small changes / additions
+#define MAGIK_VERSION_MINOR 6           // Small changes / additions
 #define MAGIK_VERSION_REVISION 0        // Bug fix release
 
 
@@ -47,6 +47,7 @@ typedef enum e_magik_result_types
     // Host 200 - 299
     MAGIK_ERROR_HOST_OUT_OF_MEMORY = 100,
     MAGIK_ERROR_HOST_MEMORY_ALLOCATION_FAILED = 101,
+    MAGIK_ERROR_HOST_TRACE_ALLOCATED_STEPS_AND_CAPACITY_MISMATCH = 102,
 
     // Device 300 - 399
     MAGIK_ERROR_DEVICE_OUT_OF_MEMORY = 200,
@@ -79,6 +80,7 @@ typedef enum e_magik_result_types
     MAGIK_ERROR_POSITIVE_NORM_TIMELIKE_FOUR_VECTOR = 704,
     MAGIK_ERROR_INCORRECT_PHOTON_NORM_FOUR_VECTOR = 705,
     MAGIK_ERROR_INCORRECT_PARTICLE_NORM_FOUR_VECTOR = 706,
+    MAGIK_ERROR_UNKNOWN_METRIC = 707,
 
     // Lens simulation 800 - 899
     MAGIK_ERROR_LENSLETS_OUT_OF_ORDER = 801,
@@ -211,26 +213,6 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 * [SECTION] Memory
 */
 
-/**
-* 
-*/
-typedef enum
-{
-    MAGIK_MEMORY_HOST = 0,
-    MAGIK_MEMORY_DEVICE = 1,
-    MAGIK_MEMORY_UNIFIED = 2
-} e_magik_memory_types;
-
-// typedef void (*magik_error_callback)(e_magik_result_types result, const char* func, const char* file, int line, void* user_data);
-
-typedef void* (*host_mem_reserve_function)(uint64_t size);
-
-typedef bool (*host_mem_commit_function)(void* ptr, uint64_t size);
-
-typedef bool (*host_mem_decommit_function)(void* ptr, uint64_t size);
-
-typedef bool (*host_mem_release_function)(void* ptr, uint64_t size);
-
 
 
 /**
@@ -288,11 +270,6 @@ typedef struct magik_manager_descriptor_t
     uint32_t cqs_n_reserved_chunk = 4096;
     bool cqs_drop_overflow = false;
 
-    host_mem_reserve_function host_reserve_func = nullptr;
-    host_mem_commit_function host_commit_func = nullptr;
-    host_mem_decommit_function host_decommit_func = nullptr;
-    host_mem_release_function host_release_func = nullptr;
-
 } magik_manager_descriptor_t;
 
 /**
@@ -338,16 +315,33 @@ MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_man
 */
 
 /**
-* 
+* Magik owns the memory ! DO NOT FREE IT ON THE DCC ! IT IS RELEASED ON TERMINATION ! 
 */
 typedef struct magik_renderer_statistics_t
 {
-    double sampled_time_point_seconds = 0.0f;
-    double average_sample_time_seconds = 0.0f;
-    double latest_sample_time_seconds = 0.0f;
-    double total_render_time_seconds = 0.0f;
+    // Sample 
+    size_t x_sample = 0;
 
-    // Memory
+    // Render loop timings
+    double total_render_time_seconds = 0.0;
+    double latest_render_loop_iteration_time_seconds = 0.0;
+
+    // Wavefront sample timings
+    double total_wavefront_sample_time_seconds = 0.0;
+    double latest_wavefront_sample_time_seconds = 0.0;
+
+    // Wavefront queue
+    size_t latest_wavefront_history_length = 0;
+    uint32_t* h_latest_advance_A_queue_count_history = nullptr;
+    uint32_t* h_latest_advance_B_queue_count_history = nullptr;
+    uint32_t* h_latest_intersect_queue_count_history = nullptr;
+    uint32_t* h_latest_bxdf_queue_count_history = nullptr;
+    uint32_t* h_latest_redistribute_queue_count_history = nullptr;
+    uint32_t* h_latest_splat_queue_count_history = nullptr;
+
+    // Memory usage
+    size_t total_framebuffer_swapchain_size = 0;
+    size_t total_wavefront_buffer_size = 0;
 } magik_renderer_statistics_t;
 
 /**
@@ -355,7 +349,14 @@ typedef struct magik_renderer_statistics_t
 * 
 * @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
 */
-MAGIK_API e_magik_result_types magik_fetch_renderer_statistics(magik_render_manager_t manager, magik_renderer_statistics_t* statistics);
+MAGIK_API e_magik_result_types magik_fetch_renderer_statistics(magik_render_manager_t manager, bool* is_new_fetch, magik_renderer_statistics_t* dcc_statistics);
+
+/**
+* @brief Returns render statistics.
+* 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
+*/
+MAGIK_API e_magik_result_types magik_destroy_renderer_statistics(magik_renderer_statistics_t* statistics);
 
 
 
@@ -507,6 +508,87 @@ MAGIK_API e_magik_result_types magik_destroy_framebuffer_collection(magik_frameb
 
 
 /**
+* [SECTION] Relativity
+*/
+
+typedef enum e_magik_spacetime_metric_types
+{
+    MINKOWSKI = 0,
+    SCHWARZSCHILD = 1,
+    KERR = 2
+} e_magik_spacetime_metric_types;
+
+typedef enum e_magik_test_particle_types
+{
+    MASSIVE = 0,
+    MASSLESS = 1
+} e_magik_test_particle_types;
+
+typedef struct magik_trace_geodesic_metric_parameters_t
+{
+    e_magik_spacetime_metric_types metric_type;
+    bool time_reversed;
+    float event_horizon_scalar; // > 1 
+    float schwarzschild_mass; // In kg
+    float kerr_mass; // In kg
+    float kerr_spin;
+} magik_trace_geodesic_metric_parameters_t;
+
+typedef struct magik_trace_geodesic_integrator_parameters_t
+{
+    unsigned int n_integrator_max_substep;
+    float integrator_absolute_error_tolerance;
+    float integrator_relative_error_tolerance;
+} magik_trace_geodesic_integrator_parameters_t;
+
+typedef struct magik_trace_geodesic_inital_conditions_t
+{
+    e_magik_test_particle_types test_particle_type;
+
+    float spatial_position_x;
+    float spatial_position_y;
+    float spatial_position_z;
+
+    float x_rotation;
+    float y_rotation;
+    float z_rotation;
+
+    float local_proper_velocity_x;
+    float local_proper_velocity_y;
+    float local_proper_velocity_z;
+
+    float massive_particle_speed;
+} magik_trace_geodesic_inital_conditions_t;
+
+typedef struct magik_trace_geodesic_step_t
+{
+    float four_position[4];
+    float four_momentum[4];
+    float moment_derivative[4];
+    float four_vector_contraction;
+    float affine_parameter;
+    float delta_affine_parameter;
+} magik_trace_geodesic_step_t;
+
+typedef struct magik_trace_geodesic_container_t
+{
+    uint64_t capacity;
+    uint32_t n_allocated_step;
+    uint32_t n_written;
+    magik_trace_geodesic_step_t* steps;
+} magik_trace_geodesic_container_t; 
+
+/**
+* @brief This function enables the DCC to trace geodesics of a test particle in a chosen spacetime metric and set of initial conditions. 
+* 
+* @warning Magik does not allocate the memory requiered to store the geodesic. The user is responsible for providing the host memory and 
+* correctly indicate the number of available slots. This function runs on the caller thread and is not async. 
+*/
+MAGIK_API e_magik_result_types magik_trace_geodesic(magik_trace_geodesic_container_t* container, magik_trace_geodesic_inital_conditions_t initial_conditions, magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters);
+
+
+
+/**
 * [SECTION] Command Queue System
 */
 
@@ -580,6 +662,35 @@ typedef enum e_magik_cqs_command_types
     // #######################
     // ### 4000-4999 Scene ###
     // #######################
+    /**
+    * @brief Changes metric to Minkowski
+    */
+   MAGIK_COMMAND_SET_METRIC_MINKOWSKI = 4100,
+
+    /**
+    * @brief Changes metric to Schwarzschild
+    */
+   MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD = 4101,
+
+    /**
+    * @brief Changes metric to Kerr
+    */
+   MAGIK_COMMAND_SET_METRIC_KERR = 4102,
+
+    /**
+    * @brief Set Schwarzschild mass (M >= 0)
+    */
+   MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS = 4103,
+
+    /**
+    * @brief Set Kerr mass (M >= 0)
+    */
+   MAGIK_COMMAND_SET_KERR_MASS = 4104,
+
+    /**
+    * @brief Set Kerr spin (|a| > 0)
+    */
+   MAGIK_COMMAND_SET_KERR_SPIN = 4105,
 
 
     
@@ -605,6 +716,12 @@ typedef enum e_magik_cqs_command_types
     * @brief Set the resolution of the camera, values less than 2 are guarded against.
     */
     MAGIK_COMMAND_SET_CAMERA_RESOLUTION = 5003,
+
+    /**
+    * @brief Set the cameras local three velocity. The velocity is naturally bound to 
+    * the speed of light.      
+    */
+    MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY = 5004,
 
 
 
@@ -686,6 +803,44 @@ typedef struct MAGIK_ALIGN4 magik_command_printf_t
 // #######################
 // ### 4000-4999 Scene ###
 // #######################
+typedef struct MAGIK_ALIGN4 magik_command_set_metric_minkowski_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_MINKOWSKI;
+    uint32_t id = 0;
+} magik_command_set_metric_minkowski_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_metric_schwarzschild_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD;
+    uint32_t id = 0;
+} magik_command_set_metric_schwarzschild_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_metric_kerr_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_KERR;
+    uint32_t id = 0;
+} magik_command_set_metric_kerr_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_schwarzschild_mass_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS;
+    float mass_parameter = 6.7329546075E26f;
+    uint32_t id = 0;
+} magik_command_set_schwarzschild_mass_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_kerr_mass_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_MASS;
+    float mass_parameter = 6.7329546075E26f;
+    uint32_t id = 0;
+} magik_command_set_kerr_mass_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_kerr_spin_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_SPIN;
+    float spin_parameter = 0.999f;
+    uint32_t id = 0;
+} magik_command_set_kerr_spin_t;
 
 
 
@@ -722,6 +877,14 @@ typedef struct MAGIK_ALIGN4 magik_command_set_camera_resolution_t
     uint32_t x_resolution = 2;
     uint32_t y_resolution = 2;
 } magik_command_set_camera_resolution_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_camera_three_velocity_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY;
+    float velocity_x = 0.0f;
+    float velocity_y = 0.0f;
+    float velocity_z = 0.0f;
+} magik_command_set_camera_three_velocity_t;
 
 
 

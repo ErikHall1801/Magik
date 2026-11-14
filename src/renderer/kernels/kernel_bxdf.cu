@@ -2,115 +2,114 @@
 #include "cuda_device_utilities.cuh"
 #include "cuda_host_utilities.h"
 
+#include "relativity_utilities.cuh"
+#include "metric_minkowski.cuh"
+#include "metric_schwarzschild.cuh"
+#include "metric_kerr.cuh"
+
+#include "bxdf_utilities.cuh"
+#include "matter_examples.cuh"
+
 namespace magik
 {
-    static __device__ vec3f random_unit_three_vector(curandState_t* random_device, vec3f n)
+    struct kernel_bxdf_args_t
     {
-        using ::sin;
-        using ::cos;
-        using ::acos;
+        uint32_t* d_bxdf_queue_id = nullptr;
+        uint32_t* d_bxdf_queue_count = nullptr;
+        uint32_t* d_redistribute_queue_id = nullptr;
+        uint32_t* d_redistribute_queue_count = nullptr;
+        uint32_t* d_advance_A_queue_id = nullptr;
+        uint32_t* d_advance_A_queue_count = nullptr;
 
-        float u = curand_uniform(random_device);
-        float theta = acos(1.0f - 2.0f*u);
-        float phi = 2.0f*magik::pi*curand_uniform(random_device);
+        uint32_t* d_hit_matter_slot = nullptr;
+        vec4f* d_hit_normal = nullptr;
+        float* d_sensor_wavelength_nm = nullptr;
+        curandState_t* d_random_device = nullptr;
+        uint32_t* d_n_reflected = nullptr;
+        float* d_spectral_radiance = nullptr;
+        vec4f* d_current_four_position = nullptr;
+        vec4f* d_current_four_momentum = nullptr;
+        vec4f* d_next_four_position = nullptr;
+        vec4f* d_next_four_momentum = nullptr;
+        vec4f* d_momentum_derivative_start = nullptr;
+        vec4f* d_momentum_derivative_end = nullptr;
+        float* d_initial_four_vector_contraction = nullptr;
+        float* d_monte_carlo_weight = nullptr;
+        float* d_affine_parameter = nullptr;
+        float* d_delta_affine_parameter = nullptr;
 
-        vec3f p;
-        p.x = cos(phi) * sin(theta);
-        p.y = sin(phi) * sin(theta);
-        p.z = cos(theta);
-        return (p+n).norm();
-    }
+        __host__ void create(wavefront_buffer_t* wb)
+        {
+            d_bxdf_queue_id = wb->queue_pool.get_id_ptr<bxdf_queue_t>();
+            d_bxdf_queue_count = wb->queue_pool.get_count_ptr<bxdf_queue_t>();
+            d_redistribute_queue_id = wb->queue_pool.get_id_ptr<redistribute_queue_t>();
+            d_redistribute_queue_count = wb->queue_pool.get_count_ptr<redistribute_queue_t>();
+            d_advance_A_queue_id = wb->queue_pool.get_id_ptr<advance_A_queue_t>();
+            d_advance_A_queue_count = wb->queue_pool.get_count_ptr<advance_A_queue_t>();
 
-    static __device__ vec3f offset_origin(vec3f x, vec3f n)
+            d_hit_matter_slot = wb->ray_pool.get<hit_matter_slot_t>();
+            d_hit_normal = wb->ray_pool.get<hit_normal_t>();
+            d_sensor_wavelength_nm = wb->ray_pool.get<sensor_wavelength_nm_t>();
+            d_random_device = wb->ray_pool.get<random_device_t>();
+            d_n_reflected = wb->ray_pool.get<n_reflected_t>();
+            d_spectral_radiance = wb->ray_pool.get<spectral_radiance_t>();
+            d_current_four_position = wb->ray_pool.get<current_four_position_t>();
+            d_current_four_momentum = wb->ray_pool.get<current_four_momentum_t>();
+            d_next_four_position = wb->ray_pool.get<next_four_position_t>();
+            d_next_four_momentum = wb->ray_pool.get<next_four_momentum_t>();
+            d_momentum_derivative_start = wb->ray_pool.get<momentum_derivative_start_t>();
+            d_momentum_derivative_end = wb->ray_pool.get<momentum_derivative_end_t>();
+            d_initial_four_vector_contraction = wb->ray_pool.get<initial_four_vector_contraction_t>();
+            d_monte_carlo_weight = wb->ray_pool.get<monte_carlo_weight_t>();
+            d_affine_parameter = wb->ray_pool.get<affine_parameter_t>();
+            d_delta_affine_parameter = wb->ray_pool.get<delta_affine_parameter_t>();
+        }
+    };
+
+    template<e_magik_spacetime_metric_types T, class bxdf_matter> static __global__ void kernel_bxdf(typename metric<T>::params_t metric_parameters, uint32_t kernel_matter_slot, kernel_bxdf_args_t args)
     {
-        /*
-        CREDITS;
-
-        https://github.com/Apress/ray-tracing-gems/blob/master/Ch_06_A_Fast_and_Robust_Method_for_Avoiding_Self-Intersection/offset_ray.cu
-
-        To make the function transform the offset into the surface, simply negate the normal
-        assuming the convention that the passed in normal always opposes the geodesics direction ! 
-        */
-
-        const float offset_scale = 4.0f;
-        const float int_scale = 256.0f * offset_scale;
-        const float float_scale = (1.0f / 65536.0f) * offset_scale;
-        const float origin = 1.0f / 32.0f;
-
-        int of_ix = int_scale*n.x;
-        int of_iy = int_scale*n.y;
-        int of_iz = int_scale*n.z;
-
-        float p_ix = __int_as_float(__float_as_int(x.x) + ((x.x < 0) ? -of_ix : of_ix));
-        float p_iy = __int_as_float(__float_as_int(x.y) + ((x.y < 0) ? -of_iy : of_iy));
-        float p_iz = __int_as_float(__float_as_int(x.z) + ((x.z < 0) ? -of_iz : of_iz));
-
-        return vec3f{   fabsf(x.x) < origin ? x.x+float_scale*n.x : p_ix,
-                        fabsf(x.y) < origin ? x.y+float_scale*n.y : p_iy,
-                        fabsf(x.z) < origin ? x.z+float_scale*n.z : p_iz };
-    }
-
-    static __global__ void kernel_bxdf(uint32_t* d_hit_id, vec4f* d_hit_normal, vec4f* d_dir, vec4f* d_pos, curandState_t* d_random_device, float* d_step_distance, float* d_monte_carlo_weight, float* d_spectral_radiance, float* d_sensor_wavelength_nm, uint32_t* d_bxdf_queue_count, uint32_t* d_bxdf_queue_id, uint32_t* d_advance_queue_A_count, uint32_t* d_advance_queue_A_id, uint32_t* d_redistribute_queue_count, uint32_t* d_redistribute_queue_id)
-    {
-        // Reads "bxdf queue"
-        // Writes "advance queue" or "redistribution queue"
-
-        // 1. Fetch ray id
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
-        if(queue_index >= *d_bxdf_queue_count) return;
-        uint32_t ray_id = d_bxdf_queue_id[queue_index];
+        if(queue_index >= *args.d_bxdf_queue_count) return;
+        uint32_t ray_id = args.d_bxdf_queue_id[queue_index];
+        uint32_t matter_slot = args.d_hit_matter_slot[ray_id];
+        if(matter_slot != kernel_matter_slot) return;
 
-        // 2. Fetch ray-specific data
-        uint32_t hit_id = d_hit_id[ray_id];
+        bxdf_velocity_context v_context = generate_velocity_context(args.d_sensor_wavelength_nm[ray_id], metric<T>::length_scale(metric_parameters), args.d_initial_four_vector_contraction[ray_id], args.d_affine_parameter[ray_id], args.d_delta_affine_parameter[ray_id], args.d_monte_carlo_weight[ray_id], args.d_current_four_position[ray_id], args.d_current_four_momentum[ray_id], args.d_next_four_position[ray_id], args.d_next_four_momentum[ray_id], args.d_momentum_derivative_start[ray_id], args.d_momentum_derivative_end[ray_id], vec3f{args.d_hit_normal[ray_id].x, args.d_hit_normal[ray_id].y, args.d_hit_normal[ray_id].z}, &args.d_random_device[ray_id]);
+        vec3f result_three_velocity = -bxdf_matter::local_proper_velocity_function(v_context); // Negated so authors direct physical velocities
 
-        bool to_advance = false;
+        bxdf_material_context m_context = generate_material_context<T>(metric_parameters, v_context, -result_three_velocity / magik::speed_of_light);
+        bxdf_result result_material = bxdf_matter::material_function(m_context);
 
-        // 3. Do work
-        if(hit_id == 1)
+        apply_bxdf_result<T>(metric_parameters, result_material, ray_id, args.d_n_reflected, args.d_spectral_radiance, args.d_current_four_position, args.d_current_four_momentum, args.d_next_four_position, args.d_next_four_momentum, args.d_initial_four_vector_contraction, args.d_monte_carlo_weight, m_context.redshift_factor, m_context.dimensionless_four_velocity, m_context.global_frame_facing_normal);
+
+        if(result_material.type == ABSORBED)
         {
-            // Box, reflect ray dir, offset ray orig, set "step distance" to 0, send to advance queue
-
-            vec3f hit_normal = vec3f{d_hit_normal[ray_id].x, d_hit_normal[ray_id].y, d_hit_normal[ray_id].z};
-            vec3f hit_dir = vec3f{d_dir[ray_id].x, d_dir[ray_id].y, d_dir[ray_id].z};
-
-            vec3f n = vector_dot_product(hit_normal, hit_dir) < 0.0f ? hit_normal : -hit_normal; // faces the ray
-            vec3f outgoing_dir = random_unit_three_vector(&d_random_device[ray_id], n);
-
-            if(vector_dot_product(outgoing_dir, n) < 0.0f)
-            {
-                outgoing_dir *= -1.0f;
-            }
-
-            vec3f new_orig = offset_origin(vec3f{d_pos[ray_id].x, d_pos[ray_id].y, d_pos[ray_id].z}, n);
-
-            d_dir[ray_id] = vec4f{outgoing_dir.x, outgoing_dir.y, outgoing_dir.z, 0.0f};
-            d_pos[ray_id] = vec4f{new_orig.x, new_orig.y, new_orig.z};
-            d_step_distance[ray_id] = 0.0f;
-            d_monte_carlo_weight[ray_id] *= 0.9f;
-
-            to_advance = true;
-        }
-        else if(hit_id == 2)
-        {
-            // Light
-            // ray_pool.d_spectral_radiance[ray_id] = magik::evaluate_sodium_vapor_lamp_spectrum(ray_pool.d_sensor_wavelength_nm[ray_id]) * 50000000000.0f;
-            // float temperature = magik::map_range(0.0f, 1.0f, 500.0f, 1400.0f, (ray_pool.d_pos[ray_id].x + 5.0f) / 10.0f);
-            d_spectral_radiance[ray_id] = magik::sample_plancks_law<float>(d_sensor_wavelength_nm[ray_id], 5600.0f) * 0.007f;
-            to_advance = false;
-        }
-
-        uint32_t slot = 0;
-
-        if(to_advance)
-        {
-            slot = atomicAdd(d_advance_queue_A_count, 1);
-            d_advance_queue_A_id[slot] = ray_id;
+            uint32_t redistribute_slot = atomicAdd(args.d_redistribute_queue_count, 1);
+            args.d_redistribute_queue_id[redistribute_slot] = ray_id;
         }
         else
         {
-            slot = atomicAdd(d_redistribute_queue_count, 1);
-            d_redistribute_queue_id[slot] = ray_id;
+            uint32_t advance_slot = atomicAdd(args.d_advance_A_queue_count, 1);
+            args.d_advance_A_queue_id[advance_slot] = ray_id;
         }
+    }
+ 
+    /*
+    This is temporary logic to get something on the screen. The proper bxdf pipeline will
+    utilize NVRTC throughout and not rely on a compile-time matter list at all. The hope 
+    is that once we expand the system, while a lot of logic will have to change, the core
+    concepts stay the same. 
+    Regardless of how NVRTC works, we will need to sort the bxdf queue and matter evalu-
+    uation stays the same too. 
+    */
+    template<class... T> struct matter_list {};
+
+    using registered_matter = matter_list<bxdf_null_matter_t, bxdf_diffuse_matter_t, bxdf_illuminant_matter_t, bxdf_horizon_matter_t>;
+
+    template<e_magik_spacetime_metric_types T, class... matter_type> static void launch_all_matter_types(typename metric<T>::params_t metric_parameters, uint32_t threads_per_block, uint32_t n_block, cudaStream_t user_stream, kernel_bxdf_args_t args, matter_list<matter_type...>)
+    {
+        uint32_t slot = 0;
+        (kernel_bxdf<T, matter_type><<<n_block, threads_per_block, 0, user_stream>>>(metric_parameters, slot++, args), ...);
     }
 
     void launch_kernel_bxdf_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
@@ -118,28 +117,26 @@ namespace magik
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
 
-        uint32_t* d_hit_id = wavefront_buffer->ray_pool.get<hit_id_t>();
-        vec4f* d_hit_normal = wavefront_buffer->ray_pool.get<hit_normal_t>();
-        vec4f* d_dir = wavefront_buffer->ray_pool.get<direction_t>();
-        vec4f* d_pos = wavefront_buffer->ray_pool.get<position_t>();
-        curandState_t* d_random_device = wavefront_buffer->ray_pool.get<random_device_t>();
-        float* d_step_distance = wavefront_buffer->ray_pool.get<step_distance_t>();
-        float* d_monte_carlo_weight = wavefront_buffer->ray_pool.get<monte_carlo_weight_t>();
-        float* d_spectral_radiance = wavefront_buffer->ray_pool.get<spectral_radiance_t>();
-        float* d_sensor_wavelength_nm = wavefront_buffer->ray_pool.get<sensor_wavelength_nm_t>();
+        kernel_bxdf_args_t args;
+        args.create(wavefront_buffer);
+        bool time_reversed = true;
 
-        uint32_t* d_bxdf_queue_count = wavefront_buffer->queue_pool.get_count_ptr<bxdf_queue_t>();
-        uint32_t* d_bxdf_queue_id = wavefront_buffer->queue_pool.get_id_ptr<bxdf_queue_t>();
+        bool successful = dispatch_metric(manager->stage.settings.metric_type, [&](auto tag)
+        {
+            constexpr auto T = decltype(tag)::value;
+            launch_all_matter_types<T>(metric<T>::make_params(manager, time_reversed), threads_per_block, n_block, static_cast<cudaStream_t>(manager->cuda_stream), args, registered_matter{});
+        });
 
-        uint32_t* d_advance_queue_A_count = wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>();
-        uint32_t* d_advance_queue_A_id = wavefront_buffer->queue_pool.get_id_ptr<advance_A_queue_t>();
-
-        uint32_t* d_redistribute_queue_count = wavefront_buffer->queue_pool.get_count_ptr<redistribute_queue_t>();
-        uint32_t* d_redistribute_queue_id = wavefront_buffer->queue_pool.get_id_ptr<redistribute_queue_t>();
-
-        kernel_bxdf<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_hit_id, d_hit_normal, d_dir, d_pos, d_random_device, d_step_distance, d_monte_carlo_weight, d_spectral_radiance, d_sensor_wavelength_nm, d_bxdf_queue_count, d_bxdf_queue_id, d_advance_queue_A_count, d_advance_queue_A_id, d_redistribute_queue_count, d_redistribute_queue_id);
         check_cuda_errors(cudaGetLastError());
 
+        wavefront_buffer->queue_pool.store_count_in_history<bxdf_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.settings.n_geodesic_step_limit);
         wavefront_buffer->queue_pool.zero_count_async<bxdf_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
+
+        if(!successful)
+        {
+            e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_ERROR_UNKNOWN_METRIC;
+            manager->atomic_last_error_type.compare_exchange_strong(expected, result);
+            manager->is_running.store(false, std::memory_order_release);
+        }
     }
 }

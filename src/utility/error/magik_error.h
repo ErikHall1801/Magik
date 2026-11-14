@@ -1,13 +1,8 @@
 #pragma once
 #include "magik.h"
 
-#ifdef __CUDACC__
-    #define MAGIK_HD __host__ __device__ 
-    #define MAGIK_INLINE __forceinline__ __host__ __device__
-#else
-    #define MAGIK_HD
-    #define MAGIK_INLINE inline
-#endif
+#include "cuda_host_device_utilities.h"
+
 
 /**
 * [SECTION] Error handling & result types

@@ -3,51 +3,120 @@
 #include "cuda_host_utilities.h"
 #include "traceables.cuh"
 
+#include "relativity_utilities.cuh"
+#include "metric_minkowski.cuh"
+#include "metric_schwarzschild.cuh"
+#include "metric_kerr.cuh"
+
 namespace magik
 {
-    static __global__ void kernel_intersect(vec4f* d_pos, vec4f* d_dir, float* d_step_distance, uint32_t* hit_id, vec4f* hit_normal, uint32_t* d_intersect_queue_count, uint32_t* d_intersect_queue_id, uint32_t* d_advance_queue_A_count, uint32_t* d_advance_queue_A_id, uint32_t* d_bxdf_queue_count, uint32_t* d_bxdf_queue_id, vec3f box_min, vec3f box_max, vec3f light_min, vec3f light_max)
+    struct kernel_intersect_args_t
+    {
+        vec4f* d_current_four_position = nullptr;
+        vec4f* d_next_four_position = nullptr;
+        uint32_t* d_hit_matter_slot = nullptr;
+        vec4f* d_hit_normal = nullptr;
+        uint32_t* d_intersect_queue_count = nullptr;
+        uint32_t* d_intersect_queue_id = nullptr;
+        uint32_t* d_advance_queue_A_count = nullptr;
+        uint32_t* d_advance_queue_A_id = nullptr;
+        uint32_t* d_bxdf_queue_count = nullptr;
+        uint32_t* d_bxdf_queue_id = nullptr;
+
+        vec3f box_min;
+        vec3f box_max;
+        vec3f light_min;
+        vec3f light_max;
+        float celestial_sphere_radius;
+        vec3f observer_origin;
+
+        __host__ void create(magik_render_manager* manager, wavefront_buffer_t* wb)
+        {
+            d_current_four_position = wb->ray_pool.get<current_four_position_t>();
+            d_next_four_position = wb->ray_pool.get<next_four_position_t>();
+            d_hit_matter_slot = wb->ray_pool.get<hit_matter_slot_t>();
+            d_hit_normal = wb->ray_pool.get<hit_normal_t>();
+            d_intersect_queue_count = wb->queue_pool.get_count_ptr<intersect_queue_t>();
+            d_intersect_queue_id = wb->queue_pool.get_id_ptr<intersect_queue_t>();
+            d_advance_queue_A_count = wb->queue_pool.get_count_ptr<advance_A_queue_t>();
+            d_advance_queue_A_id = wb->queue_pool.get_id_ptr<advance_A_queue_t>();
+            d_bxdf_queue_count = wb->queue_pool.get_count_ptr<bxdf_queue_t>();
+            d_bxdf_queue_id = wb->queue_pool.get_id_ptr<bxdf_queue_t>();
+
+            box_min = manager->stage.box_min;
+            box_max = manager->stage.box_max;
+            light_min = manager->stage.light_min;
+            light_max = manager->stage.light_max;
+            celestial_sphere_radius = manager->stage.celestial_sphere_radius;
+            observer_origin = manager->stage.optical_systen.position;
+        }
+    };
+
+    template<e_magik_spacetime_metric_types T> static __global__ void kernel_intersect(typename metric<T>::params_t metric_parameters, kernel_intersect_args_t args)
     {
         // Reads "intersect queue"
         // Writes "advance queue" or "bxdf queue"
 
-        // 1. Fetch ray id
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
-        if(queue_index >= *d_intersect_queue_count) return;
-        uint32_t ray_id = d_intersect_queue_id[queue_index];
+        if(queue_index >= *args.d_intersect_queue_count) return;
+        uint32_t ray_id = args.d_intersect_queue_id[queue_index];
 
-        // 2. Fetch ray-specific data
-        vec3f ray_orig = vec3f{d_pos[ray_id].x, d_pos[ray_id].y, d_pos[ray_id].z};
-        vec3f ray_dir = vec3f{d_dir[ray_id].x, d_dir[ray_id].y, d_dir[ray_id].z};
-        float distance = d_step_distance[ray_id];
+        float length_scale = metric<T>::length_scale(metric_parameters);
+        vec4f current_four_position = args.d_current_four_position[ray_id] * length_scale;
+        vec4f next_four_position = args.d_next_four_position[ray_id] * length_scale;
+
+        vec3f origin = vec3f{current_four_position.x, current_four_position.y, current_four_position.z};
+        vec3f direction = vec3f{next_four_position.x - current_four_position.x, next_four_position.y - current_four_position.y, next_four_position.z - current_four_position.z}.norm();
+        float step_euclidian = vector_distance(vec3f{current_four_position.x, current_four_position.y, current_four_position.z}, vec3f{next_four_position.x, next_four_position.y, next_four_position.z});
 
         // 3. Do work
         bool hit_any = false;
-        uint32_t local_hit_id = 0;
+        uint32_t local_hit_id = 0; // That is ok, if nothing is hit the implication is null-matter. 
 
         float closest_hit = 1e30f;
         vec3f closest_normal;
         float candidate_hit_parameter = 1e30f;
         vec3f candidate_hit_normal;
 
-        if(affine_aabb_intersection(&candidate_hit_parameter, &candidate_hit_normal, ray_dir, ray_orig, 1.0f/distance, box_min, box_max))
+        if(affine_aabb_intersection(&candidate_hit_parameter, &candidate_hit_normal, direction, origin, 1.0f/step_euclidian, args.box_min, args.box_max))
         {
             closest_hit = candidate_hit_parameter;
             closest_normal = candidate_hit_normal;
             hit_any = true;
-            local_hit_id = 1;
+            local_hit_id = 1; // Diffuse
         }
 
         candidate_hit_parameter = 1e30f;
 
-        if(affine_aabb_intersection(&candidate_hit_parameter, &candidate_hit_normal, ray_dir, ray_orig, 1.0f/distance, light_min, light_max))
+        if(affine_aabb_intersection(&candidate_hit_parameter, &candidate_hit_normal, direction, origin, 1.0f/step_euclidian, args.light_min, args.light_max))
         {
             if(candidate_hit_parameter < closest_hit)
             {
                 closest_hit = candidate_hit_parameter;
                 closest_normal = candidate_hit_normal;
                 hit_any = true;
-                local_hit_id = 2;
+                local_hit_id = 2; // Illuminant
             }
+        }
+
+        candidate_hit_parameter = 1e30f;
+
+        if(affine_celestial_sphere_intersection(&candidate_hit_parameter, &candidate_hit_normal, length_scale, args.d_current_four_position[ray_id], args.d_next_four_position[ray_id], args.celestial_sphere_radius, args.observer_origin))
+        {
+            if(candidate_hit_parameter < closest_hit)
+            {
+                closest_hit = candidate_hit_parameter;
+                closest_normal = candidate_hit_normal;
+                hit_any = true;
+                local_hit_id = 3;
+            }
+        }
+
+        if(!hit_any && metric<T>::in_domain(next_four_position/length_scale, metric_parameters))
+        {
+            hit_any = true;
+            closest_hit = 1.0f;
+            local_hit_id = 3; // 0th slot is reservered for the horizon !
         }
 
         // 4. Append to queues
@@ -55,20 +124,16 @@ namespace magik
 
         if(hit_any)
         {
-            slot = atomicAdd(d_bxdf_queue_count, 1);
-            d_bxdf_queue_id[slot] = ray_id;
-
-            // As before, we define that, if there was a hit, by the end of this operation
-            // the ray is at that position. 
-            vec3f new_pos = ray_orig + ray_dir * distance * closest_hit;
-            d_pos[ray_id] = vec4f{new_pos.x, new_pos.y, new_pos.z, 0.0f};
-            hit_id[ray_id] = local_hit_id;
-            hit_normal[ray_id] = vec4f{closest_normal.x, closest_normal.y, closest_normal.z, 0.0f};
+            slot = atomicAdd(args.d_bxdf_queue_count, 1);
+            args.d_bxdf_queue_id[slot] = ray_id;
+            args.d_next_four_position[ray_id] = lerp(current_four_position, next_four_position, closest_hit)/length_scale;
+            args.d_hit_matter_slot[ray_id] = local_hit_id;
+            args.d_hit_normal[ray_id] = vec4f{closest_normal.x, closest_normal.y, closest_normal.z, 0.0f};
         }
         else
         {
-            slot = atomicAdd(d_advance_queue_A_count, 1);
-            d_advance_queue_A_id[slot] = ray_id;
+            slot = atomicAdd(args.d_advance_queue_A_count, 1);
+            args.d_advance_queue_A_id[slot] = ray_id;
         }
     }
 
@@ -77,24 +142,26 @@ namespace magik
         uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
         uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
 
-        vec4f* d_pos = wavefront_buffer->ray_pool.get<position_t>();
-        vec4f* d_dir = wavefront_buffer->ray_pool.get<direction_t>();
-        float* d_step_distance = wavefront_buffer->ray_pool.get<step_distance_t>();
-        uint32_t* d_hit_id = wavefront_buffer->ray_pool.get<hit_id_t>();
-        vec4f* d_hit_normal = wavefront_buffer->ray_pool.get<hit_normal_t>();
+        kernel_intersect_args_t args;
+        args.create(manager, wavefront_buffer);
+        bool time_reversed = true;
 
-        uint32_t* d_intersect_queue_count = wavefront_buffer->queue_pool.get_count_ptr<intersect_queue_t>();
-        uint32_t* d_intersect_queue_id = wavefront_buffer->queue_pool.get_id_ptr<intersect_queue_t>();
+        bool successful = dispatch_metric(manager->stage.settings.metric_type, [&](auto tag)
+        {
+            constexpr auto T = decltype(tag)::value;
+            kernel_intersect<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager, time_reversed), args);
+        });
 
-        uint32_t* d_advance_queue_A_count = wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>();
-        uint32_t* d_advance_queue_A_id = wavefront_buffer->queue_pool.get_id_ptr<advance_A_queue_t>();
-
-        uint32_t* d_bxdf_queue_count = wavefront_buffer->queue_pool.get_count_ptr<bxdf_queue_t>();
-        uint32_t* d_bxdf_queue_id = wavefront_buffer->queue_pool.get_id_ptr<bxdf_queue_t>();
-
-        kernel_intersect<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(d_pos, d_dir, d_step_distance, d_hit_id, d_hit_normal, d_intersect_queue_count, d_intersect_queue_id, d_advance_queue_A_count, d_advance_queue_A_id, d_bxdf_queue_count, d_bxdf_queue_id, manager->stage.box_min, manager->stage.box_max, manager->stage.light_min, manager->stage.light_max);
         check_cuda_errors(cudaGetLastError());
 
+        wavefront_buffer->queue_pool.store_count_in_history<intersect_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.settings.n_geodesic_step_limit);
         wavefront_buffer->queue_pool.zero_count_async<intersect_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
+
+        if(!successful)
+        {
+            e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_ERROR_UNKNOWN_METRIC;
+            manager->atomic_last_error_type.compare_exchange_strong(expected, result);
+            manager->is_running.store(false, std::memory_order_release);
+        }
     }
 }

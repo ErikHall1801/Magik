@@ -23,11 +23,8 @@ namespace magik
     void run(magik_render_manager* manager)
     {
         // A lot of this logic is more than suspect. 
-        // Why is the framebuffer_ object part of the manager at all ? 
+        // The error callback needs to be part of the manager ??? 
         // Some of these names need to be modified. 
-        // MAGIK_HD, MAGIK_HOST_DEVICE etc. We have like 3 files with 3 macros that do the same thing. 
-        // The "is_running" variable should be loaded. 
-        // "internal_memory.h" can be removed. 
 
         e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_SUCCESS;
 
@@ -51,7 +48,7 @@ namespace magik
         wavefront_buffer_t wavefront_buffer;
 
         // Render stage
-        while(manager->is_running)
+        while(manager->is_running.load(std::memory_order_relaxed))
         {
             iteration_start_time = std::chrono::steady_clock::now();
 
@@ -66,10 +63,12 @@ namespace magik
             }
 
             // Framebuffer stage
+            // Why is this not a member function ????
             result = allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
 
             // Wavefront realloc
-            realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.settings.n_spectral_irradiance_bin, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
+            // Why is this not a member function ? 
+            realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.settings.n_spectral_irradiance_bin, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution, manager->stage.settings.n_geodesic_step_limit);
 
             if(result)
             {
@@ -124,15 +123,18 @@ namespace magik
             iteration++;
             iteration_end_time = std::chrono::steady_clock::now();
 
-            manager->sampled_time_point_seconds.store(std::chrono::duration<double>(iteration_start_time.time_since_epoch()).count(), std::memory_order_release);
-            manager->average_sample_time_seconds.store(manager->total_render_time_seconds.load(std::memory_order_relaxed) / (double)iteration);
-            manager->latest_sample_time_seconds.store(std::chrono::duration<double>(iteration_end_time - iteration_start_time).count(), std::memory_order_release);
-            manager->total_render_time_seconds.fetch_add(manager->latest_sample_time_seconds.load(std::memory_order_relaxed), std::memory_order_release);
+            // Update performance statistics "work" buffer, which incldues swapping the buffers. 
+
+            // manager->sampled_time_point_seconds.store(std::chrono::duration<double>(iteration_start_time.time_since_epoch()).count(), std::memory_order_release);
+            // manager->average_sample_time_seconds.store(manager->total_render_time_seconds.load(std::memory_order_relaxed) / (double)iteration);
+            // manager->latest_sample_time_seconds.store(std::chrono::duration<double>(iteration_end_time - iteration_start_time).count(), std::memory_order_release);
+            // manager->total_render_time_seconds.fetch_add(manager->latest_sample_time_seconds.load(std::memory_order_relaxed), std::memory_order_release);
         }
 
         // Shutdown stage
         if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
         {
+            // why is this not a member function ?
             result = destroy_framebuffer_swpachain(&manager->framebuffer_swapchain);
             if(result)
             {
