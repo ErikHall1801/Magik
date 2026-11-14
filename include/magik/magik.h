@@ -213,26 +213,6 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
 * [SECTION] Memory
 */
 
-/**
-* 
-*/
-typedef enum
-{
-    MAGIK_MEMORY_HOST = 0,
-    MAGIK_MEMORY_DEVICE = 1,
-    MAGIK_MEMORY_UNIFIED = 2
-} e_magik_memory_types;
-
-// typedef void (*magik_error_callback)(e_magik_result_types result, const char* func, const char* file, int line, void* user_data);
-
-typedef void* (*host_mem_reserve_function)(uint64_t size);
-
-typedef bool (*host_mem_commit_function)(void* ptr, uint64_t size);
-
-typedef bool (*host_mem_decommit_function)(void* ptr, uint64_t size);
-
-typedef bool (*host_mem_release_function)(void* ptr, uint64_t size);
-
 
 
 /**
@@ -290,11 +270,6 @@ typedef struct magik_manager_descriptor_t
     uint32_t cqs_n_reserved_chunk = 4096;
     bool cqs_drop_overflow = false;
 
-    host_mem_reserve_function host_reserve_func = nullptr;
-    host_mem_commit_function host_commit_func = nullptr;
-    host_mem_decommit_function host_decommit_func = nullptr;
-    host_mem_release_function host_release_func = nullptr;
-
 } magik_manager_descriptor_t;
 
 /**
@@ -340,16 +315,33 @@ MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_man
 */
 
 /**
-* 
+* Magik owns the memory ! DO NOT FREE IT ON THE DCC ! IT IS RELEASED ON TERMINATION ! 
 */
 typedef struct magik_renderer_statistics_t
 {
-    double sampled_time_point_seconds = 0.0f;
-    double average_sample_time_seconds = 0.0f;
-    double latest_sample_time_seconds = 0.0f;
-    double total_render_time_seconds = 0.0f;
+    // Sample 
+    size_t x_sample = 0;
 
-    // Memory
+    // Render loop timings
+    double total_render_time_seconds = 0.0;
+    double latest_render_loop_iteration_time_seconds = 0.0;
+
+    // Wavefront sample timings
+    double total_wavefront_sample_time_seconds = 0.0;
+    double latest_wavefront_sample_time_seconds = 0.0;
+
+    // Wavefront queue
+    size_t latest_wavefront_history_length = 0;
+    uint32_t* h_latest_advance_A_queue_count_history = nullptr;
+    uint32_t* h_latest_advance_B_queue_count_history = nullptr;
+    uint32_t* h_latest_intersect_queue_count_history = nullptr;
+    uint32_t* h_latest_bxdf_queue_count_history = nullptr;
+    uint32_t* h_latest_redistribute_queue_count_history = nullptr;
+    uint32_t* h_latest_splat_queue_count_history = nullptr;
+
+    // Memory usage
+    size_t total_framebuffer_swapchain_size = 0;
+    size_t total_wavefront_buffer_size = 0;
 } magik_renderer_statistics_t;
 
 /**
@@ -357,7 +349,14 @@ typedef struct magik_renderer_statistics_t
 * 
 * @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
 */
-MAGIK_API e_magik_result_types magik_fetch_renderer_statistics(magik_render_manager_t manager, magik_renderer_statistics_t* statistics);
+MAGIK_API e_magik_result_types magik_fetch_renderer_statistics(magik_render_manager_t manager, bool* is_new_fetch, magik_renderer_statistics_t* dcc_statistics);
+
+/**
+* @brief Returns render statistics.
+* 
+* @return MAGIK_SUCCESS, MAGIK_ERROR_INVALID_POINTER
+*/
+MAGIK_API e_magik_result_types magik_destroy_renderer_statistics(magik_renderer_statistics_t* statistics);
 
 
 

@@ -77,37 +77,6 @@ namespace magik
 
     void wavefront_sample(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
-        /*
-        ### Goal for tomorrow
-        - Wavefront performance metrics 
-            - The data will be supplied to the DCC in a similar manner to the framebuffer. Magik 
-              writes to a tripple buffered queue and the DCC can request the latest capture. 
-            - What data do we actually want to capture ? 
-            - The biggest one is how quickly each queue drains. So we ideally want to have a 
-              histogram of the ID count in each queue over all iterations. Not even an average, 
-              as that is kinda meaningless with a moving camera.
-            - This should be part of the queue pool itself. We can make a function that stores 
-              the count to a parallel array created for each queue. Then we can gobble up the 
-              history at the end and send it to the buffer. 
-
-        - h_step sorting (Radix sort ?)
-
-        - Matter slot sorting (Bucket sort) 
-            - We can move the sync point to just before the bxdf kernels are launched. This way the 
-              Host can only launch kernels which are present in the queue. 
-            - What is the idea ? 
-            - We start with a scrambled bxdf queue. 
-            - A small kernel scans through the queue and records how many times each matter type is 
-              present. It is literally an array of size M (M = N matter slots) where each element 
-              represents the slot's count. 
-            - This data has to be sent to the scheduler as any slot with 0 members means "No launch". 
-            - The next step is to scatter. Another kernel the size of the bxdf queue reads the unsorted
-              queue and atomically adds it to a sorted one. Where we use the number of elements as an
-              offset. So for example if there are 200 0th elements, then the first "1" slot starts at
-              id 200. 
-              This way the bxdf queue gets sorted. 
-        */
-
         bool working = true;
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
 

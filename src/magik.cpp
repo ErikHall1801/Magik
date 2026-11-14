@@ -125,11 +125,6 @@ MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_
     new_manager->command_context.front->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
     new_manager->command_context.back->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
 
-    new_manager->user_host_mem_reserve_func = descriptor.host_reserve_func;
-    new_manager->user_host_mem_commit_func = descriptor.host_commit_func;
-    new_manager->user_host_mem_decommit_func = descriptor.host_decommit_func;
-    new_manager->user_host_mem_release_func = descriptor.host_release_func;
-
     new_manager->worker_thread = std::thread(magik::run, new_manager);
 
     *manager = new_manager;
@@ -160,18 +155,6 @@ MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_man
 /**
 * [SECTION] Renderer statistics
 */
-
-MAGIK_API e_magik_result_types magik_fetch_renderer_statistics(magik_render_manager_t manager, magik_renderer_statistics_t* statistics)
-{
-    if(!manager || !statistics) return MAGIK_ERROR_INVALID_POINTER;
-
-    statistics->sampled_time_point_seconds = manager->sampled_time_point_seconds.load(std::memory_order_relaxed);
-    statistics->average_sample_time_seconds = manager->average_sample_time_seconds.load(std::memory_order_relaxed);
-    statistics->latest_sample_time_seconds = manager->latest_sample_time_seconds.load(std::memory_order_relaxed);
-    statistics->total_render_time_seconds = manager->total_render_time_seconds.load(std::memory_order_relaxed);
-
-    return MAGIK_SUCCESS;
-}
 
 
 
