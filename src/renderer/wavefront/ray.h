@@ -9,7 +9,12 @@
 
 namespace magik
 {
-    struct ray_queue_base_t { uint32_t* d_count = nullptr; uint32_t* d_id = nullptr; uint32_t* d_count_history = nullptr; };
+    struct ray_queue_base_t 
+    {
+        uint32_t* d_count = nullptr; 
+        uint32_t* d_count_history = nullptr; 
+        uint32_t* d_id = nullptr; 
+    };
 
     struct advance_A_queue_t : ray_queue_base_t {};
 
@@ -25,6 +30,14 @@ namespace magik
 
     template<typename... T_queue> struct queue_pool_t : T_queue...
     {
+        uint32_t* d_count_base = nullptr;
+        uint32_t* d_count_history_base = nullptr;
+        uint32_t* d_id_base = nullptr;
+
+        size_t size_of_d_count_block = 0;
+        size_t size_of_d_count_history_block = 0;
+        size_t size_of_d_id_block = 0;
+
         static constexpr size_t align_up(size_t x)
         {
             return (x + 255) & ~(255);
@@ -74,12 +87,12 @@ namespace magik
 
         void reset_all_counts(cudaStream_t user_stream)
         {
-            (check_cuda_errors(cudaMemsetAsync(get_count_ptr<T_queue>(), 0x0, sizeof(uint32_t), user_stream)), ...);
+            check_cuda_errors(cudaMemsetAsync(d_count_base, 0, size_of_d_count_block, user_stream));
         }
 
         void reset_all_count_histories(cudaStream_t user_stream, uint32_t n_geodesic_step_limit)
         {
-            (check_cuda_errors(cudaMemsetAsync(get_count_history_ptr<T_queue>(), 0x0, sizeof(uint32_t)*n_geodesic_step_limit, user_stream)), ...);
+            check_cuda_errors(cudaMemsetAsync(d_count_history_base, 0, size_of_d_count_history_block, user_stream));
         }
 
         void swap_advance_queues()
@@ -92,15 +105,48 @@ namespace magik
 
         void assign(device_mem_arena* arena, const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t n_geodesic_step_limit)
         {
-            // It might, in the future, make sense to put all counts next to each other. 
-            size_t n_pixel = (size_t)x_resolution * y_resolution;
-            auto push = [&](ray_queue_base_t& q)
+            constexpr size_t n_queue = sizeof...(T_queue);
+            const size_t id_stride = ((size_t)x_resolution * y_resolution + 63) & ~size_t(63);
+
+            size_t total_size_of_count = n_queue * sizeof(uint32_t);
+            size_t total_size_of_count_history = n_queue * sizeof(uint32_t) * (size_t)n_geodesic_step_limit;
+            size_t total_size_of_id = n_queue * id_stride * sizeof(uint32_t);
+
+            size_of_d_count_block = total_size_of_count;
+            size_of_d_count_history_block = total_size_of_count_history;
+            size_of_d_id_block = total_size_of_id;
+
+            uint32_t* d_count_base_ptr = static_cast<uint32_t*>(device_arena_push(arena, total_size_of_count));
+            uint32_t* d_count_history_base_ptr = static_cast<uint32_t*>(device_arena_push(arena, total_size_of_count_history));
+            uint32_t* d_id_base_ptr = static_cast<uint32_t*>(device_arena_push(arena, total_size_of_id));
+
+            d_count_base = d_count_base_ptr;
+            d_count_history_base = d_count_history_base_ptr;
+            d_id_base = d_id_base_ptr;
+
+            size_t i_push_count = 0;
+            auto push_count = [&](ray_queue_base_t& q)
             {
-                q.d_count = static_cast<uint32_t*>(device_arena_push(arena, sizeof(uint32_t)));
-                q.d_id = static_cast<uint32_t*>(device_arena_push(arena, n_pixel * sizeof(uint32_t)));
-                q.d_count_history = static_cast<uint32_t*>(device_arena_push(arena, sizeof(uint32_t) * (size_t)n_geodesic_step_limit));
+                q.d_count = d_count_base_ptr + i_push_count;
+                i_push_count++;
             };
-            (push(static_cast<T_queue&>(*this)), ...);
+            (push_count(static_cast<T_queue&>(*this)), ...);
+
+            size_t i_push_count_history = 0;
+            auto push_count_history = [&](ray_queue_base_t& q)
+            {
+                q.d_count_history = d_count_history_base_ptr + i_push_count_history * (size_t)n_geodesic_step_limit;
+                i_push_count_history++;
+            };
+            (push_count_history(static_cast<T_queue&>(*this)), ...);
+
+            size_t i_push_id = 0;
+            auto push_id = [&](ray_queue_base_t& q)
+            {
+                q.d_id = d_id_base_ptr + i_push_id * id_stride;
+                i_push_id++;
+            };
+            (push_id(static_cast<T_queue&>(*this)), ...);
         }
     };
 
