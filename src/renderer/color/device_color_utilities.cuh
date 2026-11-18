@@ -45,20 +45,20 @@ namespace magik
         uint32_t ray_id;
         uint32_t sensor_resolution_x; 
         uint32_t sensor_resolution_y; 
-        uint32_t n_isi_spectral_irradiance_bin;
+        uint32_t n_isi_bin;
     };
 
     __device__ __inline__ static void redistribute_spectral_radiance(redistribute_spectral_radiance_args_t args)
     {
-        size_t spectral_irradiance_id = (size_t)args.ray_id * args.n_isi_spectral_irradiance_bin;
+        size_t spectral_irradiance_id = (size_t)args.ray_id * args.n_isi_bin;
 
-        float wavelength_range_in_bin_nm = (args.isi_max_wavelength_nm - args.isi_min_wavelength_nm) / static_cast<float>(args.n_isi_spectral_irradiance_bin);
+        float wavelength_range_in_bin_nm = (args.isi_max_wavelength_nm - args.isi_min_wavelength_nm) / static_cast<float>(args.n_isi_bin);
         float x1 = args.isi_min_wavelength_nm;
         float x2 = args.isi_min_wavelength_nm + wavelength_range_in_bin_nm;
         float sampled_irradiance = radiance_to_irradiance({args.spectral_radiance, args.monte_carlo_weight, args.sensor_width_mm, args.sensor_height_mm, args.iso, args.fps, args.shutter_angle, args.sensor_resolution_x, args.sensor_resolution_y});
         float x_stored_irradiance = 0.0f;
 
-        for(size_t i = 0; i < args.n_isi_spectral_irradiance_bin; i++)
+        for(size_t i = 0; i < args.n_isi_bin; i++)
         {
             x_stored_irradiance = args.d_intrinsic_spectral_irradiance[spectral_irradiance_id + i];
             x_stored_irradiance += sampled_irradiance * (magik::norm_gaussian_cdf(args.sensor_wavelength_nm, x2, args.redistribution_standard_deviation) - magik::norm_gaussian_cdf(args.sensor_wavelength_nm, x1, args.redistribution_standard_deviation));
@@ -72,7 +72,7 @@ namespace magik
 
     struct intrinsic_spectral_irradiance_to_color_args_t
     {
-        uint32_t n_isi_spectral_irradiance_bin;
+        uint32_t n_isi_bin;
         uint32_t ray_id;
         float* d_intrinsic_spectral_irradiance;
         const vec3f* isi_to_scene_referred_weights;
@@ -81,11 +81,11 @@ namespace magik
 
     __device__ __inline__ static vec3f intrinsic_spectral_irradiance_to_scene_color(intrinsic_spectral_irradiance_to_color_args_t args)
     {
-        size_t spectral_irradiance_id = (size_t)args.ray_id * args.n_isi_spectral_irradiance_bin;
+        size_t spectral_irradiance_id = (size_t)args.ray_id * args.n_isi_bin;
         vec3f result_color = vec3f{0.0f, 0.0f, 0.0f}, cmf_weights = vec3f{0.0f, 0.0f, 0.0f};
         float x_intrinsic_spectral_irradiance = 0.0f;
         
-        for(uint32_t i = 0; i < args.n_isi_spectral_irradiance_bin; i++)
+        for(uint32_t i = 0; i < args.n_isi_bin; i++)
         {
             x_intrinsic_spectral_irradiance = args.d_intrinsic_spectral_irradiance[spectral_irradiance_id + i];
             cmf_weights = args.isi_to_scene_referred_weights[i];

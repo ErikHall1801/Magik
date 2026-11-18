@@ -33,7 +33,7 @@ namespace magik
         return match_color_matching_function(type, std::forward<F>(f), supported_color_matching_functions{});
     }
 
-    template<typename T> MAGIK_DEVICE_HOST T sample_spectral_data_equidistant(const T* values, uint32_t n_entries, float values_min_wavelength_nm, float values_max_wavelength_nm, float sample_wavelength_nm)
+    template<typename T> MAGIK_DEVICE_HOST T sample_equidistant_spectral_data(const T* values, uint32_t n_entries, float values_min_wavelength_nm, float values_max_wavelength_nm, float sample_wavelength_nm)
     {
         float spacing = (values_max_wavelength_nm - values_min_wavelength_nm) / float(n_entries - 1);
         float float_index = fminf(fmaxf((sample_wavelength_nm - values_min_wavelength_nm) / spacing, 0.0f), float(n_entries - 1));

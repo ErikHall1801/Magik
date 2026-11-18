@@ -48,15 +48,15 @@ namespace magik
         wavefront_buffer_t wavefront_buffer;
 
         color_pipeline_settings_t pipeline_settings;
-        pipeline_settings.n_spectral_irradiance_bin = manager->stage.settings.n_spectral_irradiance_bin;
+        pipeline_settings.n_isi_bin = manager->stage.settings.n_isi_bin;
         pipeline_settings.scene_colorspace_type = manager->stage.optical_systen.scene_colorspace_type;
         pipeline_settings.display_colorspace_type = manager->stage.optical_systen.display_colorspace_type;
         pipeline_settings.view_transform = manager->stage.optical_systen.view_transform_type;
         pipeline_settings.output_format = manager->stage.optical_systen.output_format;
         pipeline_settings.white_point = manager->stage.optical_systen.white_point;
         pipeline_settings.tint = manager->stage.optical_systen.tint;
-        pipeline_settings.isi_max_wavelength_nm = manager->stage.settings.max_wavelength_nm;
-        pipeline_settings.isi_min_wavelength_nm = manager->stage.settings.min_wavelength_nm;
+        pipeline_settings.isi_max_wavelength_nm = manager->stage.settings.isi_max_wavelength_nm;
+        pipeline_settings.isi_min_wavelength_nm = manager->stage.settings.isi_min_wavelength_nm;
         pipeline_settings.cmf_type = manager->stage.optical_systen.cmf_type;
         manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(pipeline_settings);
 
@@ -81,7 +81,7 @@ namespace magik
 
             // Wavefront realloc
             // Why is this not a member function ? 
-            realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.settings.n_spectral_irradiance_bin, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution, manager->stage.settings.n_geodesic_step_limit);
+            realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.settings.n_isi_bin, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution, manager->stage.settings.n_geodesic_step_limit);
 
             if(result)
             {

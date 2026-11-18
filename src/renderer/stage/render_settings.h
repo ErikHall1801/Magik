@@ -12,11 +12,11 @@ namespace magik
         uint32_t threads_per_block_y = 16;
         uint32_t wavefront_threads_per_block = 256;
 
-        // Spectral integration
-        uint32_t n_spectral_irradiance_bin = 12;
-        float max_wavelength_nm = 830.0f;
-        float min_wavelength_nm = 360.0f;
-        float redistribution_standard_deviation = 10.0f;
+        // Spectral integration - ISI = Intrinsic Spectral Irradiance
+        uint32_t n_isi_bin = 24;
+        float isi_max_wavelength_nm = 830.0f;
+        float isi_min_wavelength_nm = 360.0f;
+        float redistribution_standard_deviation_nm = 10.0f;
 
         // Relativistic integration
         e_magik_spacetime_metric_types metric_type = e_magik_spacetime_metric_types::KERR;

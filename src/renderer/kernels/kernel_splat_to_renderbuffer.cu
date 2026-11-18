@@ -14,7 +14,7 @@ namespace magik
         float* d_renderbuffer;
         color_pipeline_descriptor_t color_pipeline_descriptor;
         
-        uint32_t n_spectral_irradiance_bin;
+        uint32_t n_isi_bin;
         float max_wavelength_nm;
         float min_wavelength_nm;
         uint32_t x_sample;
@@ -27,25 +27,21 @@ namespace magik
             d_renderbuffer = d_target_buffer;
             color_pipeline_descriptor = manager->color_pipeline_descriptor;
 
-            n_spectral_irradiance_bin = manager->stage.settings.n_spectral_irradiance_bin;
-            max_wavelength_nm = manager->stage.settings.max_wavelength_nm;
-            min_wavelength_nm = manager->stage.settings.min_wavelength_nm;
+            n_isi_bin = manager->stage.settings.n_isi_bin;
+            max_wavelength_nm = manager->stage.settings.isi_max_wavelength_nm;
+            min_wavelength_nm = manager->stage.settings.isi_min_wavelength_nm;
             x_sample = manager->x_sample.load(std::memory_order_acquire);
         }
     };
 
     static __global__ void kernel_splat_to_renderbuffer(kernel_splat_to_renderbuffer_t args)
     {
-        /*
-        This kernel will eventually include the entire color pipeline, such as OCIO-generated functions. 
-        */
-
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
         if(queue_index >= *args.d_splat_queue_count) return;
         uint32_t ray_id = args.d_splat_queue_id[queue_index];
 
         intrinsic_spectral_irradiance_to_color_args_t isi_args;
-        isi_args.n_isi_spectral_irradiance_bin = args.n_spectral_irradiance_bin;
+        isi_args.n_isi_bin = args.n_isi_bin;
         isi_args.ray_id = ray_id;
         isi_args.d_intrinsic_spectral_irradiance = args.d_intrinsic_spectral_irradiance;
         isi_args.isi_to_scene_referred_weights = args.color_pipeline_descriptor.isi_to_scene_referred_weights;

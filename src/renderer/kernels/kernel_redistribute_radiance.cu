@@ -17,13 +17,13 @@ namespace magik
         float* d_intrinsic_spectral_irradiance = nullptr;
         float* d_sensor_wavelength_nm = nullptr;
 
-        float max_wavelength_nm;
-        float min_wavelength_nm;
-        float redistribution_standard_deviation;
+        float isi_max_wavelength_nm;
+        float isi_min_wavelength_nm;
+        float redistribution_standard_deviation_nm;
         float sensor_diagonal_mm;
         float sensor_resolution_x;
         float sensor_resolution_y;
-        uint32_t n_spectral_irradiance_bin;
+        uint32_t n_isi_bin;
 
         __host__ void create(magik_render_manager* manager, wavefront_buffer_t* wb)
         {
@@ -36,27 +36,18 @@ namespace magik
             d_intrinsic_spectral_irradiance = wb->ray_pool.get<intrinsic_spectral_irradiance_t>();
             d_sensor_wavelength_nm = wb->ray_pool.get<sensor_wavelength_nm_t>();
 
-            max_wavelength_nm = manager->stage.settings.max_wavelength_nm;
-            min_wavelength_nm = manager->stage.settings.min_wavelength_nm;
-            redistribution_standard_deviation = manager->stage.settings.redistribution_standard_deviation;
+            isi_max_wavelength_nm = manager->stage.settings.isi_max_wavelength_nm;
+            isi_min_wavelength_nm = manager->stage.settings.isi_min_wavelength_nm;
+            redistribution_standard_deviation_nm = manager->stage.settings.redistribution_standard_deviation_nm;
             sensor_diagonal_mm = manager->stage.optical_systen.sensor_diagonal_mm;
             sensor_resolution_x = static_cast<float>(manager->stage.optical_systen.x_resolution);
             sensor_resolution_y = static_cast<float>(manager->stage.optical_systen.y_resolution);
-            n_spectral_irradiance_bin = manager->stage.settings.n_spectral_irradiance_bin;
+            n_isi_bin = manager->stage.settings.n_isi_bin;
         }
     };
 
     __global__ static void kernel_redistribute_radiance(kernel_redistribute_radiance_args_t args)
     {
-        // Reads "redistribute queue"
-        // Writes "splat queue"
-        // Well what does this write too ? The idea is that any ray in the redistribute queue is kill. 
-        // The question really is if we can put the splat kernel into the wavefront as well. Because
-        // that too can easily be async. Yeah, this works fine. We can even put the color kernel there. 
-        // Since, again, that can be async here. 
-        // We keep this one seperate because, in the future, the work done in here will get more complicated
-        // when sensor responsens and what not. 
-
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
         if(queue_index >= *args.d_redistribute_queue_count) return;
         uint32_t ray_id = args.d_redistribute_queue_id[queue_index];
@@ -73,9 +64,9 @@ namespace magik
             s_args.spectral_radiance = spectral_radiance;
             s_args.monte_carlo_weight = monte_carlo_weight;
             s_args.sensor_wavelength_nm = args.d_sensor_wavelength_nm[ray_id];
-            s_args.isi_max_wavelength_nm = args.max_wavelength_nm;
-            s_args.isi_min_wavelength_nm = args.min_wavelength_nm;
-            s_args.redistribution_standard_deviation = args.redistribution_standard_deviation;
+            s_args.isi_max_wavelength_nm = args.isi_max_wavelength_nm;
+            s_args.isi_min_wavelength_nm = args.isi_min_wavelength_nm;
+            s_args.redistribution_standard_deviation = args.redistribution_standard_deviation_nm;
             s_args.sensor_width_mm = static_cast<float>(args.sensor_resolution_x) * inv_b;
             s_args.sensor_height_mm = static_cast<float>(args.sensor_resolution_y) * inv_b;
             s_args.iso = 1000.0f; 
@@ -84,7 +75,7 @@ namespace magik
             s_args.ray_id = ray_id;
             s_args.sensor_resolution_x = args.sensor_resolution_x; 
             s_args.sensor_resolution_y = args.sensor_resolution_y;
-            s_args.n_isi_spectral_irradiance_bin = args.n_spectral_irradiance_bin;
+            s_args.n_isi_bin = args.n_isi_bin;
 
             redistribute_spectral_radiance(s_args);
         }

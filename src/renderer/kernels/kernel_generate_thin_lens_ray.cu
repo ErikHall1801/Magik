@@ -36,8 +36,8 @@ namespace magik
 
             x_resolution = wb->x_resolution;
             y_resolution = wb->y_resolution;
-            max_wavelength_nm = manager->stage.settings.max_wavelength_nm;
-            min_wavelength_nm = manager->stage.settings.min_wavelength_nm;
+            max_wavelength_nm = manager->stage.settings.isi_max_wavelength_nm;
+            min_wavelength_nm = manager->stage.settings.isi_min_wavelength_nm;
             focal_length = manager->stage.optical_systen.focal_length;
             sensor_diagonal_mm = manager->stage.optical_systen.sensor_diagonal_mm;
             position = manager->stage.optical_systen.position;

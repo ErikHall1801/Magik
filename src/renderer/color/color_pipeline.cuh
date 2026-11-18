@@ -35,7 +35,7 @@ namespace magik
 
         for(uint32_t i = 0; i < cmf_n_entries; i++)
         {
-            x_cmf_values = sample_spectral_data_equidistant(cmf_values, cmf_n_entries, cmf_min_wavelength_nm, cmf_max_wavelength_nm, x_wavelength_nm);
+            x_cmf_values = sample_equidistant_spectral_data(cmf_values, cmf_n_entries, cmf_min_wavelength_nm, cmf_max_wavelength_nm, x_wavelength_nm);
             blackbody_xyz += x_cmf_values * sample_plancks_law(x_wavelength_nm, temperature);
             blackbody_xyz_dT += x_cmf_values * sample_plancks_law(x_wavelength_nm, temperature + 1);
             x_wavelength_nm += x_wavelength_range;
@@ -52,11 +52,8 @@ namespace magik
         if(n_locus.y < 0.0f) n_locus *= -1.0f;
 
         vec2f cie_uv_prime = cie_uv_0 + n_locus * tint;
-
         vec2f cie_xy = cie_uv_to_cie_xy(cie_uv_prime);
-
-        vec3f cie_xyz_tinted = cie_xy_to_cie_XYZ(cie_xy);
-        return cie_xyz_tinted;
+        return cie_xy_to_cie_XYZ(cie_xy);
     }
 
     __host__ static inline mat3f chromatic_adaptation(vec3f white_point_src_cie_xyz, vec3f white_point_dst_cie_xyz)
@@ -70,51 +67,51 @@ namespace magik
         return m_cat_inv * mat3f{lms_dst.x / lms_src.x, 0.0f, 0.0f, 0.0f, lms_dst.y / lms_src.y, 0.0f, 0.0f, 0.0f, lms_dst.z / lms_src.z} * m_cat;
     }
 
-    __host__ static inline void compute_normalized_isi_cmf_weights(vec3f* isi_cmf_weights, uint32_t n_isi_spectral_bin, float isi_min_wavelength_nm, float isi_max_wavelength_nm, const vec3f* cmf_values, uint32_t cmf_n_entries, float cmf_min_wavelength_nm, float cmf_max_wavelength_nm)
+    __host__ static inline void compute_normalized_isi_cmf_weights(vec3f* isi_to_scene_referred_weights, uint32_t n_isi_bin, float isi_min_wavelength_nm, float isi_max_wavelength_nm, const vec3f* cmf_values, uint32_t cmf_n_entries, float cmf_min_wavelength_nm, float cmf_max_wavelength_nm)
     {
         vec3f w = {0.0f, 0.0f, 0.0f};
         float sum_y = 0.0f;
 
-        float isi_bin_range = (isi_max_wavelength_nm - isi_min_wavelength_nm) / static_cast<float>(n_isi_spectral_bin);
+        float isi_bin_range = (isi_max_wavelength_nm - isi_min_wavelength_nm) / static_cast<float>(n_isi_bin);
         float cmf_bin_range = (cmf_max_wavelength_nm - cmf_min_wavelength_nm) / static_cast<float>(cmf_n_entries - 1);
         uint32_t sub_range_steps = static_cast<uint32_t>(ceilf(isi_bin_range / cmf_bin_range));
         float x_wavelength_sub_range_nm = isi_bin_range / static_cast<float>(sub_range_steps);
         float x_wavelength_nm_isi_bin, x_wavelenght_nm_sub_range;
 
-        for(uint32_t i = 0; i < n_isi_spectral_bin; i++)
+        for(uint32_t i = 0; i < n_isi_bin; i++)
         {
             x_wavelength_nm_isi_bin = isi_min_wavelength_nm + i * isi_bin_range;
 
             for(uint32_t j = 0; j < sub_range_steps; j++)
             {
                 x_wavelenght_nm_sub_range = x_wavelength_nm_isi_bin + (j + 0.5f)*x_wavelength_sub_range_nm;
-                w += sample_spectral_data_equidistant(cmf_values, cmf_n_entries, cmf_min_wavelength_nm, cmf_max_wavelength_nm, x_wavelenght_nm_sub_range) * x_wavelength_sub_range_nm;
+                w += sample_equidistant_spectral_data(cmf_values, cmf_n_entries, cmf_min_wavelength_nm, cmf_max_wavelength_nm, x_wavelenght_nm_sub_range) * x_wavelength_sub_range_nm;
             }
 
-            isi_cmf_weights[i] = w;
+            isi_to_scene_referred_weights[i] = w;
             sum_y += w.y;
             w = {0.0f, 0.0f, 0.0f};
         }
 
         float k = 1.0f / sum_y;
 
-        for(uint32_t i = 0; i < n_isi_spectral_bin; i++)
+        for(uint32_t i = 0; i < n_isi_bin; i++)
         {
-            isi_cmf_weights[i] *= k;
+            isi_to_scene_referred_weights[i] *= k;
         }
     }
 
-    __host__ static inline void fold_XYZ_to_scene_matrix_into_isi(vec3f* isi_cmf_weights, uint32_t n_isi_spectral_bin, mat3f XYZ_to_scene)
+    __host__ static inline void fold_XYZ_to_scene_matrix_into_isi(vec3f* isi_to_scene_referred_weights, uint32_t n_isi_bin, mat3f XYZ_to_scene)
     {
-        for(uint32_t i = 0; i < n_isi_spectral_bin; i++)
+        for(uint32_t i = 0; i < n_isi_bin; i++)
         {
-            isi_cmf_weights[i] = XYZ_to_scene * isi_cmf_weights[i];
+            isi_to_scene_referred_weights[i] = XYZ_to_scene * isi_to_scene_referred_weights[i];
         }
     }
 
     struct color_pipeline_settings_t
     {
-        uint32_t n_spectral_irradiance_bin;
+        uint32_t n_isi_bin;
         e_magik_scene_colorspace_types scene_colorspace_type;
         e_magik_display_colorspace_types display_colorspace_type;
         e_magik_view_transform_types view_transform;
@@ -141,7 +138,7 @@ namespace magik
             color_pipeline_descriptor_t result;
 
             // Extract number of spectral bins - This should be replaced by a command-level constraint ! 
-            result.n_spectral_bin = settings.n_spectral_irradiance_bin > MAGIK_N_MAX_SPECTRAL_BIN ? MAGIK_N_MAX_SPECTRAL_BIN : settings.n_spectral_irradiance_bin;
+            result.n_spectral_bin = settings.n_isi_bin > MAGIK_N_MAX_SPECTRAL_BIN ? MAGIK_N_MAX_SPECTRAL_BIN : settings.n_isi_bin;
 
             // Fold the scene referred colorspace into the CMF
             mat3f XYZ_to_scene_colorspace, scene_colorspace_to_XYZ;
