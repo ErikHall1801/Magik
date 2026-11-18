@@ -68,7 +68,7 @@ namespace magik
         {
             bxdf_result result;
 
-            result.spectral_radiance = sample_plancks_law(m_context.redshifted_wavelength_nm, 5600.0f) * 0.02f;
+            result.spectral_radiance = evaluate_white_led_spectrum(m_context.redshifted_wavelength_nm) * 4000000000.0f; // sample_plancks_law(m_context.redshifted_wavelength_nm, 5600.0f) * 0.02f;
             result.monte_carlo_weight_adjustment = 1.0f;
             result.type = ABSORBED;
 

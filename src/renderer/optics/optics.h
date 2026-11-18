@@ -22,7 +22,7 @@ namespace magik
         e_magik_color_matching_function_types cmf_type = MAGIK_CMF_CIE_1931;
         e_magik_scene_colorspace_types scene_colorspace_type = MAGIK_SCENE_COLORSPACE_LINEAR_REC709;
         e_magik_view_transform_types view_transform_type = MAGIK_VIEW_TRANSFORM_REINHARD_EXTENDED;
-        e_magik_display_colorspace_types display_colorspace_type = MAGIK_DISPLAY_COLORSPACE_SRGB;
+        e_magik_display_colorspace_types display_colorspace_type = MAGIK_DISPLAY_COLORSPACE_ADOBE_RGB;
         e_magik_output_format_types output_format = MAGIK_OUTPUT_FORMAT_FLOAT32;
         float iso = 1000.0f;
         float white_point = 5600.0f;

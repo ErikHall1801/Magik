@@ -2,7 +2,6 @@
 #include "cuda_device_utilities.cuh"
 #include "cuda_host_utilities.h"
 #include "device_sensor_utilities.cuh"
-#include "wavelength_sampler.cuh"
 #include "thin_lens.cuh"
 
 namespace magik

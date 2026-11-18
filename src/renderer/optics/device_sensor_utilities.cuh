@@ -15,6 +15,12 @@ namespace magik
     * Naturally this header is device only. 
     */
 
+    __device__ __inline__ static void draw_random_wavelength_uniform(float* wavelength_out, float* monte_carlo_weight_out, float max_wavelength_nm, float min_wavelength_nm, curandState_t* random_state)
+    {
+        *wavelength_out = magik::lerp(min_wavelength_nm, max_wavelength_nm, curand_uniform(random_state));
+        *monte_carlo_weight_out = 1.0f / (max_wavelength_nm - min_wavelength_nm);
+    }
+
     __device__ static vec2f generate_screen_uv_coordinates(uint32_t x_resolution, uint32_t y_resolution)
     {
         int x_abs = threadIdx.x + blockIdx.x * blockDim.x;
