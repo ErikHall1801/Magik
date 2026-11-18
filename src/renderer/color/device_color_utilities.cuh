@@ -97,24 +97,21 @@ namespace magik
 
     __device__ __inline__ static vec3f scene_to_display_referred_color(vec3f scene_color, const color_pipeline_descriptor_t& descriptor)
     {
-        auto reinhard_extended = [](vec3f c, float white_luminance, vec3f luminance_weights)
+        vec3f display_color = {0.0f, 0.0f, 0.0f};
+
+        bool successful_tonemapper = dispatch_list(supported_view_transforms{}, descriptor.view_transform_descriptor.type, [&](auto tag)
         {
-            float L = vector_dot_product(luminance_weights, c); 
-            float L0 = L * (1.0f + L/(white_luminance * white_luminance)) / (1.0f + L);
-            return L > 0.0f ? c * (L0/L) : vec3f{0.0f, 0.0f, 0.0f};
-        };
+            constexpr auto T = decltype(tag)::value;
+            display_color = generic_view_transform_t<T>::apply(scene_color, descriptor.view_transform_descriptor.params);
+        });
 
-        auto ctf = [](const float comp)
+        display_color = descriptor.scene_to_display_referred * display_color;
+
+        bool successful_encode = dispatch_list(supported_display_colorspaces{}, descriptor.display_colorspace_type, [&](auto tag)
         {
-            if(comp <= 0.0031308f) return 12.92f*comp;
-
-            return 1.055f*powf(comp, 1.0f/2.4f) - 0.055f;
-        };
-
-        vec3f tonemapped_color = reinhard_extended(scene_color, 4.0f, vec3f{0.2126f, 0.7152f, 0.0722f});
-
-        vec3f display_color = descriptor.scene_to_display_referred * tonemapped_color;
-        display_color = { ctf(display_color.x), ctf(display_color.y), ctf(display_color.z) };
+            constexpr auto T = decltype(tag)::value;
+            display_color = generic_display_colorspace_t<T>::encode(display_color);
+        });
 
         return display_color;
     }

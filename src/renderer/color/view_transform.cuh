@@ -6,24 +6,29 @@
 
 namespace magik
 {
-    template<e_magik_view_transform_types T_map> struct generic_view_transform_t;
+    struct view_transform_params_t
+    {
+        float reinhard_extended_white_luminance;
+        vec3f reinhard_extended_luminance_weights;
 
-    template<auto... T> struct view_transform_list {};
+        float khronos_pbr_neutral_start_compression;
+        float khronos_pbr_neutral_desaturation;
+    };
+
+    template<e_magik_view_transform_types T_map> struct generic_view_transform_t;
 
     template<> struct generic_view_transform_t<MAGIK_VIEW_TRANSFORM_NONE>
     {
-        struct params_t{};
         static constexpr bool does_gamut_mapping = false;
         
-        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const params_t& p) { return c; }
+        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const view_transform_params_t& p) { return c; }
     };
 
     template<> struct generic_view_transform_t<MAGIK_VIEW_TRANSFORM_REINHARD_SIMPLE>
     {
-        struct params_t{};
         static constexpr bool does_gamut_mapping = false;
         
-        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const params_t& p) 
+        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const view_transform_params_t& p) 
         { 
             return c / (c + vec3f{1.0f, 1.0f, 1.0f}); 
         }
@@ -31,54 +36,70 @@ namespace magik
 
     template<> struct generic_view_transform_t<MAGIK_VIEW_TRANSFORM_REINHARD_EXTENDED>
     {
-        struct params_t{ float white_luminance; vec3f luminance_weights; };
         static constexpr bool does_gamut_mapping = false;
         
-        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const params_t& p)
+        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const view_transform_params_t& p)
         {
-            float L = vector_dot_product(p.luminance_weights, c); 
-            float L0 = L * (1.0f + L/(p.white_luminance * p.white_luminance)) / (1.0f + L);
+            float L = vector_dot_product(p.reinhard_extended_luminance_weights, c); 
+            float L0 = L * (1.0f + L/(p.reinhard_extended_white_luminance * p.reinhard_extended_white_luminance)) / (1.0f + L);
             return L > 0.0f ? c * (L0/L) : vec3f{0.0f, 0.0f, 0.0f};
         }
     };
 
-    struct view_transform_params_t
+    template<> struct generic_view_transform_t<MAGIK_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL>
     {
-        e_magik_view_transform_types view_transform_type;
-
-        union
+        static constexpr bool does_gamut_mapping = false;
+        
+        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const view_transform_params_t& p)
         {
-            generic_view_transform_t<MAGIK_VIEW_TRANSFORM_NONE>::params_t none{};
-            generic_view_transform_t<MAGIK_VIEW_TRANSFORM_REINHARD_SIMPLE>::params_t reinhard_simple;
-            generic_view_transform_t<MAGIK_VIEW_TRANSFORM_REINHARD_EXTENDED>::params_t reinhard_extended;
-        };
+            // Requieres Linear Rec 709 input !!! 
+            vec3f color = c;
+            float start_compression = p.khronos_pbr_neutral_start_compression - 0.04f;
 
-        static __host__ view_transform_params_t create(e_magik_view_transform_types view_transform, float white_luminance, vec3f luminance_weights)
+            float x = fminf(c.x, fminf(c.y, c.z));
+            float offset = x < 0.08f ? x - 6.25f * x * x : 0.04f;
+            color -= vec3f{offset, offset, offset};
+
+            float peak = fmaxf(color.x, fmaxf(color.y, color.z));
+            if(peak < start_compression) return color;
+
+            float d = 1.0f - start_compression;
+            float new_peak = 1.0f - d * d / (peak + d - start_compression);
+            color *= new_peak / peak;
+
+            float g = 1.0f - 1.0f/(p.khronos_pbr_neutral_desaturation * (peak - new_peak) + 1.0f);
+            return magik::lerp(color, vec3f{new_peak, new_peak, new_peak}, g);
+        }
+    };
+
+    struct view_transform_descriptor_t
+    {
+        e_magik_view_transform_types type;
+        view_transform_params_t params;
+
+        static __host__ view_transform_descriptor_t create(e_magik_view_transform_types view_transform, float white_luminance, vec3f luminance_weights, float khronos_pbr_neutral_start_compression, float khronos_pbr_neutral_desaturation)
         {
-            view_transform_params_t result;
+            view_transform_descriptor_t result;
 
-            result.view_transform_type = view_transform;
-            result.reinhard_extended = { white_luminance, luminance_weights };
+            result.type = view_transform;
+            result.params.reinhard_extended_white_luminance = white_luminance;
+            result.params.reinhard_extended_luminance_weights = luminance_weights;
+            result.params.khronos_pbr_neutral_start_compression = khronos_pbr_neutral_start_compression;
+            result.params.khronos_pbr_neutral_desaturation = khronos_pbr_neutral_desaturation;
 
             return result;
         }
     };
 
-    using supported_view_transforms = view_transform_list
+    using supported_view_transforms = value_list
     <
         e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_NONE,
         e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_REINHARD_SIMPLE,
-        e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_REINHARD_EXTENDED
+        e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_REINHARD_EXTENDED,
+        e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL
+        // e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_GRAN_TURISMO_7
+        // e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_ACES_2,
+        // e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_AGX,
+        // e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_EXPONENTIAL
     >;
-
-    template<class F, e_magik_view_transform_types... Ts> bool match_view_transforms(e_magik_view_transform_types type, F&& f, view_transform_list<Ts...>)
-    {
-        return ((type == Ts ? (f(std::integral_constant<e_magik_view_transform_types, Ts>{}), true) : false) || ...);
-    }
-
-    template<class F> bool dispatch_view_transforms(e_magik_view_transform_types type, F&& f)
-    {
-        return match_view_transforms(type, std::forward<F>(f), supported_view_transforms{});
-    }
-
 }

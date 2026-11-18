@@ -126,7 +126,7 @@ namespace magik
     struct color_pipeline_descriptor_t
     {
         uint32_t n_spectral_bin;
-        // view_transform_params_t view_transform_params;
+        view_transform_descriptor_t view_transform_descriptor;
         vec3f isi_to_scene_referred_weights[MAGIK_N_MAX_SPECTRAL_BIN];
         e_magik_display_colorspace_types display_colorspace_type;
         float peak_nits;
@@ -144,7 +144,7 @@ namespace magik
             mat3f XYZ_to_scene_colorspace, scene_colorspace_to_XYZ;
             vec2f scene_white_point_cie_xy;
 
-            bool successful_colorspace = dispatch_scene_colorspace(settings.scene_colorspace_type, [&](auto tag)
+            bool successful_colorspace = dispatch_list(supported_scene_colorspaces{}, settings.scene_colorspace_type, [&](auto tag)
             {
                 constexpr auto T = decltype(tag)::value;
                 XYZ_to_scene_colorspace = generic_scene_colorspace_t<T>::XYZ_to_colorspace;
@@ -164,7 +164,7 @@ namespace magik
             float cmf_max_wavelength_nm;
             const vec3f* cmf_values;
 
-            bool successful_cmf = dispatch_color_matching_function(settings.cmf_type, [&](auto tag)
+            bool successful_cmf = dispatch_list(supported_color_matching_functions{}, settings.cmf_type, [&](auto tag)
             {
                 constexpr auto T = decltype(tag)::value;
                 cmf_n_entries = generic_color_matching_function_t<T>::n_entries;
@@ -194,7 +194,7 @@ namespace magik
             vec2f display_white_point_cie_xy;
             float display_peak_nits;
 
-            bool successful_display_colorspace = dispatch_display_colorspace(settings.display_colorspace_type, [&](auto tag)
+            bool successful_display_colorspace = dispatch_list(supported_display_colorspaces{}, settings.display_colorspace_type, [&](auto tag)
             {
                 constexpr auto T = decltype(tag)::value;
                 XYZ_to_display_colorspace = generic_display_colorspace_t<T>::XYZ_to_colorspace;
@@ -212,7 +212,7 @@ namespace magik
             result.scene_to_display_referred = XYZ_to_display_colorspace * chromatic_adaptation(white_point_dst_cie_xyz, cie_xy_to_cie_XYZ(display_white_point_cie_xy)) * scene_colorspace_to_XYZ;
 
             // Create the view transform paramters
-            // result.view_transform_params = view_transform_params_t::create(settings.view_transform, 4.0f, vec3f{scene_colorspace_to_XYZ.m21, scene_colorspace_to_XYZ.m22, scene_colorspace_to_XYZ.m23});
+            result.view_transform_descriptor = view_transform_descriptor_t::create(settings.view_transform, 4.0f, vec3f{scene_colorspace_to_XYZ.m21, scene_colorspace_to_XYZ.m22, scene_colorspace_to_XYZ.m23}, 0.8f, 0.15f);
 
             // Set remainers
             result.display_colorspace_type = settings.display_colorspace_type;

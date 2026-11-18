@@ -86,7 +86,7 @@ namespace magik
         args.create(wavefront_buffer);
         bool time_reversed = true;
 
-        bool successful = dispatch_metric(manager->stage.settings.metric_type, [&](auto tag)
+        bool successful = dispatch_list(supported_metrics{}, manager->stage.settings.metric_type, [&](auto tag)
         {
             constexpr auto T = decltype(tag)::value;
             kernel_advance_geodesic<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager, time_reversed), args);

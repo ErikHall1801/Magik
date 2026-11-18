@@ -7,8 +7,6 @@ namespace magik
 {
     template<auto T_colorspace> struct generic_scene_colorspace_t; // Maybe make distinct _scene and _display types. Bc the display has a peak luminance and transfer functions 
 
-    template<auto... T> struct colorspaces_list {};
-
     // Scene colorspaces
     template<> struct generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_CIE_XYZ>
     {
@@ -52,7 +50,7 @@ namespace magik
         static constexpr vec2f white_point_cie_xy{0.31272f, 0.32903f};
     };
 
-    using supported_scene_colorspaces = colorspaces_list
+    using supported_scene_colorspaces = value_list
     <
         e_magik_scene_colorspace_types::MAGIK_SCENE_COLORSPACE_CIE_XYZ,
         e_magik_scene_colorspace_types::MAGIK_SCENE_COLORSPACE_CIE_RGB,
@@ -61,17 +59,6 @@ namespace magik
         e_magik_scene_colorspace_types::MAGIK_SCENE_COLORSPACE_ACES_CG,
         e_magik_scene_colorspace_types::MAGIK_SCENE_COLORSPACE_ADOBE_RGB_1998
     >;
-
-    template<class F, e_magik_scene_colorspace_types... Ts> bool match_scene_colorspace(e_magik_scene_colorspace_types type, F&& f, colorspaces_list<Ts...>)
-    {
-        return ((type == Ts ? (f(std::integral_constant<e_magik_scene_colorspace_types, Ts>{}), true) : false) || ...);
-    }
-
-    template<class F> bool dispatch_scene_colorspace(e_magik_scene_colorspace_types type, F&& f)
-    {
-        return match_scene_colorspace(type, std::forward<F>(f), supported_scene_colorspaces{});
-    }
-
 
 
     // Display colorspaces
@@ -317,7 +304,7 @@ namespace magik
         }
     };
 
-    using supported_display_colorspaces = colorspaces_list
+    using supported_display_colorspaces = value_list
     <
         e_magik_display_colorspace_types::MAGIK_DISPLAY_COLORSPACE_SRGB,
         e_magik_display_colorspace_types::MAGIK_DISPLAY_COLORSPACE_REC709,
@@ -327,14 +314,4 @@ namespace magik
         e_magik_display_colorspace_types::MAGIK_DISPLAY_COLORSPACE_DISPLAY_P3,
         e_magik_display_colorspace_types::MAGIK_DISPLAY_COLORSPACE_ADOBE_RGB
     >;
-
-    template<class F, e_magik_display_colorspace_types... Ts> bool match_display_colorspace(e_magik_display_colorspace_types type, F&& f, colorspaces_list<Ts...>)
-    {
-        return ((type == Ts ? (f(std::integral_constant<e_magik_display_colorspace_types, Ts>{}), true) : false) || ...);
-    }
-
-    template<class F> bool dispatch_display_colorspace(e_magik_display_colorspace_types type, F&& f)
-    {
-        return match_display_colorspace(type, std::forward<F>(f), supported_display_colorspaces{});
-    }
 }

@@ -121,7 +121,7 @@ namespace magik
         args.create(wavefront_buffer);
         bool time_reversed = true;
 
-        bool successful = dispatch_metric(manager->stage.settings.metric_type, [&](auto tag)
+        bool successful = dispatch_list(supported_metrics{}, manager->stage.settings.metric_type, [&](auto tag)
         {
             constexpr auto T = decltype(tag)::value;
             launch_all_matter_types<T>(metric<T>::make_params(manager, time_reversed), threads_per_block, n_block, static_cast<cudaStream_t>(manager->cuda_stream), args, registered_matter{});
