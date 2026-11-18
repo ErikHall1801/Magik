@@ -2,7 +2,7 @@
 #include "cuda_device_utilities.cuh"
 #include "cuda_host_utilities.h"
 #include "device_sensor_utilities.cuh"
-#include "device_spectral_utilities.cuh"
+#include "wavelength_sampler.cuh"
 #include "thin_lens.cuh"
 
 namespace magik
@@ -49,8 +49,6 @@ namespace magik
     {
         if(!magik::is_valid_thread(args.x_resolution, args.y_resolution)) return;
 
-        uint32_t i_x = threadIdx.x + blockIdx.x * blockDim.x;
-        uint32_t i_y = threadIdx.y + blockIdx.y * blockDim.y;
         uint32_t thread_id = magik::get_n_dimensional_thread_id(args.x_resolution, 1);
 
         // Logic for making the ray dir and orig. 

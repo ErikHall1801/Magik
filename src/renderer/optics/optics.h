@@ -16,21 +16,26 @@ namespace magik
     struct optical_system_t
     {
         // Lens
-        // Shutter (Shutter angle, shutter type)
-        // Sensor (As in type and properties)
-        // Body
-        // Video settings (FPS, motion blur) 
-        // Physical properties (Position, velocity, orientation)
-        
-        // But for now, lets not make this more complicated than it has to be
-        // We dont need anything else for a basic camera. We technically do not
-        // even need the sensor diagonal. 
-        // So all of the above is temporary. 
         float focal_length = 12.0f;
-
+        
+        // Sensor
+        e_magik_color_matching_function_types cmf_type = MAGIK_CMF_CIE_1931;
+        e_magik_scene_colorspace_types scene_colorspace_type = MAGIK_SCENE_COLORSPACE_LINEAR_REC709;
+        e_magik_view_transform_types view_transform_type = MAGIK_VIEW_TRANSFORM_REINHARD_EXTENDED;
+        e_magik_display_colorspace_types display_colorspace_type = MAGIK_DISPLAY_COLORSPACE_SRGB;
+        e_magik_output_format_types output_format = MAGIK_OUTPUT_FORMAT_FLOAT32;
+        float iso = 1000.0f;
+        float white_point = 5600.0f;
+        float tint = 0.0f;
+        float fps = 24.0f;
+        // Shutter type
+        // motion blur
+        float shutter_angle = 180.0f;
         float sensor_diagonal_mm = 24.0f;
         uint32_t x_resolution = 2195;
         uint32_t y_resolution = 1860;
+
+        // Body (Parasitic heat etc.)
 
         vec3f position = vec3f{2.0f, 0.0f, 9.0f};
         vec3f local_proper_velocity;

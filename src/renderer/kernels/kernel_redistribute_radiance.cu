@@ -1,7 +1,7 @@
 #include "kernel_redistribute_radiance.cuh"
 #include "cuda_device_utilities.cuh"
 #include "cuda_host_utilities.h"
-#include "device_spectral_utilities.cuh"
+#include "device_color_utilities.cuh"
 #include "device_sensor_utilities.cuh"
 
 namespace magik
@@ -68,22 +68,25 @@ namespace magik
         {
             float inv_b = compute_inv_b(args.sensor_diagonal_mm, args.sensor_resolution_x, args.sensor_resolution_y);
 
-            redistribute_spectral_radiance_t s_args;
-            s_args.d_spectral_irradiance = args.d_intrinsic_spectral_irradiance;
+            redistribute_spectral_radiance_args_t s_args;
+            s_args.d_intrinsic_spectral_irradiance = args.d_intrinsic_spectral_irradiance;
             s_args.spectral_radiance = spectral_radiance;
             s_args.monte_carlo_weight = monte_carlo_weight;
             s_args.sensor_wavelength_nm = args.d_sensor_wavelength_nm[ray_id];
-            s_args.max_wavelength_nm = args.max_wavelength_nm;
-            s_args.min_wavelength_nm = args.min_wavelength_nm;
+            s_args.isi_max_wavelength_nm = args.max_wavelength_nm;
+            s_args.isi_min_wavelength_nm = args.min_wavelength_nm;
             s_args.redistribution_standard_deviation = args.redistribution_standard_deviation;
-            s_args.sensor_width_mm = args.sensor_resolution_x * inv_b;
-            s_args.sensor_height_mm = args.sensor_resolution_y * inv_b;
-            s_args.sensor_resolution_x = args.sensor_resolution_x;
-            s_args.sensor_resolution_y = args.sensor_resolution_y;
-            s_args.n_spectral_irradiance_bin = args.n_spectral_irradiance_bin;
+            s_args.sensor_width_mm = static_cast<float>(args.sensor_resolution_x) * inv_b;
+            s_args.sensor_height_mm = static_cast<float>(args.sensor_resolution_y) * inv_b;
+            s_args.iso = 1000.0f; 
+            s_args.fps = 24.0f; 
+            s_args.shutter_angle = 180.0f;
             s_args.ray_id = ray_id;
+            s_args.sensor_resolution_x = args.sensor_resolution_x; 
+            s_args.sensor_resolution_y = args.sensor_resolution_y;
+            s_args.n_isi_spectral_irradiance_bin = args.n_spectral_irradiance_bin;
 
-            redistribute_spectral_radiance(&s_args);
+            redistribute_spectral_radiance(s_args);
         }
 
         uint32_t slot = atomicAdd(args.d_splat_queue_count, 1);

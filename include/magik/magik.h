@@ -98,6 +98,9 @@ typedef enum e_magik_result_types
     MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED = 1001, // Did you call magik_gl_init ?
     MAGIK_ERROR_GL_BUFFER_SIZE_MISMATCH = 1002,
 
+    // Color 1100 - 1199
+    MAGIK_ERROR_UNKNOWN_COLOR_MATCHING_FUNCTION = 1100,
+
     // General 10000 - 10099
     MAGIK_ERROR_UNKNOWN = 10000,
 
@@ -307,6 +310,61 @@ MAGIK_API e_magik_result_types magik_render_manager_destroy(magik_render_manager
 * Do note, the DCC owns the manager. So when the API crashes, the last error is persistent in the manager.  
 */
 MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_manager_t manager);
+
+
+
+/**
+* [SECTION] Color
+*/
+
+typedef enum e_magik_color_matching_function_types
+{
+    MAGIK_CMF_CIE_1931 = 0
+} e_magik_color_matching_function_types;
+
+typedef enum e_magik_scene_colorspace_types
+{
+    MAGIK_SCENE_COLORSPACE_CIE_XYZ = 0,
+    MAGIK_SCENE_COLORSPACE_CIE_RGB = 1,
+    MAGIK_SCENE_COLORSPACE_LINEAR_REC709 = 2,
+    MAGIK_SCENE_COLORSPACE_LINEAR_REC2020= 3,
+    MAGIK_SCENE_COLORSPACE_ACES_CG = 4,
+    MAGIK_SCENE_COLORSPACE_ADOBE_RGB_1998 = 5
+} e_magik_scene_colorspace_types; 
+
+typedef enum e_magik_display_colorspace_types
+{
+    MAGIK_DISPLAY_COLORSPACE_NONE = 0,
+    MAGIK_DISPLAY_COLORSPACE_SRGB = 1,
+    MAGIK_DISPLAY_COLORSPACE_REC709 = 2,
+    MAGIK_DISPLAY_COLORSPACE_REC2100_PQ = 3,
+    MAGIK_DISPLAY_COLORSPACE_REC2100_HLG = 4,
+    MAGIK_DISPLAY_COLORSPACE_DCI_P3 = 5,
+    MAGIK_DISPLAY_COLORSPACE_DISPLAY_P3 = 6,
+    MAGIK_DISPLAY_COLORSPACE_ADOBE_RGB = 7
+} e_magik_display_colorspace_types;
+
+typedef enum e_magik_view_transform_types
+{
+    MAGIK_VIEW_TRANSFORM_NONE = 0,
+    MAGIK_VIEW_TRANSFORM_REINHARD_SIMPLE = 1,
+    MAGIK_VIEW_TRANSFORM_REINHARD_EXTENDED = 2,
+    MAGIK_VIEW_TRANSFORM_GRAN_TURISMO_7 = 3,
+    MAGIK_VIEW_TRANSFORM_ACES_2 = 4,
+    MAGIK_VIEW_TRANSFORM_AGX = 5,
+    MAGIK_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL = 6,
+    MAGIK_VIEW_TRANSFORM_EXPONENTIAL = 7
+} e_magik_view_transform_types;
+
+typedef enum e_magik_output_format_types
+{
+    MAGIK_OUTPUT_FORMAT_UNORM8 = 0,
+    MAGIK_OUTPUT_FORMAT_UNORM10 = 1,
+    MAGIK_OUTPUT_FORMAT_UNORM12 = 2,
+    MAGIK_OUTPUT_FORMAT_UNORM16 = 3,
+    MAGIK_OUTPUT_FORMAT_FLOAT16 = 4,
+    MAGIK_OUTPUT_FORMAT_FLOAT32 = 5,
+} e_magik_output_format_types;
 
 
 

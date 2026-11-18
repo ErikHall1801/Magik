@@ -1,7 +1,8 @@
 #include "kernel_splat_to_renderbuffer.cuh"
 #include "cuda_device_utilities.cuh"
 #include "cuda_host_utilities.h"
-#include "device_spectral_utilities.cuh"
+#include "device_color_utilities.cuh"
+#include "color_pipeline.cuh"
 
 namespace magik
 {
@@ -11,6 +12,7 @@ namespace magik
         uint32_t* d_splat_queue_count;
         uint32_t* d_splat_queue_id;
         float* d_renderbuffer;
+        color_pipeline_descriptor_t color_pipeline_descriptor;
         
         uint32_t n_spectral_irradiance_bin;
         float max_wavelength_nm;
@@ -23,6 +25,7 @@ namespace magik
             d_splat_queue_count = wb->queue_pool.get_count_ptr<splat_queue_t>();
             d_splat_queue_id = wb->queue_pool.get_id_ptr<splat_queue_t>();
             d_renderbuffer = d_target_buffer;
+            color_pipeline_descriptor = manager->color_pipeline_descriptor;
 
             n_spectral_irradiance_bin = manager->stage.settings.n_spectral_irradiance_bin;
             max_wavelength_nm = manager->stage.settings.max_wavelength_nm;
@@ -41,11 +44,20 @@ namespace magik
         if(queue_index >= *args.d_splat_queue_count) return;
         uint32_t ray_id = args.d_splat_queue_id[queue_index];
 
-        vec3f linear_color = spectral_irradiance_to_cie_xyz(&args.d_intrinsic_spectral_irradiance[(size_t)ray_id * args.n_spectral_irradiance_bin], args.n_spectral_irradiance_bin, args.max_wavelength_nm, args.min_wavelength_nm, args.x_sample);
+        intrinsic_spectral_irradiance_to_color_args_t isi_args;
+        isi_args.n_isi_spectral_irradiance_bin = args.n_spectral_irradiance_bin;
+        isi_args.ray_id = ray_id;
+        isi_args.d_intrinsic_spectral_irradiance = args.d_intrinsic_spectral_irradiance;
+        isi_args.isi_to_scene_referred_weights = args.color_pipeline_descriptor.isi_to_scene_referred_weights;
+        isi_args.x_sample = args.x_sample;
 
-        args.d_renderbuffer[ray_id * 3 + 0] = linear_color.x;
-        args.d_renderbuffer[ray_id * 3 + 1] = linear_color.y;
-        args.d_renderbuffer[ray_id * 3 + 2] = linear_color.z;
+        vec3f scene_color = intrinsic_spectral_irradiance_to_scene_color(isi_args);
+
+        vec3f display_color = scene_to_display_referred_color(scene_color, args.color_pipeline_descriptor);
+
+        args.d_renderbuffer[ray_id * 3 + 0] = display_color.x;
+        args.d_renderbuffer[ray_id * 3 + 1] = display_color.y;
+        args.d_renderbuffer[ray_id * 3 + 2] = display_color.z;
     }
 
     void launch_kernel_splat_to_renderbuffer_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer, float* d_renderbuffer)
