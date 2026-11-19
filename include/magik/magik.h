@@ -355,6 +355,12 @@ typedef enum e_magik_view_transform_types
     MAGIK_VIEW_TRANSFORM_EXPONENTIAL = 7
 } e_magik_view_transform_types;
 
+typedef enum e_magik_gran_turismo_7_mode_types
+{
+    MAGIK_GRANTURISMO_7_MODE_ICTCP = 0,
+    MAGIK_GRANTURISMO_7_MODE_JZAZBZ = 1
+} e_magik_gran_turismo_7_mode_types;
+
 typedef enum e_magik_output_format_types
 {
     MAGIK_OUTPUT_FORMAT_UNORM8 = 0,

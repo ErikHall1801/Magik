@@ -213,17 +213,29 @@ namespace magik
 
             // Create the view transform paramters
             view_transform_params_t view_transform_params;
+
             view_transform_params.reinhard_extended_white_luminance = 4.0f;
             view_transform_params.reinhard_extended_luminance_weights = vec3f{scene_colorspace_to_XYZ.m21, scene_colorspace_to_XYZ.m22, scene_colorspace_to_XYZ.m23};
 
             view_transform_params.khronos_pbr_neutral_start_compression = 0.8f;
             view_transform_params.khronos_pbr_neutral_desaturation = 0.15f;
-            mat3f XYZ_to_rec709 = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::XYZ_to_colorspace;
-            mat3f rec709_to_XYZ = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::colorspace_to_XYZ;
-            mat3f cat_in = chromatic_adaptation(white_point_dst_cie_xyz, cie_xy_to_cie_XYZ(generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::white_point_cie_xy));
-            mat3f cat_out = chromatic_adaptation(cie_xy_to_cie_XYZ(generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::white_point_cie_xy), white_point_dst_cie_xyz);
-            view_transform_params.khronos_pbr_neutral_to_linear_rec_709 = XYZ_to_rec709 * cat_in * scene_colorspace_to_XYZ;
-            view_transform_params.khronos_pbr_neutral_to_scene_colorspace = XYZ_to_scene_colorspace * cat_out * rec709_to_XYZ;
+            mat3f XYZ_to_rec709 = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC709>::XYZ_to_colorspace;
+            mat3f rec709_to_XYZ = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC709>::colorspace_to_XYZ;
+            mat3f cat_in_khronos = chromatic_adaptation(white_point_dst_cie_xyz, cie_xy_to_cie_XYZ(generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::white_point_cie_xy));
+            mat3f cat_out_khronos = chromatic_adaptation(cie_xy_to_cie_XYZ(generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::white_point_cie_xy), white_point_dst_cie_xyz);
+            view_transform_params.khronos_pbr_neutral_to_linear_rec_709 = XYZ_to_rec709 * cat_in_khronos * scene_colorspace_to_XYZ;
+            view_transform_params.khronos_pbr_neutral_to_scene_colorspace = XYZ_to_scene_colorspace * cat_out_khronos * rec709_to_XYZ;
+
+            view_transform_params.gran_turismo_7_mode = MAGIK_GRANTURISMO_7_MODE_JZAZBZ;
+            mat3f XYZ_to_rec2020 = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC2020>::XYZ_to_colorspace;
+            mat3f rec2020_to_XYZ = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC2020>::colorspace_to_XYZ;
+            mat3f cat_in = chromatic_adaptation(white_point_dst_cie_xyz, cie_xy_to_cie_XYZ(generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC2020>::white_point_cie_xy));
+            mat3f cat_out = chromatic_adaptation(cie_xy_to_cie_XYZ(generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC2020>::white_point_cie_xy), white_point_dst_cie_xyz);
+            view_transform_params.gran_turismo_7_to_linear_rec_2020 = XYZ_to_rec2020 * cat_in_khronos * scene_colorspace_to_XYZ;
+            view_transform_params.gran_turismo_7_to_scene_colorspace = XYZ_to_scene_colorspace * cat_out_khronos * rec2020_to_XYZ;
+            view_transform_params.gran_turismo_7_sdr_paper_white = 250.0f;
+            view_transform_params.gran_turismo_7_reference_luminance = 100.0f;
+            view_transform_params.gran_turismo_7_jzazbz_exponent_scale_factor = 1.7f;
 
             result.view_transform_descriptor = view_transform_descriptor_t::create(settings.view_transform, view_transform_params);
 
