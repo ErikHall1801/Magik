@@ -212,7 +212,20 @@ namespace magik
             result.scene_to_display_referred = XYZ_to_display_colorspace * chromatic_adaptation(white_point_dst_cie_xyz, cie_xy_to_cie_XYZ(display_white_point_cie_xy)) * scene_colorspace_to_XYZ;
 
             // Create the view transform paramters
-            result.view_transform_descriptor = view_transform_descriptor_t::create(settings.view_transform, 4.0f, vec3f{scene_colorspace_to_XYZ.m21, scene_colorspace_to_XYZ.m22, scene_colorspace_to_XYZ.m23}, 0.8f, 0.15f);
+            view_transform_params_t view_transform_params;
+            view_transform_params.reinhard_extended_white_luminance = 4.0f;
+            view_transform_params.reinhard_extended_luminance_weights = vec3f{scene_colorspace_to_XYZ.m21, scene_colorspace_to_XYZ.m22, scene_colorspace_to_XYZ.m23};
+
+            view_transform_params.khronos_pbr_neutral_start_compression = 0.8f;
+            view_transform_params.khronos_pbr_neutral_desaturation = 0.15f;
+            mat3f XYZ_to_rec709 = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::XYZ_to_colorspace;
+            mat3f rec709_to_XYZ = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::colorspace_to_XYZ;
+            mat3f cat_in = chromatic_adaptation(white_point_dst_cie_xyz, cie_xy_to_cie_XYZ(generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::white_point_cie_xy));
+            mat3f cat_out = chromatic_adaptation(cie_xy_to_cie_XYZ(generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::white_point_cie_xy), white_point_dst_cie_xyz);
+            view_transform_params.khronos_pbr_neutral_to_linear_rec_709 = XYZ_to_rec709 * cat_in * scene_colorspace_to_XYZ;
+            view_transform_params.khronos_pbr_neutral_to_scene_colorspace = XYZ_to_scene_colorspace * cat_out * rec709_to_XYZ;
+
+            result.view_transform_descriptor = view_transform_descriptor_t::create(settings.view_transform, view_transform_params);
 
             // Set remainers
             result.display_colorspace_type = settings.display_colorspace_type;

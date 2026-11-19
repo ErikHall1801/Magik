@@ -11,6 +11,8 @@ namespace magik
         float reinhard_extended_white_luminance;
         vec3f reinhard_extended_luminance_weights;
 
+        mat3f khronos_pbr_neutral_to_linear_rec_709;
+        mat3f khronos_pbr_neutral_to_scene_colorspace;
         float khronos_pbr_neutral_start_compression;
         float khronos_pbr_neutral_desaturation;
     };
@@ -52,23 +54,22 @@ namespace magik
         
         static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const view_transform_params_t& p)
         {
-            // Requieres Linear Rec 709 input !!! 
-            vec3f color = c;
+            vec3f color = p.khronos_pbr_neutral_to_linear_rec_709 * c;
             float start_compression = p.khronos_pbr_neutral_start_compression - 0.04f;
 
-            float x = fminf(c.x, fminf(c.y, c.z));
+            float x = fminf(color.x, fminf(color.y, color.z));
             float offset = x < 0.08f ? x - 6.25f * x * x : 0.04f;
             color -= vec3f{offset, offset, offset};
 
             float peak = fmaxf(color.x, fmaxf(color.y, color.z));
-            if(peak < start_compression) return color;
+            if(peak < start_compression) return p.khronos_pbr_neutral_to_scene_colorspace * color;
 
             float d = 1.0f - start_compression;
             float new_peak = 1.0f - d * d / (peak + d - start_compression);
             color *= new_peak / peak;
 
             float g = 1.0f - 1.0f/(p.khronos_pbr_neutral_desaturation * (peak - new_peak) + 1.0f);
-            return magik::lerp(color, vec3f{new_peak, new_peak, new_peak}, g);
+            return p.khronos_pbr_neutral_to_scene_colorspace * magik::lerp(color, vec3f{new_peak, new_peak, new_peak}, g);
         }
     };
 
@@ -77,16 +78,11 @@ namespace magik
         e_magik_view_transform_types type;
         view_transform_params_t params;
 
-        static __host__ view_transform_descriptor_t create(e_magik_view_transform_types view_transform, float white_luminance, vec3f luminance_weights, float khronos_pbr_neutral_start_compression, float khronos_pbr_neutral_desaturation)
+        static __host__ view_transform_descriptor_t create(e_magik_view_transform_types type, view_transform_params_t params)
         {
             view_transform_descriptor_t result;
-
-            result.type = view_transform;
-            result.params.reinhard_extended_white_luminance = white_luminance;
-            result.params.reinhard_extended_luminance_weights = luminance_weights;
-            result.params.khronos_pbr_neutral_start_compression = khronos_pbr_neutral_start_compression;
-            result.params.khronos_pbr_neutral_desaturation = khronos_pbr_neutral_desaturation;
-
+            result.type = type;
+            result.params = params;
             return result;
         }
     };
