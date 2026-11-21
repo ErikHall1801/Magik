@@ -23,6 +23,9 @@ namespace magik
         float sensor_diagonal_mm;
         float sensor_resolution_x;
         float sensor_resolution_y;
+        float iso;
+        float fps;
+        float shutter_angle;
         uint32_t n_isi_bin;
 
         __host__ void create(magik_render_manager* manager, wavefront_buffer_t* wb)
@@ -42,6 +45,9 @@ namespace magik
             sensor_diagonal_mm = manager->stage.optical_systen.sensor_diagonal_mm;
             sensor_resolution_x = static_cast<float>(manager->stage.optical_systen.x_resolution);
             sensor_resolution_y = static_cast<float>(manager->stage.optical_systen.y_resolution);
+            iso = manager->stage.optical_systen.iso;
+            fps = manager->stage.optical_systen.fps;
+            shutter_angle = manager->stage.optical_systen.shutter_angle;
             n_isi_bin = manager->stage.settings.n_isi_bin;
         }
     };
@@ -58,26 +64,27 @@ namespace magik
         if((spectral_radiance > 0.0f) && (monte_carlo_weight > 0.0f))
         {
             float inv_b = compute_inv_b(args.sensor_diagonal_mm, args.sensor_resolution_x, args.sensor_resolution_y);
+            float sensor_width_mm = args.sensor_resolution_x * inv_b;
+            float sensor_height_mm = args.sensor_resolution_y * inv_b;
+            float sensor_wavelength_nm = args.d_sensor_wavelength_nm[ray_id];
+            size_t spectral_irradiance_id = (size_t)ray_id * args.n_isi_bin;
 
-            redistribute_spectral_radiance_args_t s_args;
-            s_args.d_intrinsic_spectral_irradiance = args.d_intrinsic_spectral_irradiance;
-            s_args.spectral_radiance = spectral_radiance;
-            s_args.monte_carlo_weight = monte_carlo_weight;
-            s_args.sensor_wavelength_nm = args.d_sensor_wavelength_nm[ray_id];
-            s_args.isi_max_wavelength_nm = args.isi_max_wavelength_nm;
-            s_args.isi_min_wavelength_nm = args.isi_min_wavelength_nm;
-            s_args.redistribution_standard_deviation = args.redistribution_standard_deviation_nm;
-            s_args.sensor_width_mm = static_cast<float>(args.sensor_resolution_x) * inv_b;
-            s_args.sensor_height_mm = static_cast<float>(args.sensor_resolution_y) * inv_b;
-            s_args.iso = 1000.0f; 
-            s_args.fps = 24.0f; 
-            s_args.shutter_angle = 180.0f;
-            s_args.ray_id = ray_id;
-            s_args.sensor_resolution_x = args.sensor_resolution_x; 
-            s_args.sensor_resolution_y = args.sensor_resolution_y;
-            s_args.n_isi_bin = args.n_isi_bin;
+            float wavelength_range_in_bin_nm = (args.isi_max_wavelength_nm - args.isi_min_wavelength_nm) / static_cast<float>(args.n_isi_bin);
+            float x1 = args.isi_min_wavelength_nm;
+            float x2 = args.isi_min_wavelength_nm + wavelength_range_in_bin_nm;
+            float sampled_irradiance = radiance_to_irradiance({spectral_radiance, monte_carlo_weight, sensor_width_mm, sensor_height_mm, args.iso, args.fps, args.shutter_angle, static_cast<uint32_t>(args.sensor_resolution_x), static_cast<uint32_t>(args.sensor_resolution_y)});
+            float x_stored_irradiance = 0.0f;
 
-            redistribute_spectral_radiance(s_args);
+            for(size_t i = 0; i < args.n_isi_bin; i++)
+            {
+                x_stored_irradiance = args.d_intrinsic_spectral_irradiance[spectral_irradiance_id + i];
+                x_stored_irradiance += sampled_irradiance * (magik::norm_gaussian_cdf(sensor_wavelength_nm, x2, args.redistribution_standard_deviation_nm) - magik::norm_gaussian_cdf(sensor_wavelength_nm, x1, args.redistribution_standard_deviation_nm));
+                /* Intrinsic sensor response function goes here */ 
+                args.d_intrinsic_spectral_irradiance[spectral_irradiance_id + i] = x_stored_irradiance;
+
+                x1 += wavelength_range_in_bin_nm;
+                x2 += wavelength_range_in_bin_nm;
+            }
         }
 
         uint32_t slot = atomicAdd(args.d_splat_queue_count, 1);

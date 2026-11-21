@@ -28,48 +28,6 @@ namespace magik
         return numerator / denominator;
     }
 
-    struct redistribute_spectral_radiance_args_t
-    {
-        float* d_intrinsic_spectral_irradiance;
-        float spectral_radiance; 
-        float monte_carlo_weight; 
-        float sensor_wavelength_nm; 
-        float isi_max_wavelength_nm; 
-        float isi_min_wavelength_nm; 
-        float redistribution_standard_deviation;
-        float sensor_width_mm;
-        float sensor_height_mm;
-        float iso = 1000.0f; 
-        float fps = 24.0f; 
-        float shutter_angle = 180.0f;
-        uint32_t ray_id;
-        uint32_t sensor_resolution_x; 
-        uint32_t sensor_resolution_y; 
-        uint32_t n_isi_bin;
-    };
-
-    __device__ __inline__ static void redistribute_spectral_radiance(redistribute_spectral_radiance_args_t args)
-    {
-        size_t spectral_irradiance_id = (size_t)args.ray_id * args.n_isi_bin;
-
-        float wavelength_range_in_bin_nm = (args.isi_max_wavelength_nm - args.isi_min_wavelength_nm) / static_cast<float>(args.n_isi_bin);
-        float x1 = args.isi_min_wavelength_nm;
-        float x2 = args.isi_min_wavelength_nm + wavelength_range_in_bin_nm;
-        float sampled_irradiance = radiance_to_irradiance({args.spectral_radiance, args.monte_carlo_weight, args.sensor_width_mm, args.sensor_height_mm, args.iso, args.fps, args.shutter_angle, args.sensor_resolution_x, args.sensor_resolution_y});
-        float x_stored_irradiance = 0.0f;
-
-        for(size_t i = 0; i < args.n_isi_bin; i++)
-        {
-            x_stored_irradiance = args.d_intrinsic_spectral_irradiance[spectral_irradiance_id + i];
-            x_stored_irradiance += sampled_irradiance * (magik::norm_gaussian_cdf(args.sensor_wavelength_nm, x2, args.redistribution_standard_deviation) - magik::norm_gaussian_cdf(args.sensor_wavelength_nm, x1, args.redistribution_standard_deviation));
-            /* Intrinsic sensor response function goes here */ 
-            args.d_intrinsic_spectral_irradiance[spectral_irradiance_id + i] = x_stored_irradiance;
-
-            x1 += wavelength_range_in_bin_nm;
-            x2 += wavelength_range_in_bin_nm;
-        }
-    }
-
     struct intrinsic_spectral_irradiance_to_color_args_t
     {
         uint32_t n_isi_bin;
