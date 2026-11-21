@@ -2,6 +2,7 @@
 #define MAGIK_H
 
 #include <stdint.h>
+#include <cstddef>
 
 #if defined(_WIN32)
     #if defined(MAGIK_BUILD_DLL)
