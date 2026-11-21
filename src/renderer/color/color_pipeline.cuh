@@ -11,17 +11,17 @@
 
 namespace magik
 {
-    __host__ static vec3f cie_xy_to_cie_XYZ(vec2f cie_xy)
+    __host__ static inline vec3f cie_xy_to_cie_XYZ(vec2f cie_xy)
     {
         return {cie_xy.x / cie_xy.y, 1.0f, (1.0f - cie_xy.x - cie_xy.y) / cie_xy.y};
     }
 
-    __host__ static vec2f cie_XYZ_to_cie_uv(vec3f cie_XYZ)
+    __host__ static inline vec2f cie_XYZ_to_cie_uv(vec3f cie_XYZ)
     {
         return { 4.0f*cie_XYZ.x / (cie_XYZ.x + 15.0f*cie_XYZ.y + 3.0f*cie_XYZ.z), 6.0f*cie_XYZ.y / (cie_XYZ.x + 15.0f*cie_XYZ.y + 3.0f*cie_XYZ.z) };
     }
 
-    __host__ static vec2f cie_uv_to_cie_xy(vec2f cie_uv)
+    __host__ static inline vec2f cie_uv_to_cie_xy(vec2f cie_uv)
     {
         return { 3.0f*cie_uv.x / (2.0f*cie_uv.x - 8.0f*cie_uv.y + 4.0f), 2.0f*cie_uv.y / (2.0f*cie_uv.x - 8.0f*cie_uv.y + 4.0f) };
     }
@@ -56,7 +56,7 @@ namespace magik
         return cie_xy_to_cie_XYZ(cie_xy);
     }
 
-    __host__ static mat3f chromatic_adaptation(vec3f white_point_src_cie_xyz, vec3f white_point_dst_cie_xyz)
+    __host__ static inline mat3f chromatic_adaptation(vec3f white_point_src_cie_xyz, vec3f white_point_dst_cie_xyz)
     {
         constexpr mat3f m_cat = {0.8951f, 0.2664f, -0.1614f, -0.7502f, 1.7135f, 0.0367f, 0.0389f, -0.0685f, 1.0296f};
         constexpr mat3f m_cat_inv = {0.9869929f, -0.1470543f, 0.1599627f, 0.4323053f, 0.5183603f, 0.0492912f, -0.0085287f, 0.0400428f, 0.9684867f};
@@ -67,7 +67,7 @@ namespace magik
         return m_cat_inv * mat3f{lms_dst.x / lms_src.x, 0.0f, 0.0f, 0.0f, lms_dst.y / lms_src.y, 0.0f, 0.0f, 0.0f, lms_dst.z / lms_src.z} * m_cat;
     }
 
-    __host__ static void compute_normalized_isi_cmf_weights(vec3f* isi_to_scene_referred_weights, uint32_t n_isi_bin, float isi_min_wavelength_nm, float isi_max_wavelength_nm, const vec3f* cmf_values, uint32_t cmf_n_entries, float cmf_min_wavelength_nm, float cmf_max_wavelength_nm)
+    __host__ static inline void compute_normalized_isi_cmf_weights(vec3f* isi_to_scene_referred_weights, uint32_t n_isi_bin, float isi_min_wavelength_nm, float isi_max_wavelength_nm, const vec3f* cmf_values, uint32_t cmf_n_entries, float cmf_min_wavelength_nm, float cmf_max_wavelength_nm)
     {
         vec3f w = {0.0f, 0.0f, 0.0f};
         float sum_y = 0.0f;
@@ -101,7 +101,7 @@ namespace magik
         }
     }
 
-    __host__ static void fold_XYZ_to_scene_matrix_into_isi(vec3f* isi_to_scene_referred_weights, uint32_t n_isi_bin, mat3f XYZ_to_scene)
+    __host__ static inline void fold_XYZ_to_scene_matrix_into_isi(vec3f* isi_to_scene_referred_weights, uint32_t n_isi_bin, mat3f XYZ_to_scene)
     {
         for(uint32_t i = 0; i < n_isi_bin; i++)
         {

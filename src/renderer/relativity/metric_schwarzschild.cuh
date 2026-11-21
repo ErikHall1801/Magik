@@ -89,7 +89,7 @@ namespace magik
         uint32_t n_max; 
     };
 
-    template<> schwarzschild_metric::params_t schwarzschild_metric::make_params(magik_render_manager* manager, bool time_reversed)
+    template<> inline schwarzschild_metric::params_t schwarzschild_metric::make_params(magik_render_manager* manager, bool time_reversed)
     {
         return {    time_reversed,
                     fabsf(manager->stage.schwarzschild_mass), 
@@ -101,7 +101,7 @@ namespace magik
                     manager->stage.settings.n_integrator_max_substep};
     }
 
-    template<> schwarzschild_metric::params_t schwarzschild_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)
+    template<> inline schwarzschild_metric::params_t schwarzschild_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)
     {
         return {    time_reversed,
                     fabsf(metric_parameters.schwarzschild_mass), 

@@ -27,14 +27,14 @@ namespace magik
         return 1000.0f;
     }
 
-    template<> minkowski_metric::params_t minkowski_metric::make_params(magik_render_manager* manager, bool time_reversed)
+    template<> inline minkowski_metric::params_t minkowski_metric::make_params(magik_render_manager* manager, bool time_reversed)
     {
         minkowski_metric::params_t p;
         p.time_reversed = time_reversed;
         return p;
     }
 
-    template<> minkowski_metric::params_t minkowski_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)
+    template<> inline minkowski_metric::params_t minkowski_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)
     {
         minkowski_metric::params_t p;
         p.time_reversed = time_reversed;

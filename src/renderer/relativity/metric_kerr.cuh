@@ -122,7 +122,7 @@ namespace magik
         uint32_t n_max;
     };
 
-    template<> kerr_metric::params_t kerr_metric::make_params(magik_render_manager* manager, bool time_reversed)
+    template<> inline kerr_metric::params_t kerr_metric::make_params(magik_render_manager* manager, bool time_reversed)
     {
         return {    time_reversed,
                     manager->stage.kerr_mass, 
@@ -134,7 +134,7 @@ namespace magik
                     manager->stage.settings.n_integrator_max_substep}; 
     }
 
-    template<> kerr_metric::params_t kerr_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)
+    template<> inline kerr_metric::params_t kerr_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)
     {
         return {    time_reversed,
                     metric_parameters.kerr_mass, 
