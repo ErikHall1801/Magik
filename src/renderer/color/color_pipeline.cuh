@@ -186,17 +186,37 @@ namespace magik
         }
     }
 
-    __host__ static inline void compute_tabulated_cmf_inverse_cdf(float* cmf_inverse_cdf, float cdf_floor, cmf_info_t cmf_info)
+    __host__ static inline void compute_tabulated_cmf_inverse_cdf(float* cmf_inverse_cdf, float cdf_floor, float user_min_wavelength_nm, float user_max_wavelength_nm, cmf_info_t cmf_info)
     {
+        /*
+        Note, a key difference between this and uniform sampling is that the min/max wavelength constraint 
+        needs to be backed into the inverse CDF itself. Which we have not been doing so far. 
+        I think there are two approaches. Either we attack the inversion or resample the data to match 
+        the desired range. The second option is conceptually easier becuase we only have to change the 
+        input to some functions below. 
+        What we can do is change the cdf directly. Instead of summing over the CMF bins directly, we add 
+        a resampling step that ensures the inverse CDF has the user decided min/max range. We importantly
+        keep the CMF's number of bins. The step essentially scales the CMF into the user defined range. 
+        */
+
+        uint32_t n = cmf_info.n_entries - 1;
+        std::vector<vec3f> resampled_cmf(cmf_info.n_entries, vec3f{});
+
+        float resampled_wavelength_range_nm_bin = (user_max_wavelength_nm - user_min_wavelength_nm)/float(n);
+
+        for(uint32_t i = 0; i < cmf_info.n_entries; ++i)
+        {
+            float sample_wavelength_nm = user_min_wavelength_nm + float(i) * resampled_wavelength_range_nm_bin;
+            resampled_cmf[i] = sample_equidistant_spectral_data(cmf_info.values, cmf_info.n_entries, cmf_info.min_wavelength_nm, cmf_info.max_wavelength_nm, sample_wavelength_nm);
+        }
+
         auto s = [&](uint32_t i) 
-        { 
-            return cmf_info.values[i].x + cmf_info.values[i].y + cmf_info.values[i].z; 
+        {
+            return resampled_cmf[i].x + resampled_cmf[i].y + resampled_cmf[i].z; 
         };
 
-        uint32_t n = cmf_info.n_entries - 1; 
-        float wavelength_range_nm_bin = (cmf_info.max_wavelength_nm - cmf_info.min_wavelength_nm) / (static_cast<float>(n));
-
         // Compute the CDF
+        float wavelength_range_nm_bin = (user_max_wavelength_nm - user_min_wavelength_nm) / (static_cast<float>(n)); 
         std::vector<float> cdf(n + 1, 0.0f);
 
         float mean = 0.0f;
@@ -220,7 +240,7 @@ namespace magik
             while(best_match_index < n - 1 && cdf[best_match_index+1] < u) ++best_match_index;
             float t = (u - cdf[best_match_index]) / fmaxf(cdf[best_match_index + 1] - cdf[best_match_index], 1e-12f);
 
-            cmf_inverse_cdf[k] = cmf_info.min_wavelength_nm + (float(best_match_index) + t) * wavelength_range_nm_bin;
+            cmf_inverse_cdf[k] = user_min_wavelength_nm + (float(best_match_index) + t) * wavelength_range_nm_bin;
         }
     }
 
@@ -244,8 +264,6 @@ namespace magik
         view_transform_descriptor_t view_transform_descriptor;
         vec3f isi_to_scene_referred_weights[MAGIK_N_MAX_SPECTRAL_BIN];
         float cmf_inverse_cdf_values[MAGIK_N_CMF_INVERSE_CDF_BIN];
-        float cmf_inverse_cdf_min_wavelength_nm; // These come from the CMF and can thus differ from the render range 
-        float cmf_inverse_cdf_max_wavelength_nm;
         e_magik_display_colorspace_types display_colorspace_type;
         float peak_nits;
         mat3f scene_to_display_referred;
@@ -266,7 +284,7 @@ namespace magik
 
             compute_normalized_isi_cmf_weights(result.isi_to_scene_referred_weights, result.n_spectral_bin, settings.isi_min_wavelength_nm, settings.isi_max_wavelength_nm, cmf_info);
 
-            compute_tabulated_cmf_inverse_cdf(result.cmf_inverse_cdf_values, 0.05f, cmf_info);
+            compute_tabulated_cmf_inverse_cdf(result.cmf_inverse_cdf_values, 0.05f, settings.isi_min_wavelength_nm, settings.isi_max_wavelength_nm, cmf_info);
 
             vec3f white_point_src_cie_xyz = compute_white_point_xyz(settings.white_point, settings.tint, cmf_info);
             vec3f white_point_dst_cie_xyz = cie_xy_to_cie_XYZ(scene_colorspace_info.white_point_cie_xy);
