@@ -6,6 +6,17 @@
 
 namespace magik
 {
+    // A core assumption here is that the CMF samples are equally spaced apart. Which massively simplifies the 
+    // math. If we ever run across a CMF without this attribute, we will have to resample it. 
+
+    struct cmf_info_t
+    {
+        uint32_t n_entries;
+        float min_wavelength_nm;
+        float max_wavelength_nm;
+        const vec3f* values;
+    };
+
     template<e_magik_color_matching_function_types T_cmf> struct generic_color_matching_function_t;
 
     template<> struct generic_color_matching_function_t<MAGIK_CMF_CIE_1931>

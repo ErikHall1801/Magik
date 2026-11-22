@@ -24,7 +24,7 @@ namespace magik
         e_magik_view_transform_types view_transform_type = MAGIK_VIEW_TRANSFORM_GRAN_TURISMO_7;
         e_magik_display_colorspace_types display_colorspace_type = MAGIK_DISPLAY_COLORSPACE_REC709;
         e_magik_output_format_types output_format = MAGIK_OUTPUT_FORMAT_FLOAT32;
-        float iso = 1000.0f;
+        float iso = 100.0f;
         float white_point = 5600.0f;
         float tint = 0.0f;
         float fps = 24.0f;

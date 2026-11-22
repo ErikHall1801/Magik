@@ -153,7 +153,7 @@ namespace magik
     // Spectral 
     struct sensor_wavelength_nm_t { using type = float; uint32_t n_dimension = 1; };
 
-    struct monte_carlo_weight_t { using type = float; uint32_t n_dimension = 1; };
+    struct throughput_t { using type = float; uint32_t n_dimension = 1; };
 
     struct spectral_radiance_t { using type = float; uint32_t n_dimension = 1; };
 

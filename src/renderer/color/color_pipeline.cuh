@@ -6,8 +6,10 @@
 #include "colorspaces.cuh"
 #include "view_transform.cuh"
 #include "color_matching_functions.cuh"
+#include <vector>
 
 #define MAGIK_N_MAX_SPECTRAL_BIN 64
+#define MAGIK_N_CMF_INVERSE_CDF_BIN 256
 
 namespace magik
 {
@@ -26,16 +28,16 @@ namespace magik
         return { 3.0f*cie_uv.x / (2.0f*cie_uv.x - 8.0f*cie_uv.y + 4.0f), 2.0f*cie_uv.y / (2.0f*cie_uv.x - 8.0f*cie_uv.y + 4.0f) };
     }
 
-    __host__ static vec3f compute_white_point_xyz(float temperature, float tint, uint32_t cmf_n_entries, float cmf_min_wavelength_nm, float cmf_max_wavelength_nm, const vec3f* cmf_values)
+    __host__ static vec3f compute_white_point_xyz(float temperature, float tint, cmf_info_t cmf_info)
     {
         vec3f blackbody_xyz{}, blackbody_xyz_dT{};
         vec3f x_cmf_values; 
-        float x_wavelength_nm = cmf_min_wavelength_nm;
-        float x_wavelength_range = (cmf_max_wavelength_nm - cmf_min_wavelength_nm) / static_cast<float>(cmf_n_entries - 1);
+        float x_wavelength_nm = cmf_info.min_wavelength_nm;
+        float x_wavelength_range = (cmf_info.max_wavelength_nm - cmf_info.min_wavelength_nm) / static_cast<float>(cmf_info.n_entries - 1);
 
-        for(uint32_t i = 0; i < cmf_n_entries; i++)
+        for(uint32_t i = 0; i < cmf_info.n_entries; i++)
         {
-            x_cmf_values = sample_equidistant_spectral_data(cmf_values, cmf_n_entries, cmf_min_wavelength_nm, cmf_max_wavelength_nm, x_wavelength_nm);
+            x_cmf_values = sample_equidistant_spectral_data(cmf_info.values, cmf_info.n_entries, cmf_info.min_wavelength_nm, cmf_info.max_wavelength_nm, x_wavelength_nm);
             blackbody_xyz += x_cmf_values * sample_plancks_law(x_wavelength_nm, temperature);
             blackbody_xyz_dT += x_cmf_values * sample_plancks_law(x_wavelength_nm, temperature + 1);
             x_wavelength_nm += x_wavelength_range;
@@ -67,13 +69,88 @@ namespace magik
         return m_cat_inv * mat3f{lms_dst.x / lms_src.x, 0.0f, 0.0f, 0.0f, lms_dst.y / lms_src.y, 0.0f, 0.0f, 0.0f, lms_dst.z / lms_src.z} * m_cat;
     }
 
-    __host__ static inline void compute_normalized_isi_cmf_weights(vec3f* isi_to_scene_referred_weights, uint32_t n_isi_bin, float isi_min_wavelength_nm, float isi_max_wavelength_nm, const vec3f* cmf_values, uint32_t cmf_n_entries, float cmf_min_wavelength_nm, float cmf_max_wavelength_nm)
+    __host__ static inline mat3f convert_scene_colorspace(const scene_colorspace_info_t& from, const scene_colorspace_info_t& to)
+    {
+        return to.cie_XYZ_to_colorspace * chromatic_adaptation(cie_xy_to_cie_XYZ(from.white_point_cie_xy), cie_xy_to_cie_XYZ(to.white_point_cie_xy)) * from.colorspace_to_cie_XYZ;
+    }
+
+    __host__ static inline scene_colorspace_info_t fetch_scene_colorspace(e_magik_scene_colorspace_types scene_colorspace_type)
+    {
+        scene_colorspace_info_t result;
+
+        bool successful_colorspace = dispatch_list(supported_scene_colorspaces{}, scene_colorspace_type, [&](auto tag)
+        {
+            constexpr auto T = decltype(tag)::value;
+            result.cie_XYZ_to_colorspace = generic_scene_colorspace_t<T>::XYZ_to_colorspace;
+            result.colorspace_to_cie_XYZ = generic_scene_colorspace_t<T>::colorspace_to_XYZ;
+            result.white_point_cie_xy = generic_scene_colorspace_t<T>::white_point_cie_xy;
+        });
+
+        if(!successful_colorspace)
+        {
+            result.cie_XYZ_to_colorspace = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_CIE_XYZ>::XYZ_to_colorspace;
+            result.colorspace_to_cie_XYZ = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_CIE_XYZ>::colorspace_to_XYZ;
+            result.white_point_cie_xy = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_CIE_XYZ>::white_point_cie_xy;
+        }
+
+        return result;
+    }
+
+    __host__ static inline display_colorspace_info_t fetch_display_colorspace(e_magik_display_colorspace_types display_colorspace_type)
+    {
+        display_colorspace_info_t result;
+
+        bool successful_colorspace = dispatch_list(supported_display_colorspaces{}, display_colorspace_type, [&](auto tag)
+        {
+            constexpr auto T = decltype(tag)::value;
+            result.cie_XYZ_to_colorspace = generic_display_colorspace_t<T>::XYZ_to_colorspace;
+            result.colorspace_to_cie_XYZ = generic_display_colorspace_t<T>::colorspace_to_XYZ;
+            result.white_point_cie_xy = generic_display_colorspace_t<T>::white_point_cie_xy;
+            result.peak_luminance = generic_display_colorspace_t<T>::peak_luminance;
+        });
+
+        if(!successful_colorspace)
+        {
+            result.cie_XYZ_to_colorspace = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_SRGB>::XYZ_to_colorspace;
+            result.colorspace_to_cie_XYZ = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_SRGB>::colorspace_to_XYZ;
+            result.white_point_cie_xy = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_SRGB>::white_point_cie_xy;
+            result.peak_luminance = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_SRGB>::peak_luminance;
+        }
+
+        return result;
+    }
+
+    __host__ static inline cmf_info_t fetch_cmf_info(e_magik_color_matching_function_types cmf_type)
+    {
+        cmf_info_t result;
+
+        bool successful_cmf = dispatch_list(supported_color_matching_functions{}, cmf_type, [&](auto tag)
+        {
+            constexpr auto T = decltype(tag)::value;
+            result.n_entries = generic_color_matching_function_t<T>::n_entries;
+            result.min_wavelength_nm = generic_color_matching_function_t<T>::min_wavelength_nm;
+            result.max_wavelength_nm = generic_color_matching_function_t<T>::max_wavelength_nm;
+            result.values = generic_color_matching_function_t<T>::values;
+        });
+
+        if(!successful_cmf)
+        {
+            result.n_entries = generic_color_matching_function_t<MAGIK_CMF_CIE_1931>::n_entries;
+            result.min_wavelength_nm = generic_color_matching_function_t<MAGIK_CMF_CIE_1931>::min_wavelength_nm;
+            result.max_wavelength_nm = generic_color_matching_function_t<MAGIK_CMF_CIE_1931>::max_wavelength_nm;
+            result.values = generic_color_matching_function_t<MAGIK_CMF_CIE_1931>::values;
+        }
+
+        return result;
+    }
+
+    __host__ static inline void compute_normalized_isi_cmf_weights(vec3f* isi_to_scene_referred_weights, uint32_t n_isi_bin, float isi_min_wavelength_nm, float isi_max_wavelength_nm, cmf_info_t cmf_info)
     {
         vec3f w = {0.0f, 0.0f, 0.0f};
         float sum_y = 0.0f;
 
         float isi_bin_range = (isi_max_wavelength_nm - isi_min_wavelength_nm) / static_cast<float>(n_isi_bin);
-        float cmf_bin_range = (cmf_max_wavelength_nm - cmf_min_wavelength_nm) / static_cast<float>(cmf_n_entries - 1);
+        float cmf_bin_range = (cmf_info.max_wavelength_nm - cmf_info.min_wavelength_nm) / static_cast<float>(cmf_info.n_entries - 1);
         uint32_t sub_range_steps = static_cast<uint32_t>(ceilf(isi_bin_range / cmf_bin_range));
         float x_wavelength_sub_range_nm = isi_bin_range / static_cast<float>(sub_range_steps);
         float x_wavelength_nm_isi_bin, x_wavelenght_nm_sub_range;
@@ -85,7 +162,7 @@ namespace magik
             for(uint32_t j = 0; j < sub_range_steps; j++)
             {
                 x_wavelenght_nm_sub_range = x_wavelength_nm_isi_bin + (j + 0.5f)*x_wavelength_sub_range_nm;
-                w += sample_equidistant_spectral_data(cmf_values, cmf_n_entries, cmf_min_wavelength_nm, cmf_max_wavelength_nm, x_wavelenght_nm_sub_range) * x_wavelength_sub_range_nm;
+                w += sample_equidistant_spectral_data(cmf_info.values, cmf_info.n_entries, cmf_info.min_wavelength_nm, cmf_info.max_wavelength_nm, x_wavelenght_nm_sub_range) * x_wavelength_sub_range_nm;
             }
 
             isi_to_scene_referred_weights[i] = w;
@@ -109,6 +186,44 @@ namespace magik
         }
     }
 
+    __host__ static inline void compute_tabulated_cmf_inverse_cdf(float* cmf_inverse_cdf, float cdf_floor, cmf_info_t cmf_info)
+    {
+        auto s = [&](uint32_t i) 
+        { 
+            return cmf_info.values[i].x + cmf_info.values[i].y + cmf_info.values[i].z; 
+        };
+
+        uint32_t n = cmf_info.n_entries - 1; 
+        float wavelength_range_nm_bin = (cmf_info.max_wavelength_nm - cmf_info.min_wavelength_nm) / (static_cast<float>(n));
+
+        // Compute the CDF
+        std::vector<float> cdf(n + 1, 0.0f);
+
+        float mean = 0.0f;
+        for (uint32_t i = 0; i < cmf_info.n_entries; ++i) mean += s(i);
+        mean /= float(cmf_info.n_entries);
+        const float floor = cdf_floor * mean;
+
+        for(uint32_t i = 0; i < n; ++i)
+        {
+            cdf[i+1] = cdf[i] + (0.5f*(s(i) + s(i+1)) + floor) * wavelength_range_nm_bin;
+        }
+
+        const float total = cdf[n];
+        for (uint32_t j = 0; j <= n; ++j) cdf[j] /= total;
+
+        // Inverte CDF
+        uint32_t best_match_index = 0;
+        for(uint32_t k = 0; k < MAGIK_N_CMF_INVERSE_CDF_BIN; k++)
+        {
+            float u = float(k) / float(MAGIK_N_CMF_INVERSE_CDF_BIN - 1);
+            while(best_match_index < n - 1 && cdf[best_match_index+1] < u) ++best_match_index;
+            float t = (u - cdf[best_match_index]) / fmaxf(cdf[best_match_index + 1] - cdf[best_match_index], 1e-12f);
+
+            cmf_inverse_cdf[k] = cmf_info.min_wavelength_nm + (float(best_match_index) + t) * wavelength_range_nm_bin;
+        }
+    }
+
     struct color_pipeline_settings_t
     {
         uint32_t n_isi_bin;
@@ -128,6 +243,9 @@ namespace magik
         uint32_t n_spectral_bin;
         view_transform_descriptor_t view_transform_descriptor;
         vec3f isi_to_scene_referred_weights[MAGIK_N_MAX_SPECTRAL_BIN];
+        float cmf_inverse_cdf_values[MAGIK_N_CMF_INVERSE_CDF_BIN];
+        float cmf_inverse_cdf_min_wavelength_nm; // These come from the CMF and can thus differ from the render range 
+        float cmf_inverse_cdf_max_wavelength_nm;
         e_magik_display_colorspace_types display_colorspace_type;
         float peak_nits;
         mat3f scene_to_display_referred;
@@ -137,112 +255,48 @@ namespace magik
         {
             color_pipeline_descriptor_t result;
 
-            // Extract number of spectral bins - This should be replaced by a command-level constraint ! 
-            result.n_spectral_bin = settings.n_isi_bin > MAGIK_N_MAX_SPECTRAL_BIN ? MAGIK_N_MAX_SPECTRAL_BIN : settings.n_isi_bin;
+            auto scene_colorspace_info = fetch_scene_colorspace(settings.scene_colorspace_type);
+            auto display_colorspace_info = fetch_display_colorspace(settings.display_colorspace_type);
+            auto cmf_info = fetch_cmf_info(settings.cmf_type);
 
-            // Fold the scene referred colorspace into the CMF
-            mat3f XYZ_to_scene_colorspace, scene_colorspace_to_XYZ;
-            vec2f scene_white_point_cie_xy;
+            result.display_colorspace_type = settings.display_colorspace_type;
+            result.peak_nits = display_colorspace_info.peak_luminance;
+            result.output_format = settings.output_format;
+            result.n_spectral_bin = settings.n_isi_bin > MAGIK_N_MAX_SPECTRAL_BIN ? MAGIK_N_MAX_SPECTRAL_BIN : settings.n_isi_bin; // This should be replaced by a command-level constraint !
 
-            bool successful_colorspace = dispatch_list(supported_scene_colorspaces{}, settings.scene_colorspace_type, [&](auto tag)
-            {
-                constexpr auto T = decltype(tag)::value;
-                XYZ_to_scene_colorspace = generic_scene_colorspace_t<T>::XYZ_to_colorspace;
-                scene_colorspace_to_XYZ = generic_scene_colorspace_t<T>::colorspace_to_XYZ;
-                scene_white_point_cie_xy = generic_scene_colorspace_t<T>::white_point_cie_xy;
-            });
+            compute_normalized_isi_cmf_weights(result.isi_to_scene_referred_weights, result.n_spectral_bin, settings.isi_min_wavelength_nm, settings.isi_max_wavelength_nm, cmf_info);
 
-            if(!successful_colorspace)
-            {
-                XYZ_to_scene_colorspace = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_CIE_XYZ>::XYZ_to_colorspace;
-                scene_colorspace_to_XYZ = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_CIE_XYZ>::colorspace_to_XYZ;
-                scene_white_point_cie_xy = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_CIE_XYZ>::white_point_cie_xy;
-            }
+            compute_tabulated_cmf_inverse_cdf(result.cmf_inverse_cdf_values, 0.05f, cmf_info);
 
-            uint32_t cmf_n_entries;
-            float cmf_min_wavelength_nm;
-            float cmf_max_wavelength_nm;
-            const vec3f* cmf_values;
-
-            bool successful_cmf = dispatch_list(supported_color_matching_functions{}, settings.cmf_type, [&](auto tag)
-            {
-                constexpr auto T = decltype(tag)::value;
-                cmf_n_entries = generic_color_matching_function_t<T>::n_entries;
-                cmf_min_wavelength_nm = generic_color_matching_function_t<T>::min_wavelength_nm;
-                cmf_max_wavelength_nm = generic_color_matching_function_t<T>::max_wavelength_nm;
-                cmf_values = generic_color_matching_function_t<T>::values;
-            });
-
-            if(!successful_cmf)
-            {
-                cmf_n_entries = generic_color_matching_function_t<MAGIK_CMF_CIE_1931>::n_entries;
-                cmf_min_wavelength_nm = generic_color_matching_function_t<MAGIK_CMF_CIE_1931>::min_wavelength_nm;
-                cmf_max_wavelength_nm = generic_color_matching_function_t<MAGIK_CMF_CIE_1931>::max_wavelength_nm;
-                cmf_values = generic_color_matching_function_t<MAGIK_CMF_CIE_1931>::values;
-            }
-
-            vec3f white_point_src_cie_xyz = compute_white_point_xyz(settings.white_point, settings.tint, cmf_n_entries, cmf_min_wavelength_nm, cmf_max_wavelength_nm, cmf_values);
-            vec3f white_point_dst_cie_xyz = cie_xy_to_cie_XYZ(scene_white_point_cie_xy);
-            mat3f XYZ_to_scene_white_balanced = XYZ_to_scene_colorspace * chromatic_adaptation(white_point_src_cie_xyz, white_point_dst_cie_xyz);
-
-            compute_normalized_isi_cmf_weights(result.isi_to_scene_referred_weights, result.n_spectral_bin, settings.isi_min_wavelength_nm, settings.isi_max_wavelength_nm, cmf_values, cmf_n_entries, cmf_min_wavelength_nm, cmf_max_wavelength_nm);
-
+            vec3f white_point_src_cie_xyz = compute_white_point_xyz(settings.white_point, settings.tint, cmf_info);
+            vec3f white_point_dst_cie_xyz = cie_xy_to_cie_XYZ(scene_colorspace_info.white_point_cie_xy);
+            mat3f XYZ_to_scene_white_balanced = scene_colorspace_info.cie_XYZ_to_colorspace * chromatic_adaptation(white_point_src_cie_xyz, white_point_dst_cie_xyz);
             fold_XYZ_to_scene_matrix_into_isi(result.isi_to_scene_referred_weights, result.n_spectral_bin, XYZ_to_scene_white_balanced);
 
-            // Scene to display referred 
-            mat3f XYZ_to_display_colorspace;
-            vec2f display_white_point_cie_xy;
-            float display_peak_nits;
-
-            bool successful_display_colorspace = dispatch_list(supported_display_colorspaces{}, settings.display_colorspace_type, [&](auto tag)
-            {
-                constexpr auto T = decltype(tag)::value;
-                XYZ_to_display_colorspace = generic_display_colorspace_t<T>::XYZ_to_colorspace;
-                display_white_point_cie_xy = generic_display_colorspace_t<T>::white_point_cie_xy;
-                display_peak_nits = generic_display_colorspace_t<T>::peak_luminance;
-            });
-
-            if(!successful_display_colorspace)
-            {
-                XYZ_to_display_colorspace = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_SRGB>::XYZ_to_colorspace;
-                display_white_point_cie_xy = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_SRGB>::white_point_cie_xy;
-                display_peak_nits = generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_SRGB>::peak_luminance;
-            }
-
-            result.scene_to_display_referred = XYZ_to_display_colorspace * chromatic_adaptation(white_point_dst_cie_xyz, cie_xy_to_cie_XYZ(display_white_point_cie_xy)) * scene_colorspace_to_XYZ;
+            result.scene_to_display_referred = display_colorspace_info.cie_XYZ_to_colorspace * chromatic_adaptation(white_point_dst_cie_xyz, cie_xy_to_cie_XYZ(display_colorspace_info.white_point_cie_xy)) * scene_colorspace_info.colorspace_to_cie_XYZ;
 
             // Create the view transform paramters
+            auto rec709_info = fetch_scene_colorspace(MAGIK_SCENE_COLORSPACE_LINEAR_REC709);
+            auto rec2020_info = fetch_scene_colorspace(MAGIK_SCENE_COLORSPACE_LINEAR_REC2020);
+
             view_transform_params_t view_transform_params;
 
             view_transform_params.reinhard_extended_white_luminance = 4.0f;
-            view_transform_params.reinhard_extended_luminance_weights = vec3f{scene_colorspace_to_XYZ.m21, scene_colorspace_to_XYZ.m22, scene_colorspace_to_XYZ.m23};
+            view_transform_params.reinhard_extended_luminance_weights = vec3f{scene_colorspace_info.colorspace_to_cie_XYZ.m21, scene_colorspace_info.colorspace_to_cie_XYZ.m22, scene_colorspace_info.colorspace_to_cie_XYZ.m23};
 
             view_transform_params.khronos_pbr_neutral_start_compression = 0.8f;
             view_transform_params.khronos_pbr_neutral_desaturation = 0.15f;
-            mat3f XYZ_to_rec709 = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC709>::XYZ_to_colorspace;
-            mat3f rec709_to_XYZ = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC709>::colorspace_to_XYZ;
-            mat3f cat_in_khronos = chromatic_adaptation(white_point_dst_cie_xyz, cie_xy_to_cie_XYZ(generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::white_point_cie_xy));
-            mat3f cat_out_khronos = chromatic_adaptation(cie_xy_to_cie_XYZ(generic_display_colorspace_t<MAGIK_DISPLAY_COLORSPACE_REC709>::white_point_cie_xy), white_point_dst_cie_xyz);
-            view_transform_params.khronos_pbr_neutral_to_linear_rec_709 = XYZ_to_rec709 * cat_in_khronos * scene_colorspace_to_XYZ;
-            view_transform_params.khronos_pbr_neutral_to_scene_colorspace = XYZ_to_scene_colorspace * cat_out_khronos * rec709_to_XYZ;
+            view_transform_params.khronos_pbr_neutral_to_linear_rec_709 = convert_scene_colorspace(scene_colorspace_info, rec709_info);
+            view_transform_params.khronos_pbr_neutral_to_scene_colorspace = convert_scene_colorspace(rec709_info, scene_colorspace_info);
 
-            view_transform_params.gran_turismo_7_mode = MAGIK_GRANTURISMO_7_MODE_JZAZBZ;
-            mat3f XYZ_to_rec2020 = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC2020>::XYZ_to_colorspace;
-            mat3f rec2020_to_XYZ = generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC2020>::colorspace_to_XYZ;
-            mat3f cat_in = chromatic_adaptation(white_point_dst_cie_xyz, cie_xy_to_cie_XYZ(generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC2020>::white_point_cie_xy));
-            mat3f cat_out = chromatic_adaptation(cie_xy_to_cie_XYZ(generic_scene_colorspace_t<MAGIK_SCENE_COLORSPACE_LINEAR_REC2020>::white_point_cie_xy), white_point_dst_cie_xyz);
-            view_transform_params.gran_turismo_7_to_linear_rec_2020 = XYZ_to_rec2020 * cat_in_khronos * scene_colorspace_to_XYZ;
-            view_transform_params.gran_turismo_7_to_scene_colorspace = XYZ_to_scene_colorspace * cat_out_khronos * rec2020_to_XYZ;
-            view_transform_params.gran_turismo_7_sdr_paper_white = 250.0f;
-            view_transform_params.gran_turismo_7_reference_luminance = 100.0f;
-            view_transform_params.gran_turismo_7_jzazbz_exponent_scale_factor = 1.7f;
+            view_transform_params.gran_turismo_7_mode = MAGIK_GRANTURISMO_7_MODE_JZAZBZ; // Why not setting ? 
+            view_transform_params.gran_turismo_7_to_linear_rec_2020 = convert_scene_colorspace(scene_colorspace_info, rec2020_info);
+            view_transform_params.gran_turismo_7_to_scene_colorspace = convert_scene_colorspace(rec2020_info, scene_colorspace_info);
+            view_transform_params.gran_turismo_7_sdr_paper_white = 250.0f; // All of this
+            view_transform_params.gran_turismo_7_reference_luminance = 100.0f; // has to come 
+            view_transform_params.gran_turismo_7_jzazbz_exponent_scale_factor = 1.7f; // from the settings 
 
             result.view_transform_descriptor = view_transform_descriptor_t::create(settings.view_transform, view_transform_params);
-
-            // Set remainers
-            result.display_colorspace_type = settings.display_colorspace_type;
-            result.peak_nits = display_peak_nits;
-            result.output_format = settings.output_format;
 
             return result;
         }

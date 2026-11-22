@@ -24,7 +24,7 @@ namespace magik
     {
         e_magik_bxdf_result_types type = ABSORBED;
         float spectral_radiance = 0.0f;
-        float monte_carlo_weight_adjustment = 0.0f;
+        float pdf = 0.0f;
         vec3f outgoing_rest_frame_direction;
     };
 
@@ -35,7 +35,7 @@ namespace magik
         float initial_four_vector_contraction;
         float affine_parameter;
         float delta_affine_parameter;
-        float monte_carlo_weight;
+        float throughput;
         vec4f current_dimensionless_four_position;
         vec4f current_dimensionless_four_momentum;
         vec4f next_dimensionless_four_position;
@@ -50,7 +50,7 @@ namespace magik
         curandState_t* random_device;
     };
 
-    static __device__ __inline__ bxdf_velocity_context generate_velocity_context(float sensor_wavelength_nm, float length_scale, float initial_four_vector_contraction, float affine_parameter, float delta_affine_parameter, float monte_carlo_weight, vec4f current_dimensionless_four_position, vec4f current_dimensionless_four_momentum, vec4f next_dimensionless_four_position, vec4f next_dimensionless_four_momentum, vec4f momentum_derivative_start, vec4f momentum_derivative_end, vec3f global_frame_geometric_normal, curandState_t* random_device)
+    static __device__ __inline__ bxdf_velocity_context generate_velocity_context(float sensor_wavelength_nm, float length_scale, float initial_four_vector_contraction, float affine_parameter, float delta_affine_parameter, float throughput, vec4f current_dimensionless_four_position, vec4f current_dimensionless_four_momentum, vec4f next_dimensionless_four_position, vec4f next_dimensionless_four_momentum, vec4f momentum_derivative_start, vec4f momentum_derivative_end, vec3f global_frame_geometric_normal, curandState_t* random_device)
     {
         bxdf_velocity_context result;
         result.sensor_wavelength_nm = sensor_wavelength_nm;
@@ -58,7 +58,7 @@ namespace magik
         result.initial_four_vector_contraction = initial_four_vector_contraction;
         result.affine_parameter = affine_parameter;
         result.delta_affine_parameter = delta_affine_parameter;
-        result.monte_carlo_weight = monte_carlo_weight;
+        result.throughput = throughput;
         result.current_dimensionless_four_position = current_dimensionless_four_position;
         result.current_dimensionless_four_momentum = current_dimensionless_four_momentum;
         result.next_dimensionless_four_position = next_dimensionless_four_position;
@@ -136,7 +136,7 @@ namespace magik
                         x.t };
     }
 
-    template<e_magik_spacetime_metric_types T> static __device__ __inline__ void apply_reflected(typename metric<T>::params_t metric_parameters, uint32_t ray_id, uint32_t* d_n_reflected, vec4f* d_current_four_position, vec4f* d_current_four_momentum, vec4f* d_next_four_position, vec4f* d_next_four_momentum, float* d_initial_four_vector_contraction, float* d_monte_carlo_weight, float redshift_factor, vec4f four_velocity, vec3f facing_global_frame_normal, bxdf_result result)
+    template<e_magik_spacetime_metric_types T> static __device__ __inline__ void apply_reflected(typename metric<T>::params_t metric_parameters, uint32_t ray_id, uint32_t* d_n_reflected, vec4f* d_current_four_position, vec4f* d_current_four_momentum, vec4f* d_next_four_position, vec4f* d_next_four_momentum, float* d_initial_four_vector_contraction, float* d_throughput, float redshift_factor, vec4f four_velocity, vec3f facing_global_frame_normal, bxdf_result result)
     {
         contravariant_seed_vectors_t seed_vectors;
         vec4f next_four_position = d_next_four_position[ray_id];
@@ -149,17 +149,17 @@ namespace magik
         d_current_four_momentum[ray_id] = outgoing_global_frame_four_momentum;
         d_next_four_position[ray_id] = offset_next_four_position;
         d_next_four_momentum[ray_id] = outgoing_global_frame_four_momentum;
-        d_monte_carlo_weight[ray_id] *= result.monte_carlo_weight_adjustment;
+        d_throughput[ray_id] /= result.pdf;
         d_n_reflected[ray_id]++;
     }
 
-    template<e_magik_spacetime_metric_types T> static __device__ __inline__ void apply_absorbed(uint32_t ray_id, float* d_spectral_radiance, float* d_monte_carlo_weight, float redshift_factor, bxdf_result result)
+    template<e_magik_spacetime_metric_types T> static __device__ __inline__ void apply_absorbed(uint32_t ray_id, float* d_spectral_radiance, float* d_throughput, float redshift_factor, bxdf_result result)
     {
         float boosted_spectral_radiance = result.spectral_radiance * (redshift_factor*redshift_factor*redshift_factor*redshift_factor*redshift_factor);
         if(isnan(boosted_spectral_radiance) || isinf(boosted_spectral_radiance) || boosted_spectral_radiance < 0.0f) boosted_spectral_radiance = 0.0f;
 
         d_spectral_radiance[ray_id] = boosted_spectral_radiance;
-        d_monte_carlo_weight[ray_id] *= result.monte_carlo_weight_adjustment;
+        d_throughput[ray_id] /= result.pdf;
     }
 
     template<e_magik_spacetime_metric_types T> static __device__ __inline__ void apply_bxdf_result(typename metric<T>::params_t metric_parameters, bxdf_result result, uint32_t ray_id, uint32_t* d_n_reflected, float* d_spectral_radiance, vec4f* d_current_four_position, vec4f* d_current_four_momentum, vec4f* d_next_four_position, vec4f* d_next_four_momentum, float* d_initial_four_vector_contraction, float* d_monte_carlo_weight, float redshift_factor, vec4f four_velocity, vec3f facing_global_frame_normal)

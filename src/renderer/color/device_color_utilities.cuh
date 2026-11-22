@@ -9,7 +9,7 @@ namespace magik
     struct radiance_to_irradiance_args_t
     {
         float spectral_radiance;
-        float monte_carlo_weight;
+        float throughput;
         float sensor_width_mm;
         float sensor_height_mm;
         float iso;
@@ -23,7 +23,7 @@ namespace magik
     {
         float sensor_area = (args.sensor_width_mm * args.sensor_height_mm) / 1e6f;
         float n_pixel = static_cast<float>(args.sensor_resolution_x * args.sensor_resolution_y);
-        float numerator = args.spectral_radiance * args.monte_carlo_weight * (sensor_area / n_pixel) * args.iso * 2.0f * magik::pi;
+        float numerator = args.spectral_radiance * args.throughput * (sensor_area / n_pixel) * args.iso * 2.0f * magik::pi;
         float denominator = (360.0f * args.fps) / args.shutter_angle;
         return numerator / denominator;
     }

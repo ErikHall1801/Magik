@@ -28,7 +28,7 @@ namespace magik
 
         ray_pool_t<
         sensor_wavelength_nm_t,
-        monte_carlo_weight_t,
+        throughput_t,
         spectral_radiance_t,
         intrinsic_spectral_irradiance_t,
         random_device_t,

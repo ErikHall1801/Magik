@@ -44,11 +44,11 @@ namespace magik
             if((m_context.global_frame_geometric_normal.x*m_context.global_frame_geometric_normal.x) > 0.0f)
             {
                 result.outgoing_rest_frame_direction = vector_reflect(m_context.rest_frame_incoming_direction, m_context.rest_frame_facing_normal).make_norm();
-                result.monte_carlo_weight_adjustment = 1.0f;
+                result.pdf = 1.0f;
             }
             else
             {
-                sample_lambertian_brdf(&result.outgoing_rest_frame_direction, &result.monte_carlo_weight_adjustment, m_context.random_device, m_context.rest_frame_facing_normal);
+                sample_lambertian_brdf(&result.outgoing_rest_frame_direction, &result.pdf, m_context.random_device, m_context.rest_frame_facing_normal);
             }
 
             result.type = REFLECTED;
@@ -68,8 +68,8 @@ namespace magik
         {
             bxdf_result result;
 
-            result.spectral_radiance = evaluate_white_led_spectrum(m_context.redshifted_wavelength_nm) * 4000000000.0f; // sample_plancks_law(m_context.redshifted_wavelength_nm, 5600.0f) * 0.02f;
-            result.monte_carlo_weight_adjustment = 1.0f;
+            result.spectral_radiance = evaluate_white_led_spectrum(m_context.redshifted_wavelength_nm) * 100000.0f; // sample_plancks_law(m_context.redshifted_wavelength_nm, 5600.0f) * 0.02f;
+            result.pdf = 1.0f;
             result.type = ABSORBED;
 
             return result;
@@ -88,7 +88,7 @@ namespace magik
             bxdf_result result;
 
             result.spectral_radiance = 0.0f; //sample_plancks_law(m_context.sensor_wavelength_nm, 2600.0f) * 0.1f * (m_context.redshift_factor*m_context.redshift_factor*m_context.redshift_factor*m_context.redshift_factor*m_context.redshift_factor);
-            result.monte_carlo_weight_adjustment = 0.0f;
+            result.pdf = 0.0f;
             result.type = ABSORBED;
 
             return result;

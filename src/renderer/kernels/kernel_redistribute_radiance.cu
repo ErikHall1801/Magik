@@ -13,7 +13,7 @@ namespace magik
         uint32_t* d_splat_queue_count = nullptr;
         uint32_t* d_splat_queue_id = nullptr;
         float* d_spectral_radiance = nullptr;
-        float* d_monte_carlo_weight = nullptr;
+        float* d_throughput = nullptr;
         float* d_intrinsic_spectral_irradiance = nullptr;
         float* d_sensor_wavelength_nm = nullptr;
 
@@ -35,7 +35,7 @@ namespace magik
             d_splat_queue_count = wb->queue_pool.get_count_ptr<splat_queue_t>();
             d_splat_queue_id = wb->queue_pool.get_id_ptr<splat_queue_t>();
             d_spectral_radiance = wb->ray_pool.get<spectral_radiance_t>();
-            d_monte_carlo_weight = wb->ray_pool.get<monte_carlo_weight_t>();
+            d_throughput = wb->ray_pool.get<throughput_t>();
             d_intrinsic_spectral_irradiance = wb->ray_pool.get<intrinsic_spectral_irradiance_t>();
             d_sensor_wavelength_nm = wb->ray_pool.get<sensor_wavelength_nm_t>();
 
@@ -59,9 +59,9 @@ namespace magik
         uint32_t ray_id = args.d_redistribute_queue_id[queue_index];
 
         float spectral_radiance = args.d_spectral_radiance[ray_id];
-        float monte_carlo_weight = args.d_monte_carlo_weight[ray_id];
+        float throughput = args.d_throughput[ray_id];
 
-        if((spectral_radiance > 0.0f) && (monte_carlo_weight > 0.0f))
+        if((spectral_radiance > 0.0f) && (throughput > 0.0f))
         {
             float inv_b = compute_inv_b(args.sensor_diagonal_mm, args.sensor_resolution_x, args.sensor_resolution_y);
             float sensor_width_mm = args.sensor_resolution_x * inv_b;
@@ -72,7 +72,7 @@ namespace magik
             float wavelength_range_in_bin_nm = (args.isi_max_wavelength_nm - args.isi_min_wavelength_nm) / static_cast<float>(args.n_isi_bin);
             float x1 = args.isi_min_wavelength_nm;
             float x2 = args.isi_min_wavelength_nm + wavelength_range_in_bin_nm;
-            float sampled_irradiance = radiance_to_irradiance({spectral_radiance, monte_carlo_weight, sensor_width_mm, sensor_height_mm, args.iso, args.fps, args.shutter_angle, static_cast<uint32_t>(args.sensor_resolution_x), static_cast<uint32_t>(args.sensor_resolution_y)});
+            float sampled_irradiance = radiance_to_irradiance({spectral_radiance, throughput, sensor_width_mm, sensor_height_mm, args.iso, args.fps, args.shutter_angle, static_cast<uint32_t>(args.sensor_resolution_x), static_cast<uint32_t>(args.sensor_resolution_y)});
             float x_stored_irradiance = 0.0f;
 
             for(size_t i = 0; i < args.n_isi_bin; i++)

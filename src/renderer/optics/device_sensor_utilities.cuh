@@ -5,6 +5,7 @@
 #include "cuda_runtime.h"
 #include <curand_kernel.h>
 #include "curand.h"
+#include "color_pipeline.cuh"
 
 namespace magik
 {
@@ -15,10 +16,20 @@ namespace magik
     * Naturally this header is device only. 
     */
 
-    __device__ __inline__ static void draw_random_wavelength_uniform(float* wavelength_out, float* monte_carlo_weight_out, float max_wavelength_nm, float min_wavelength_nm, curandState_t* random_state)
+    __device__ __inline__ static void draw_random_wavelength_uniform(float* wavelength_out, float* pdf_out, float max_wavelength_nm, float min_wavelength_nm, curandState_t* random_state)
     {
         *wavelength_out = magik::lerp(min_wavelength_nm, max_wavelength_nm, curand_uniform(random_state));
-        *monte_carlo_weight_out = 1.0f / (max_wavelength_nm - min_wavelength_nm);
+        *pdf_out = 1.0f / (max_wavelength_nm - min_wavelength_nm);
+    }
+
+    __device__ __inline__ static void draw_random_wavelength_cmf_inverse_cdf(float* wavelength_out, float* pdf_out, const color_pipeline_descriptor_t &descriptor, curandState_t* random_state)
+    {
+        float x = curand_uniform(random_state) * (float(MAGIK_N_CMF_INVERSE_CDF_BIN - 1));
+        uint32_t k = uint32_t(fminf(x, float(MAGIK_N_CMF_INVERSE_CDF_BIN) - 2));
+        float f = x - float(k);
+        
+        *wavelength_out = magik::lerp(descriptor.cmf_inverse_cdf_values[k], descriptor.cmf_inverse_cdf_values[k+1], f);
+        *pdf_out = 1.0f / (float(MAGIK_N_CMF_INVERSE_CDF_BIN - 1) * (descriptor.cmf_inverse_cdf_values[k+1] - descriptor.cmf_inverse_cdf_values[k]));
     }
 
     __device__ static vec2f generate_screen_uv_coordinates(uint32_t x_resolution, uint32_t y_resolution)

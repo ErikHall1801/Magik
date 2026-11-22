@@ -12,7 +12,7 @@ namespace magik
         vec4f* d_initial_observer_spatial_direction = nullptr;
         vec4f* d_initial_observer_spatial_position = nullptr;
         float* d_sensor_wavelength_nm = nullptr;
-        float* d_monte_carlo_weight = nullptr;
+        float* d_throughput = nullptr;
         uint32_t* d_advance_A_queue_id = nullptr;
 
         uint32_t x_resolution;
@@ -24,13 +24,15 @@ namespace magik
         vec3f position;
         mat3f orientation;
 
+        color_pipeline_descriptor_t color_pipeline_descriptor;
+
         __host__ void create(magik_render_manager* manager, wavefront_buffer_t* wb)
         {
             d_random_device = wb->ray_pool.get<random_device_t>();
             d_initial_observer_spatial_direction = wb->ray_pool.get<initial_observer_spatial_direction_t>();
             d_initial_observer_spatial_position = wb->ray_pool.get<initial_observer_spatial_position_t>();
             d_sensor_wavelength_nm = wb->ray_pool.get<sensor_wavelength_nm_t>();
-            d_monte_carlo_weight = wb->ray_pool.get<monte_carlo_weight_t>();
+            d_throughput = wb->ray_pool.get<throughput_t>();
             d_advance_A_queue_id = wb->queue_pool.get_id_ptr<advance_A_queue_t>();
 
             x_resolution = wb->x_resolution;
@@ -41,6 +43,8 @@ namespace magik
             sensor_diagonal_mm = manager->stage.optical_systen.sensor_diagonal_mm;
             position = manager->stage.optical_systen.position;
             orientation = manager->stage.optical_systen.orientation;
+
+            color_pipeline_descriptor = manager->color_pipeline_descriptor;
         }
     };
 
@@ -65,7 +69,9 @@ namespace magik
         args.d_initial_observer_spatial_direction[thread_id] = vec4f{ray_dir.x, ray_dir.y, ray_dir.z, 0.0f};
         args.d_initial_observer_spatial_position[thread_id] = vec4f{ray_orig.x, ray_orig.y, ray_orig.z, 0.0f};
 
-        draw_random_wavelength_uniform(&args.d_sensor_wavelength_nm[thread_id], &args.d_monte_carlo_weight[thread_id], args.max_wavelength_nm, args.min_wavelength_nm, &args.d_random_device[thread_id]);
+        float pdf; // Setting for the sampling strategy ? 
+        draw_random_wavelength_cmf_inverse_cdf(&args.d_sensor_wavelength_nm[thread_id], &pdf, args.color_pipeline_descriptor, &args.d_random_device[thread_id]);
+        args.d_throughput[thread_id] = 1.0f / pdf;
 
         args.d_advance_A_queue_id[thread_id] = thread_id;
     }
