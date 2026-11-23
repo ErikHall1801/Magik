@@ -457,15 +457,118 @@ namespace magik
         }
     };
 
+    template<> struct generic_view_transform_t<MAGIK_VIEW_TRANSFORM_AGX>
+    {
+        // CREDITS: https://github.com/google/filament/blob/main/filament/src/ToneMapper.cpp#L694 
+
+        static constexpr bool does_gamut_mapping = false;
+
+        // These are most likely meant to be functions ? With LOG2_MIN, MAX and MIDDLE GRAY being parameters ? 
+        static MAGIK_DEVICE_HOST float agx_min_ev()
+        {
+            return -12.47393f;
+        }
+
+        static MAGIK_DEVICE_HOST float agx_max_ev()
+        {
+            return 4.026069f;
+        }
+
+        static MAGIK_DEVICE_HOST vec3f agx_default_contrast_approx(vec3f x)
+        {
+            vec3f const x2 = x*x;
+            vec3f const x4 = x2*x2;
+            vec3f const x6 = x4*x2;
+            return -17.86f*x6*x + 78.01f*x6 - 126.7f*x4*x + 92.06f*x4 - 28.72f*x2*x + 4.361f*x2 - 0.1718f*x + vec3f{0.002857f, 0.002857f, 0.002857f};
+        }
+
+        static MAGIK_DEVICE_HOST vec3f agx_look(vec3f val, e_magik_agx_look_types look)
+        {
+            if(look == MAGIK_AGX_LOOK_NONE) return val;
+
+            constexpr vec3f lw = vec3f{0.2126f, 0.7152f, 0.0722f};
+            float const luma = vector_dot_product(val, lw);
+
+            constexpr vec3f offset = vec3f{0.0f, 0.0f, 0.0f};
+            vec3f slope = vec3f{1.0f, 1.0f, 1.0f};
+            vec3f power = vec3f{1.0f, 1.0f, 1.0f};
+            float sat = 1.0f;
+
+            if(look == MAGIK_AGX_LOOK_GOLDEN)
+            {
+                slope = vec3f{1.0f, 0.9f, 0.5f};
+                power = vec3f{0.8f, 0.8f, 0.8f};
+                sat = 1.3f;
+            }
+
+            if(look == MAGIK_AGX_LOOK_PUNCHY)
+            {
+                slope = vec3f{1.0f, 1.0f, 1.0f};
+                power = vec3f{1.35f, 1.35f, 1.35f};
+                sat = 1.4f;
+            }
+
+            vec3f val2 = vec3f{ powf(val.x * slope.x + offset.x, power.x), powf(val.y * slope.y + offset.y, power.y), powf(val.z * slope.z + offset.z, power.z) };
+            return vec3f{luma, luma, luma} + sat * (val2 - vec3f{luma, luma, luma});
+        }
+
+        struct params_t
+        {
+            mat3f to_linear_rec_2020;
+            mat3f agx_inset_matrix;
+            mat3f agx_outset_matrix;
+            mat3f to_scene_colorspace;
+            e_magik_agx_look_types look;
+        };
+
+        static MAGIK_HOST params_t make_params(const color_settings_t& color_settings)
+        {
+            params_t p;
+
+            auto scene_colorspace_info = fetch_scene_colorspace(color_settings.scene_colorspace_type);
+            auto rec2020_info = fetch_scene_colorspace(MAGIK_SCENE_COLORSPACE_LINEAR_REC2020);
+
+            p.to_linear_rec_2020 = convert_scene_colorspace(scene_colorspace_info, rec2020_info);
+            p.to_scene_colorspace = convert_scene_colorspace(rec2020_info, scene_colorspace_info);
+
+            p.agx_inset_matrix = mat3f{0.856627153315983f, 0.137318972929847f, 0.11189821299995f, 0.0951212405381588f, 0.761241990602591f, 0.0767994186031903f, 0.0482516061458583f, 0.101439036467562f, 0.811302368396859f}.transpose();
+            p.agx_outset_matrix = mat3f{1.1271005818144f, -0.14132976349844f, -0.14132976349844f, -0.11060664309660f, 1.1578237022163f, -0.11060664309660f, -0.016493938717835f, -0.016493938717834f, 1.2519364065950f}.transpose();
+
+            p.look = color_settings.vt_agx_look;
+            return p; 
+        }
+
+        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const params_t& p) 
+        {
+            vec3f v = p.to_linear_rec_2020 * c;
+            v = vec3f{fmaxf(0.0f, v.x), fmaxf(0.0f, v.y), fmaxf(0.0f, v.z)};
+            v = p.agx_inset_matrix * v;
+
+            v = vec3f{fmaxf(v.x, 1e-10f), fmaxf(v.y, 1e-10f), fmaxf(v.z, 1e-10f)};
+            v = vec3f{log2f(v.x), log2f(v.y), log2f(v.z)};
+            v = (v - vec3f{agx_min_ev(), agx_min_ev(), agx_min_ev()}) / (agx_max_ev() - agx_min_ev());
+
+            v = vec3f{magik::clamp(0.0f, 1.0f, v.x), magik::clamp(0.0f, 1.0f, v.y), magik::clamp(0.0f, 1.0f, v.z)};
+
+            v = agx_default_contrast_approx(v);
+
+            v = agx_look(v, p.look);
+
+            v = p.agx_outset_matrix * v;
+            v = vec3f{powf(fmaxf(0.0f, v.x), 2.2f), powf(fmaxf(0.0f, v.y), 2.2f), powf(fmaxf(0.0f, v.z), 2.2f)};
+            v = p.to_scene_colorspace * v;
+
+            return v;
+        }
+    };
+
     using supported_view_transforms = value_list
     <
         e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_NONE,
         e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_REINHARD_SIMPLE,
         e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_REINHARD_EXTENDED,
         e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL,
-        e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_GRAN_TURISMO_7
-        // e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_ACES_2,
-        // e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_AGX,
-        // e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_EXPONENTIAL
+        e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_GRAN_TURISMO_7,
+        e_magik_view_transform_types::MAGIK_VIEW_TRANSFORM_AGX
     >;
 }

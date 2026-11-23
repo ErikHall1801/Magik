@@ -350,10 +350,8 @@ typedef enum e_magik_view_transform_types
     MAGIK_VIEW_TRANSFORM_REINHARD_SIMPLE = 1,
     MAGIK_VIEW_TRANSFORM_REINHARD_EXTENDED = 2,
     MAGIK_VIEW_TRANSFORM_GRAN_TURISMO_7 = 3,
-    MAGIK_VIEW_TRANSFORM_ACES_2 = 4,
-    MAGIK_VIEW_TRANSFORM_AGX = 5,
-    MAGIK_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL = 6,
-    MAGIK_VIEW_TRANSFORM_EXPONENTIAL = 7
+    MAGIK_VIEW_TRANSFORM_AGX = 4,
+    MAGIK_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL = 5
 } e_magik_view_transform_types;
 
 typedef enum e_magik_gran_turismo_7_mode_types
@@ -361,6 +359,13 @@ typedef enum e_magik_gran_turismo_7_mode_types
     MAGIK_GRAN_TURISMO_7_MODE_ICTCP = 0,
     MAGIK_GRAN_TURISMO_7_MODE_JZAZBZ = 1
 } e_magik_gran_turismo_7_mode_types;
+
+typedef enum e_magik_agx_look_types
+{
+    MAGIK_AGX_LOOK_NONE = 0,
+    MAGIK_AGX_LOOK_GOLDEN = 1,
+    MAGIK_AGX_LOOK_PUNCHY = 2
+} e_magik_agx_look_types;
 
 typedef enum e_magik_output_format_types
 {
@@ -894,6 +899,8 @@ typedef enum e_magik_cqs_command_types
     MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_REFERENCE_LUMINANCE = 6306,
     MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_JZAZBZ_EXPONENT_SCALE_FACTOR = 6407,
 
+    MAGIK_COMMAND_SET_VIEW_TRANSFORM_AGX_LOOK = 6308,
+
 
 
     // ########################
@@ -1211,6 +1218,12 @@ typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_gt7_jzazbz_exponent
     const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_JZAZBZ_EXPONENT_SCALE_FACTOR;
     float jzazbz_exponent_scale_factor;
 } magik_command_set_view_transform_gt7_jzazbz_exponent_scale_factor_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_agx_look_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_AGX_LOOK;
+    e_magik_agx_look_types look;
+} magik_command_set_view_transform_agx_look_t;
 
 
 

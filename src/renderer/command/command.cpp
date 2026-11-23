@@ -122,6 +122,8 @@ namespace magik
 
             case MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_JZAZBZ_EXPONENT_SCALE_FACTOR: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_gt7_jzazbz_exponent_scale_factor_t); break; }
 
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_AGX_LOOK: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_agx_look_t); break; }
+
 
 
             // ########################
@@ -623,6 +625,17 @@ namespace magik
                     manager->stage.color_settings.vt_gt7_jzazbz_exponent_scale_factor = cmd.jzazbz_exponent_scale_factor;
                     manager->framebuffer_swapchain.clear_render_buffer = true;
                 }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_AGX_LOOK:
+            {
+                magik_command_set_view_transform_agx_look_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.vt_agx_look = cmd.look;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
 
                 break;
             }

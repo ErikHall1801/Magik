@@ -31,5 +31,7 @@ namespace magik
         float vt_gt7_sdr_paper_white = 250.0f;
         float vt_gt7_reference_luminance = 100.0f;
         float vt_gt7_jzazbz_exponent_scale_factor = 1.7f;
+
+        e_magik_agx_look_types vt_agx_look = MAGIK_AGX_LOOK_GOLDEN;
     };
 }
