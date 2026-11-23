@@ -2,6 +2,7 @@
 
 #include <cstdint>
 // #include <cuda_runtime.h>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
