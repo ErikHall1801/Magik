@@ -7,7 +7,7 @@ namespace magik
 {
     // Common
     #define WHITE_POINT_CIE {1.0f/3.0f, 1.0f/3.0f}
-    #define WHITE_POINT_CIE_1931 {0.314f, 0.351}
+    #define WHITE_POINT_DCI {0.314f, 0.351f}
     #define WHITE_POINT_D65 {0.31272f, 0.32903f}
     #define WHITE_POINT_ACES_cg {0.32168f, 0.33767f}
 
@@ -241,14 +241,14 @@ typedef float candela_m2;
     {
         static constexpr mat3f colorspace_to_XYZ{0.44516982f, 0.27713441f, 0.17228267f, 0.20949168f, 0.72159525f, 0.06891307f, 0.00000000f, 0.04706056f, 0.90735539f};
         static constexpr mat3f XYZ_to_colorspace{2.72539403f, -1.01800301f, -0.44016320f, -0.79516803f, 1.68973205f, 0.02264719f, 0.04124189f, -0.08763902f, 1.10092938f};
-        static constexpr vec2f white_point_cie_xy = WHITE_POINT_CIE_1931;
+        static constexpr vec2f white_point_cie_xy = WHITE_POINT_DCI;
         static constexpr candela_m2 peak_luminance{48.0f};
 
         static MAGIK_DEVICE_HOST vec3f encode(vec3f c)
         {
             auto ctf = [](const float L)
             {
-                return powf(L, 1.0f/2.6f);
+                return powf(fmaxf(L, 0.0f), 1.0f/2.6f);
             };
 
             return { ctf(c.x), ctf(c.y), ctf(c.z) };

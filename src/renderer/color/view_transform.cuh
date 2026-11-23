@@ -430,7 +430,7 @@ namespace magik
             p.to_linear_rec_2020 = convert_scene_colorspace(scene_colorspace_info, rec2020_info);
             p.to_scene_colorspace = convert_scene_colorspace(rec2020_info, scene_colorspace_info);
 
-            bool is_sdr = false; // Future, automatically detect if a display colorspace is SDR or HDR
+            bool is_sdr = true; // Future, automatically detect if a display colorspace is SDR or HDR
             if(is_sdr)
             {
                 initialize_as_sdr(p);
@@ -451,10 +451,11 @@ namespace magik
             float rgb_in[3] = {color.x, color.y, color.z};
             float rgb_out[3] = {0.0f, 0.0f, 0.0f};
 
+            color = { fmaxf(color.x, 0.0f), fmaxf(color.y, 0.0f), fmaxf(color.z, 0.0f) };
+
             apply_tonemapping(p, rgb_in, rgb_out);
 
             color = p.to_scene_colorspace * vec3f{rgb_out[0], rgb_out[1], rgb_out[2]};
-            color = { fmaxf(color.x, 0.0f), fmaxf(color.y, 0.0f), fmaxf(color.z, 0.0f) };
             return color;
         }
     };
