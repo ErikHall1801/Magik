@@ -37,12 +37,12 @@ namespace magik
 
             x_resolution = wb->x_resolution;
             y_resolution = wb->y_resolution;
-            max_wavelength_nm = manager->stage.settings.isi_max_wavelength_nm;
-            min_wavelength_nm = manager->stage.settings.isi_min_wavelength_nm;
-            focal_length = manager->stage.optical_systen.focal_length;
-            sensor_diagonal_mm = manager->stage.optical_systen.sensor_diagonal_mm;
-            position = manager->stage.optical_systen.position;
-            orientation = manager->stage.optical_systen.orientation;
+            max_wavelength_nm = manager->stage.color_settings.isi_max_wavelength_nm;
+            min_wavelength_nm = manager->stage.color_settings.isi_min_wavelength_nm;
+            focal_length = manager->stage.optical_system_settings.focal_length;
+            sensor_diagonal_mm = manager->stage.optical_system_settings.sensor_diagonal_mm;
+            position = manager->stage.optical_system_settings.position;
+            orientation = manager->stage.optical_system_settings.orientation;
 
             color_pipeline_descriptor = manager->color_pipeline_descriptor;
         }
@@ -78,8 +78,8 @@ namespace magik
 
     void launch_kernel_generate_thin_lens_ray_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
-        dim3 threads_per_block = dim3(manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y, 1);
-        dim3 n_block = magik::compute_n_blocks(wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y);
+        dim3 threads_per_block = dim3(manager->stage.render_settings.threads_per_block_x, manager->stage.render_settings.threads_per_block_y, 1);
+        dim3 n_block = magik::compute_n_blocks(wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.render_settings.threads_per_block_x, manager->stage.render_settings.threads_per_block_y);
 
         kernel_generate_thin_lens_ray_args_t args;
         args.create(manager, wavefront_buffer);

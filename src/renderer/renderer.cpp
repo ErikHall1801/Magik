@@ -48,16 +48,16 @@ namespace magik
         wavefront_buffer_t wavefront_buffer;
 
         color_pipeline_settings_t pipeline_settings;
-        pipeline_settings.n_isi_bin = manager->stage.settings.n_isi_bin;
-        pipeline_settings.scene_colorspace_type = manager->stage.optical_systen.scene_colorspace_type;
-        pipeline_settings.display_colorspace_type = manager->stage.optical_systen.display_colorspace_type;
-        pipeline_settings.view_transform = manager->stage.optical_systen.view_transform_type;
-        pipeline_settings.output_format = manager->stage.optical_systen.output_format;
-        pipeline_settings.white_point = manager->stage.optical_systen.white_point;
-        pipeline_settings.tint = manager->stage.optical_systen.tint;
-        pipeline_settings.isi_max_wavelength_nm = manager->stage.settings.isi_max_wavelength_nm;
-        pipeline_settings.isi_min_wavelength_nm = manager->stage.settings.isi_min_wavelength_nm;
-        pipeline_settings.cmf_type = manager->stage.optical_systen.cmf_type;
+        pipeline_settings.n_isi_bin = manager->stage.color_settings.n_isi_bin;
+        pipeline_settings.scene_colorspace_type = manager->stage.color_settings.scene_colorspace_type;
+        pipeline_settings.display_colorspace_type = manager->stage.color_settings.display_colorspace_type;
+        pipeline_settings.view_transform = manager->stage.color_settings.view_transform_type;
+        pipeline_settings.output_format = manager->stage.color_settings.output_format;
+        pipeline_settings.white_point = manager->stage.color_settings.white_point;
+        pipeline_settings.tint = manager->stage.color_settings.tint;
+        pipeline_settings.isi_max_wavelength_nm = manager->stage.color_settings.isi_max_wavelength_nm;
+        pipeline_settings.isi_min_wavelength_nm = manager->stage.color_settings.isi_min_wavelength_nm;
+        pipeline_settings.cmf_type = manager->stage.color_settings.cmf_type;
         manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(pipeline_settings);
 
         // Render stage
@@ -77,11 +77,11 @@ namespace magik
 
             // Framebuffer stage
             // Why is this not a member function ????
-            result = allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
+            result = allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_system_settings.x_resolution, manager->stage.optical_system_settings.y_resolution);
 
             // Wavefront realloc
             // Why is this not a member function ? 
-            realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.settings.n_isi_bin, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution, manager->stage.settings.n_geodesic_step_limit);
+            realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.color_settings.n_isi_bin, manager->stage.optical_system_settings.x_resolution, manager->stage.optical_system_settings.y_resolution, manager->stage.render_settings.n_geodesic_step_limit);
 
             if(result)
             {
@@ -137,11 +137,6 @@ namespace magik
             iteration_end_time = std::chrono::steady_clock::now();
 
             // Update performance statistics "work" buffer, which incldues swapping the buffers. 
-
-            // manager->sampled_time_point_seconds.store(std::chrono::duration<double>(iteration_start_time.time_since_epoch()).count(), std::memory_order_release);
-            // manager->average_sample_time_seconds.store(manager->total_render_time_seconds.load(std::memory_order_relaxed) / (double)iteration);
-            // manager->latest_sample_time_seconds.store(std::chrono::duration<double>(iteration_end_time - iteration_start_time).count(), std::memory_order_release);
-            // manager->total_render_time_seconds.fetch_add(manager->latest_sample_time_seconds.load(std::memory_order_relaxed), std::memory_order_release);
         }
 
         // Shutdown stage

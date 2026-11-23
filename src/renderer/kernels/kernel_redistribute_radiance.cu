@@ -39,16 +39,16 @@ namespace magik
             d_intrinsic_spectral_irradiance = wb->ray_pool.get<intrinsic_spectral_irradiance_t>();
             d_sensor_wavelength_nm = wb->ray_pool.get<sensor_wavelength_nm_t>();
 
-            isi_max_wavelength_nm = manager->stage.settings.isi_max_wavelength_nm;
-            isi_min_wavelength_nm = manager->stage.settings.isi_min_wavelength_nm;
-            redistribution_standard_deviation_nm = manager->stage.settings.redistribution_standard_deviation_nm;
-            sensor_diagonal_mm = manager->stage.optical_systen.sensor_diagonal_mm;
-            sensor_resolution_x = static_cast<float>(manager->stage.optical_systen.x_resolution);
-            sensor_resolution_y = static_cast<float>(manager->stage.optical_systen.y_resolution);
-            iso = manager->stage.optical_systen.iso;
-            fps = manager->stage.optical_systen.fps;
-            shutter_angle = manager->stage.optical_systen.shutter_angle;
-            n_isi_bin = manager->stage.settings.n_isi_bin;
+            isi_max_wavelength_nm = manager->stage.color_settings.isi_max_wavelength_nm;
+            isi_min_wavelength_nm = manager->stage.color_settings.isi_min_wavelength_nm;
+            redistribution_standard_deviation_nm = manager->stage.color_settings.redistribution_standard_deviation_nm;
+            sensor_diagonal_mm = manager->stage.optical_system_settings.sensor_diagonal_mm;
+            sensor_resolution_x = static_cast<float>(manager->stage.optical_system_settings.x_resolution);
+            sensor_resolution_y = static_cast<float>(manager->stage.optical_system_settings.y_resolution);
+            iso = manager->stage.optical_system_settings.iso;
+            fps = manager->stage.optical_system_settings.fps;
+            shutter_angle = manager->stage.optical_system_settings.shutter_angle;
+            n_isi_bin = manager->stage.color_settings.n_isi_bin;
         }
     };
 
@@ -93,7 +93,7 @@ namespace magik
 
     void launch_kernel_redistribute_radiance_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
-        uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
+        uint32_t threads_per_block = manager->stage.render_settings.wavefront_threads_per_block;
         uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
 
         kernel_redistribute_radiance_args_t args;
@@ -102,7 +102,7 @@ namespace magik
         kernel_redistribute_radiance<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(args);
         check_cuda_errors(cudaGetLastError());
 
-        wavefront_buffer->queue_pool.store_count_in_history<redistribute_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.settings.n_geodesic_step_limit);
+        wavefront_buffer->queue_pool.store_count_in_history<redistribute_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.render_settings.n_geodesic_step_limit);
         wavefront_buffer->queue_pool.zero_count_async<redistribute_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
     }
 }

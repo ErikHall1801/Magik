@@ -125,13 +125,13 @@ namespace magik
     template<> inline kerr_metric::params_t kerr_metric::make_params(magik_render_manager* manager, bool time_reversed)
     {
         return {    time_reversed,
-                    manager->stage.kerr_mass, 
-                    time_reversed ? -manager->stage.kerr_spin : manager->stage.kerr_spin, 
-                    manager->stage.event_horizon_scalar, 
+                    manager->stage.relativity_settings.kerr_mass_parameter, 
+                    time_reversed ? -manager->stage.relativity_settings.kerr_dimensionless_spin_parameter : manager->stage.relativity_settings.kerr_dimensionless_spin_parameter, 
+                    manager->stage.relativity_settings.kerr_event_horizon_scalar, 
                     1000.0f, 
-                    manager->stage.settings.integrator_absolute_error_tolerance, 
-                    manager->stage.settings.integrator_relative_error_tolerance, 
-                    manager->stage.settings.n_integrator_max_substep}; 
+                    manager->stage.relativity_settings.integrator_absolute_error_tolerance, 
+                    manager->stage.relativity_settings.integrator_relative_error_tolerance, 
+                    manager->stage.relativity_settings.n_integrator_max_substep}; 
     }
 
     template<> inline kerr_metric::params_t kerr_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)

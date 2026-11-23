@@ -47,8 +47,8 @@ namespace magik
             box_max = manager->stage.box_max;
             light_min = manager->stage.light_min;
             light_max = manager->stage.light_max;
-            celestial_sphere_radius = manager->stage.celestial_sphere_radius;
-            observer_origin = manager->stage.optical_systen.position;
+            celestial_sphere_radius = manager->stage.relativity_settings.celestial_sphere_radius;
+            observer_origin = manager->stage.optical_system_settings.position;
         }
     };
 
@@ -139,14 +139,14 @@ namespace magik
 
     void launch_kernel_intersect_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
-        uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
+        uint32_t threads_per_block = manager->stage.render_settings.wavefront_threads_per_block;
         uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
 
         kernel_intersect_args_t args;
         args.create(manager, wavefront_buffer);
         bool time_reversed = true;
 
-        bool successful = dispatch_list(supported_metrics{}, manager->stage.settings.metric_type, [&](auto tag)
+        bool successful = dispatch_list(supported_metrics{}, manager->stage.relativity_settings.metric_type, [&](auto tag)
         {
             constexpr auto T = decltype(tag)::value;
             kernel_intersect<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager, time_reversed), args);
@@ -154,7 +154,7 @@ namespace magik
 
         check_cuda_errors(cudaGetLastError());
 
-        wavefront_buffer->queue_pool.store_count_in_history<intersect_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.settings.n_geodesic_step_limit);
+        wavefront_buffer->queue_pool.store_count_in_history<intersect_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.render_settings.n_geodesic_step_limit);
         wavefront_buffer->queue_pool.zero_count_async<intersect_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
 
         if(!successful)

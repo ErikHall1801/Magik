@@ -27,9 +27,9 @@ namespace magik
             d_renderbuffer = d_target_buffer;
             color_pipeline_descriptor = manager->color_pipeline_descriptor;
 
-            n_isi_bin = manager->stage.settings.n_isi_bin;
-            max_wavelength_nm = manager->stage.settings.isi_max_wavelength_nm;
-            min_wavelength_nm = manager->stage.settings.isi_min_wavelength_nm;
+            n_isi_bin = manager->stage.color_settings.n_isi_bin;
+            max_wavelength_nm = manager->stage.color_settings.isi_max_wavelength_nm;
+            min_wavelength_nm = manager->stage.color_settings.isi_min_wavelength_nm;
             x_sample = manager->x_sample.load(std::memory_order_acquire);
         }
     };
@@ -58,7 +58,7 @@ namespace magik
 
     void launch_kernel_splat_to_renderbuffer_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer, float* d_renderbuffer)
     {
-        uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
+        uint32_t threads_per_block = manager->stage.render_settings.wavefront_threads_per_block;
         uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
 
         kernel_splat_to_renderbuffer_t args;
@@ -67,7 +67,7 @@ namespace magik
         kernel_splat_to_renderbuffer<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(args);
         check_cuda_errors(cudaGetLastError());
 
-        wavefront_buffer->queue_pool.store_count_in_history<splat_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.settings.n_geodesic_step_limit);
+        wavefront_buffer->queue_pool.store_count_in_history<splat_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.render_settings.n_geodesic_step_limit);
         wavefront_buffer->queue_pool.zero_count_async<splat_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
     }
 }

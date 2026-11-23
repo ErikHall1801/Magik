@@ -2,8 +2,12 @@
 
 #ifdef __CUDACC__
     #define MAGIK_DEVICE_HOST __device__ __host__ __inline__
+    #define MAGIK_HOST __host__ __inline__
+    #define MAGIK_DEVICE __device__ __inline__
 #else
     #define MAGIK_DEVICE_HOST inline 
+    #define MAGIK_HOST inline
+    #define MAGIK_DEVICE 
 #endif
 
 namespace magik

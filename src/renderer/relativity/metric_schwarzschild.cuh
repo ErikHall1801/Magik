@@ -92,13 +92,13 @@ namespace magik
     template<> inline schwarzschild_metric::params_t schwarzschild_metric::make_params(magik_render_manager* manager, bool time_reversed)
     {
         return {    time_reversed,
-                    fabsf(manager->stage.schwarzschild_mass), 
-                    manager->stage.schwarzschild_mass > 0.0f ? 1.0f : -1.0f,
-                    manager->stage.event_horizon_scalar, 
+                    fabsf(manager->stage.relativity_settings.schwarzschild_mass_parameter), 
+                    manager->stage.relativity_settings.schwarzschild_mass_parameter > 0.0f ? 1.0f : -1.0f,
+                    manager->stage.relativity_settings.schwarzschild_event_horizon_scalar, 
                     1000.0f, 
-                    manager->stage.settings.integrator_absolute_error_tolerance, 
-                    manager->stage.settings.integrator_relative_error_tolerance, 
-                    manager->stage.settings.n_integrator_max_substep};
+                    manager->stage.relativity_settings.integrator_absolute_error_tolerance, 
+                    manager->stage.relativity_settings.integrator_relative_error_tolerance, 
+                    manager->stage.relativity_settings.n_integrator_max_substep};
     }
 
     template<> inline schwarzschild_metric::params_t schwarzschild_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)

@@ -79,7 +79,7 @@ namespace magik
         bool working = true;
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
 
-        prepair_wavefront_buffer_async(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer, manager->stage.settings.n_geodesic_step_limit);
+        prepair_wavefront_buffer_async(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer, manager->stage.render_settings.n_geodesic_step_limit);
  
         launch_kernel_generate_thin_lens_ray_async(manager, wavefront_buffer);
 

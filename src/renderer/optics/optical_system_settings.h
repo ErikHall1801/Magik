@@ -1,5 +1,6 @@
 #pragma once
 
+#include "magik.h"
 #include "internal_math.h"
 #include <cstdint>
 
@@ -13,20 +14,12 @@
 
 namespace magik
 {
-    struct optical_system_t
+    struct optical_system_settings_t
     {
         // Lens
         float focal_length = 12.0f;
-        
-        // Sensor
-        e_magik_color_matching_function_types cmf_type = MAGIK_CMF_CIE_1931;
-        e_magik_scene_colorspace_types scene_colorspace_type = MAGIK_SCENE_COLORSPACE_LINEAR_REC709;
-        e_magik_view_transform_types view_transform_type = MAGIK_VIEW_TRANSFORM_GRAN_TURISMO_7;
-        e_magik_display_colorspace_types display_colorspace_type = MAGIK_DISPLAY_COLORSPACE_REC709;
-        e_magik_output_format_types output_format = MAGIK_OUTPUT_FORMAT_FLOAT32;
+
         float iso = 100.0f;
-        float white_point = 5600.0f;
-        float tint = 0.0f;
         float fps = 24.0f;
         // Shutter type
         // motion blur
@@ -38,7 +31,6 @@ namespace magik
         // Body (Parasitic heat etc.)
 
         vec3f position = vec3f{2.0f, 0.0f, 9.0f};
-        vec3f local_proper_velocity;
         mat3f orientation = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
     };
 }

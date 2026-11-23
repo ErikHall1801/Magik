@@ -188,17 +188,6 @@ namespace magik
 
     __host__ static inline void compute_tabulated_cmf_inverse_cdf(float* cmf_inverse_cdf, float cdf_floor, float user_min_wavelength_nm, float user_max_wavelength_nm, cmf_info_t cmf_info)
     {
-        /*
-        Note, a key difference between this and uniform sampling is that the min/max wavelength constraint 
-        needs to be backed into the inverse CDF itself. Which we have not been doing so far. 
-        I think there are two approaches. Either we attack the inversion or resample the data to match 
-        the desired range. The second option is conceptually easier becuase we only have to change the 
-        input to some functions below. 
-        What we can do is change the cdf directly. Instead of summing over the CMF bins directly, we add 
-        a resampling step that ensures the inverse CDF has the user decided min/max range. We importantly
-        keep the CMF's number of bins. The step essentially scales the CMF into the user defined range. 
-        */
-
         uint32_t n = cmf_info.n_entries - 1;
         std::vector<vec3f> resampled_cmf(cmf_info.n_entries, vec3f{});
 

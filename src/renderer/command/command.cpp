@@ -160,7 +160,7 @@ namespace magik
             {
                 magik_command_set_metric_minkowski_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->stage.settings.metric_type = MINKOWSKI;
+                manager->stage.relativity_settings.metric_type = MINKOWSKI;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -170,7 +170,7 @@ namespace magik
             {
                 magik_command_set_metric_schwarzschild_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->stage.settings.metric_type = SCHWARZSCHILD;
+                manager->stage.relativity_settings.metric_type = SCHWARZSCHILD;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -180,7 +180,7 @@ namespace magik
             {
                 magik_command_set_metric_kerr_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->stage.settings.metric_type = KERR;
+                manager->stage.relativity_settings.metric_type = KERR;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -191,7 +191,7 @@ namespace magik
                 magik_command_set_schwarzschild_mass_t cmd;
                 memcpy(&cmd, playhead, command_size);
 
-                manager->stage.schwarzschild_mass = cmd.mass_parameter;
+                manager->stage.relativity_settings.schwarzschild_mass_parameter = cmd.mass_parameter;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -204,7 +204,7 @@ namespace magik
 
                 if(cmd.mass_parameter > 0.0f)
                 {
-                    manager->stage.kerr_mass = cmd.mass_parameter;
+                    manager->stage.relativity_settings.kerr_mass_parameter = cmd.mass_parameter;
                 }
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
@@ -215,7 +215,7 @@ namespace magik
             {
                 magik_command_set_kerr_spin_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->stage.kerr_spin = cmd.spin_parameter;
+                manager->stage.relativity_settings.kerr_dimensionless_spin_parameter = cmd.spin_parameter;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -237,9 +237,9 @@ namespace magik
             {
                 magik_command_set_camera_position_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->stage.optical_systen.position.x = cmd.position_x;
-                manager->stage.optical_systen.position.y = cmd.position_y;
-                manager->stage.optical_systen.position.z = cmd.position_z;
+                manager->stage.optical_system_settings.position.x = cmd.position_x;
+                manager->stage.optical_system_settings.position.y = cmd.position_y;
+                manager->stage.optical_system_settings.position.z = cmd.position_z;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -252,7 +252,7 @@ namespace magik
                 mat3f m;
                 m.make_identity();
                 m = m.rotate(cmd.rotation_z, cmd.rotation_y, cmd.rotation_x);
-                manager->stage.optical_systen.orientation = m;
+                manager->stage.optical_system_settings.orientation = m;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -266,8 +266,8 @@ namespace magik
                 if(cmd.x_resolution <= 0) {cmd.x_resolution = 2;}
                 if(cmd.y_resolution <= 0) {cmd.y_resolution = 2;}
 
-                manager->stage.optical_systen.x_resolution = cmd.x_resolution;
-                manager->stage.optical_systen.y_resolution = cmd.y_resolution;
+                manager->stage.optical_system_settings.x_resolution = cmd.x_resolution;
+                manager->stage.optical_system_settings.y_resolution = cmd.y_resolution;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -278,7 +278,7 @@ namespace magik
                 magik_command_set_camera_three_velocity_t cmd;
                 memcpy(&cmd, playhead, command_size);
 
-                manager->stage.optical_systen.local_proper_velocity = vec3f{cmd.velocity_x, cmd.velocity_y, cmd.velocity_z};
+                manager->stage.relativity_settings.observer_local_proper_velocity = vec3f{cmd.velocity_x, cmd.velocity_y, cmd.velocity_z};
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;

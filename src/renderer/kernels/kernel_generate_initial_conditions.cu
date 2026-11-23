@@ -40,14 +40,14 @@ namespace magik
             x_resolution = wb->x_resolution;
             y_resolution = wb->y_resolution;
 
-            vec3f local_basis_x = manager->stage.optical_systen.orientation * vec3f{1.0f, 0.0f, 0.0f};
-            vec3f local_basis_y = manager->stage.optical_systen.orientation * vec3f{0.0f, 1.0f, 0.0f};
-            vec3f local_basis_z = manager->stage.optical_systen.orientation * vec3f{0.0f, 0.0f, 1.0f};
+            vec3f local_basis_x = manager->stage.optical_system_settings.orientation * vec3f{1.0f, 0.0f, 0.0f};
+            vec3f local_basis_y = manager->stage.optical_system_settings.orientation * vec3f{0.0f, 1.0f, 0.0f};
+            vec3f local_basis_z = manager->stage.optical_system_settings.orientation * vec3f{0.0f, 0.0f, 1.0f};
             seed_vector.X = { local_basis_x.x, local_basis_x.y, local_basis_x.z, 0.0f };
             seed_vector.Y = { local_basis_y.x, local_basis_y.y, local_basis_y.z, 0.0f };
             seed_vector.Z = { local_basis_z.x, local_basis_z.y, local_basis_z.z, 0.0f };
 
-            local_proper_velocity = manager->stage.optical_systen.local_proper_velocity;
+            local_proper_velocity = manager->stage.relativity_settings.observer_local_proper_velocity;
         }
     };
 
@@ -75,14 +75,14 @@ namespace magik
 
     void launch_kernel_generate_initial_conditions_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
-        dim3 threads_per_block = dim3(manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y, 1);
-        dim3 n_block = magik::compute_n_blocks(wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y);
+        dim3 threads_per_block = dim3(manager->stage.render_settings.threads_per_block_x, manager->stage.render_settings.threads_per_block_y, 1);
+        dim3 n_block = magik::compute_n_blocks(wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.render_settings.threads_per_block_x, manager->stage.render_settings.threads_per_block_y);
 
         kernel_generate_initial_conditions_args_t args;
         args.create(manager, wavefront_buffer);
         bool time_reversed = true;
 
-        bool successful = dispatch_list(supported_metrics{}, manager->stage.settings.metric_type, [&](auto tag)
+        bool successful = dispatch_list(supported_metrics{}, manager->stage.relativity_settings.metric_type, [&](auto tag)
         {
             constexpr auto T = decltype(tag)::value;
             kernel_generate_initial_conditions<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager, time_reversed), args);
