@@ -47,18 +47,7 @@ namespace magik
         // Wavefront initalization stage
         wavefront_buffer_t wavefront_buffer;
 
-        color_pipeline_settings_t pipeline_settings;
-        pipeline_settings.n_isi_bin = manager->stage.color_settings.n_isi_bin;
-        pipeline_settings.scene_colorspace_type = manager->stage.color_settings.scene_colorspace_type;
-        pipeline_settings.display_colorspace_type = manager->stage.color_settings.display_colorspace_type;
-        pipeline_settings.view_transform = manager->stage.color_settings.view_transform_type;
-        pipeline_settings.output_format = manager->stage.color_settings.output_format;
-        pipeline_settings.white_point = manager->stage.color_settings.white_point;
-        pipeline_settings.tint = manager->stage.color_settings.tint;
-        pipeline_settings.isi_max_wavelength_nm = manager->stage.color_settings.isi_max_wavelength_nm;
-        pipeline_settings.isi_min_wavelength_nm = manager->stage.color_settings.isi_min_wavelength_nm;
-        pipeline_settings.cmf_type = manager->stage.color_settings.cmf_type;
-        manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(pipeline_settings);
+        manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(manager->stage.color_settings);
 
         // Render stage
         while(manager->is_running.load(std::memory_order_relaxed))

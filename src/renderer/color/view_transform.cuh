@@ -3,41 +3,32 @@
 #include "magik.h"
 #include "cuda_host_device_utilities.h"
 #include "internal_math.h"
+#include "host_color_utilities.cuh"
 
 namespace magik
 {
-    struct view_transform_params_t
-    {
-        float reinhard_extended_white_luminance;
-        vec3f reinhard_extended_luminance_weights;
-
-        mat3f khronos_pbr_neutral_to_linear_rec_709;
-        mat3f khronos_pbr_neutral_to_scene_colorspace;
-        float khronos_pbr_neutral_start_compression;
-        float khronos_pbr_neutral_desaturation;
-
-        e_magik_gran_turismo_7_mode_types gran_turismo_7_mode; // Jzazbz
-        mat3f gran_turismo_7_to_linear_rec_2020;
-        mat3f gran_turismo_7_to_scene_colorspace;
-        float gran_turismo_7_sdr_paper_white; // 250.0f;
-        float gran_turismo_7_reference_luminance; // 100.0f;
-        float gran_turismo_7_jzazbz_exponent_scale_factor;
-    };
-
     template<e_magik_view_transform_types T_map> struct generic_view_transform_t;
 
     template<> struct generic_view_transform_t<MAGIK_VIEW_TRANSFORM_NONE>
     {
         static constexpr bool does_gamut_mapping = false;
-        
-        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const view_transform_params_t& p) { return c; }
+
+        struct params_t{};
+
+        static MAGIK_HOST params_t make_params(const color_settings_t& color_settings){ return params_t{}; }
+
+        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const params_t& p) { return c; }
     };
 
     template<> struct generic_view_transform_t<MAGIK_VIEW_TRANSFORM_REINHARD_SIMPLE>
     {
         static constexpr bool does_gamut_mapping = false;
-        
-        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const view_transform_params_t& p) 
+
+        struct params_t{};
+
+        static MAGIK_HOST params_t make_params(const color_settings_t& color_settings){ return params_t{}; }
+
+        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const params_t& p) 
         { 
             return c / (c + vec3f{1.0f, 1.0f, 1.0f}); 
         }
@@ -47,10 +38,27 @@ namespace magik
     {
         static constexpr bool does_gamut_mapping = false;
         
-        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const view_transform_params_t& p)
+        struct params_t
         {
-            float L = vector_dot_product(p.reinhard_extended_luminance_weights, c); 
-            float L0 = L * (1.0f + L/(p.reinhard_extended_white_luminance * p.reinhard_extended_white_luminance)) / (1.0f + L);
+            float white_luminance;
+            vec3f luminance_weights;
+        };
+
+        static MAGIK_HOST params_t make_params(const color_settings_t& color_settings)
+        {
+            params_t p;
+            p.white_luminance = color_settings.vt_reinhard_extended_white_luminance;
+
+            auto scene_colorspace_info = fetch_scene_colorspace(color_settings.scene_colorspace_type);
+            p.luminance_weights = vec3f{scene_colorspace_info.colorspace_to_cie_XYZ.m21, scene_colorspace_info.colorspace_to_cie_XYZ.m22, scene_colorspace_info.colorspace_to_cie_XYZ.m23};
+            
+            return p; 
+        }
+
+        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const params_t& p) 
+        {
+            float L = vector_dot_product(p.luminance_weights, c); 
+            float L0 = L * (1.0f + L/(p.white_luminance * p.white_luminance)) / (1.0f + L);
             return L > 0.0f ? c * (L0/L) : vec3f{0.0f, 0.0f, 0.0f};
         }
     };
@@ -59,24 +67,48 @@ namespace magik
     {
         static constexpr bool does_gamut_mapping = false;
         
-        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const view_transform_params_t& p)
+        struct params_t
         {
-            vec3f color = p.khronos_pbr_neutral_to_linear_rec_709 * c;
-            float start_compression = p.khronos_pbr_neutral_start_compression - 0.04f;
+            float start_compression;
+            float desaturation;
+            mat3f to_linear_rec_709;
+            mat3f to_scene_colorspace;
+        };
+
+        static MAGIK_HOST params_t make_params(const color_settings_t& color_settings)
+        {
+            params_t p;
+
+            p.start_compression = color_settings.vt_khronos_pbr_neutral_start_compression;
+            p.desaturation = color_settings.vt_khronos_pbr_neutral_desaturation;
+
+            auto scene_colorspace_info = fetch_scene_colorspace(color_settings.scene_colorspace_type);
+            auto rec709_info = fetch_scene_colorspace(MAGIK_SCENE_COLORSPACE_LINEAR_REC709);
+
+            p.to_linear_rec_709 = convert_scene_colorspace(scene_colorspace_info, rec709_info);
+            p.to_scene_colorspace = convert_scene_colorspace(rec709_info, scene_colorspace_info);
+
+            return p; 
+        }
+
+        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const params_t& p) 
+        {
+            vec3f color = p.to_linear_rec_709 * c;
+            float start_compression = p.start_compression - 0.04f;
 
             float x = fminf(color.x, fminf(color.y, color.z));
             float offset = x < 0.08f ? x - 6.25f * x * x : 0.04f;
             color -= vec3f{offset, offset, offset};
 
             float peak = fmaxf(color.x, fmaxf(color.y, color.z));
-            if(peak < start_compression) return p.khronos_pbr_neutral_to_scene_colorspace * color;
+            if(peak < start_compression) return p.to_scene_colorspace * color;
 
             float d = 1.0f - start_compression;
             float new_peak = 1.0f - d * d / (peak + d - start_compression);
             color *= new_peak / peak;
 
-            float g = 1.0f - 1.0f/(p.khronos_pbr_neutral_desaturation * (peak - new_peak) + 1.0f);
-            return p.khronos_pbr_neutral_to_scene_colorspace * magik::lerp(color, vec3f{new_peak, new_peak, new_peak}, g);
+            float g = 1.0f - 1.0f/(p.desaturation * (peak - new_peak) + 1.0f);
+            return p.to_scene_colorspace * magik::lerp(color, vec3f{new_peak, new_peak, new_peak}, g);
         }
     };
 
@@ -280,13 +312,13 @@ namespace magik
         {
             switch(type)
             {
-                case e_magik_gran_turismo_7_mode_types::MAGIK_GRANTURISMO_7_MODE_ICTCP:
+                case e_magik_gran_turismo_7_mode_types::MAGIK_GRAN_TURISMO_7_MODE_ICTCP:
                 {
                     rgb_to_ictcp(rgb, ucs, reference_luminance);
                     break;
                 }
 
-                case e_magik_gran_turismo_7_mode_types::MAGIK_GRANTURISMO_7_MODE_JZAZBZ:
+                case e_magik_gran_turismo_7_mode_types::MAGIK_GRAN_TURISMO_7_MODE_JZAZBZ:
                 {
                     rgb_to_jzazbz(rgb, ucs, reference_luminance, jzazbz_exponent_scale_factor);
                     break;
@@ -298,13 +330,13 @@ namespace magik
         {
             switch(type)
             {
-                case e_magik_gran_turismo_7_mode_types::MAGIK_GRANTURISMO_7_MODE_ICTCP:
+                case e_magik_gran_turismo_7_mode_types::MAGIK_GRAN_TURISMO_7_MODE_ICTCP:
                 {
                     ictcp_to_rgb(ucs, rgb, reference_luminance);
                     break;
                 }
 
-                case e_magik_gran_turismo_7_mode_types::MAGIK_GRANTURISMO_7_MODE_JZAZBZ:
+                case e_magik_gran_turismo_7_mode_types::MAGIK_GRAN_TURISMO_7_MODE_JZAZBZ:
                 {
                     jzazbz_to_rgb(ucs, rgb, reference_luminance, jzazbz_exponent_scale_factor);
                     break;
@@ -380,34 +412,48 @@ namespace magik
             }
         };
         
-        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const view_transform_params_t& p)
+        struct params_t
+        {
+            e_magik_gran_turismo_7_mode_types mode;
+            float sdr_paper_white;
+            float reference_luminance;
+            float jzazbz_exponent_scale_factor;
+            mat3f to_linear_rec_2020;
+            mat3f to_scene_colorspace;
+        };
+
+        static MAGIK_HOST params_t make_params(const color_settings_t& color_settings)
+        {
+            params_t p;
+
+            p.mode = color_settings.vt_gt7_mode;
+            p.sdr_paper_white = color_settings.vt_gt7_sdr_paper_white;
+            p.reference_luminance = color_settings.vt_gt7_reference_luminance;
+            p.jzazbz_exponent_scale_factor = color_settings.vt_gt7_jzazbz_exponent_scale_factor;
+
+            auto scene_colorspace_info = fetch_scene_colorspace(color_settings.scene_colorspace_type);
+            auto rec2020_info = fetch_scene_colorspace(MAGIK_SCENE_COLORSPACE_LINEAR_REC2020);
+
+            p.to_linear_rec_2020 = convert_scene_colorspace(scene_colorspace_info, rec2020_info);
+            p.to_scene_colorspace = convert_scene_colorspace(rec2020_info, scene_colorspace_info);
+
+            return p; 
+        }
+
+        static MAGIK_DEVICE_HOST vec3f apply(vec3f c, const params_t& p)
         {
             // CREDITS :: https://blog.selfshadow.com/publications/s2025-shading-course/pdi/supplemental/gt7_tone_mapping.cpp
 
-            vec3f color = p.gran_turismo_7_to_linear_rec_2020 * c;
+            vec3f color = p.to_linear_rec_2020 * c;
             float rgb_in[3] = {color.x, color.y, color.z};
             float rgb_out[3] = {0.0f, 0.0f, 0.0f};
 
             gt7_tonemapping_t gt7_tonemapping;
-            gt7_tonemapping.initialize_as_hdr(p.gran_turismo_7_sdr_paper_white, p.gran_turismo_7_reference_luminance, p.gran_turismo_7_jzazbz_exponent_scale_factor, p.gran_turismo_7_mode);
-            gt7_tonemapping.apply_tonemapping(rgb_in, rgb_out, p.gran_turismo_7_reference_luminance, p.gran_turismo_7_jzazbz_exponent_scale_factor, p.gran_turismo_7_mode);
+            gt7_tonemapping.initialize_as_hdr(p.sdr_paper_white, p.reference_luminance, p.jzazbz_exponent_scale_factor, p.mode);
+            gt7_tonemapping.apply_tonemapping(rgb_in, rgb_out, p.reference_luminance, p.jzazbz_exponent_scale_factor, p.mode);
 
-            color = p.gran_turismo_7_to_scene_colorspace * vec3f{rgb_out[0], rgb_out[1], rgb_out[2]};
+            color = p.to_scene_colorspace * vec3f{rgb_out[0], rgb_out[1], rgb_out[2]};
             return color;
-        }
-    };
-
-    struct view_transform_descriptor_t
-    {
-        e_magik_view_transform_types type;
-        view_transform_params_t params;
-
-        static __host__ view_transform_descriptor_t create(e_magik_view_transform_types type, view_transform_params_t params)
-        {
-            view_transform_descriptor_t result;
-            result.type = type;
-            result.params = params;
-            return result;
         }
     };
 

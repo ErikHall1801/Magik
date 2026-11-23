@@ -13,7 +13,7 @@ namespace magik
         uint32_t* d_splat_queue_id;
         float* d_renderbuffer;
         color_pipeline_descriptor_t color_pipeline_descriptor;
-        
+
         uint32_t n_isi_bin;
         float max_wavelength_nm;
         float min_wavelength_nm;
@@ -34,7 +34,7 @@ namespace magik
         }
     };
 
-    static __global__ void kernel_splat_to_renderbuffer(kernel_splat_to_renderbuffer_t args)
+    template<e_magik_view_transform_types T> static __global__ void kernel_splat_to_renderbuffer(typename generic_view_transform_t<T>::params_t view_transform_params, kernel_splat_to_renderbuffer_t args)
     {
         uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
         if(queue_index >= *args.d_splat_queue_count) return;
@@ -49,7 +49,7 @@ namespace magik
 
         vec3f scene_color = intrinsic_spectral_irradiance_to_scene_color(isi_args);
 
-        vec3f display_color = scene_to_display_referred_color(scene_color, args.color_pipeline_descriptor);
+        vec3f display_color = scene_to_display_referred_color<T>(view_transform_params, scene_color, args.color_pipeline_descriptor);
 
         args.d_renderbuffer[ray_id * 3 + 0] = display_color.x;
         args.d_renderbuffer[ray_id * 3 + 1] = display_color.y;
@@ -64,7 +64,13 @@ namespace magik
         kernel_splat_to_renderbuffer_t args;
         args.create(manager, wavefront_buffer, d_renderbuffer);
 
-        kernel_splat_to_renderbuffer<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(args);
+        bool successful = dispatch_list(supported_view_transforms{}, manager->color_pipeline_descriptor.view_transform_type, [&](auto tag)
+        {
+            constexpr auto T = decltype(tag)::value;
+            kernel_splat_to_renderbuffer<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(generic_view_transform_t<T>::make_params(manager->stage.color_settings), args);
+
+        });
+
         check_cuda_errors(cudaGetLastError());
 
         wavefront_buffer->queue_pool.store_count_in_history<splat_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.render_settings.n_geodesic_step_limit);

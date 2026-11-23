@@ -21,5 +21,15 @@ namespace magik
 
         float white_point = 5600.0f;
         float tint = 0.0f;
+
+        float vt_reinhard_extended_white_luminance = 4.0f;
+
+        float vt_khronos_pbr_neutral_start_compression = 0.8f;
+        float vt_khronos_pbr_neutral_desaturation = 0.15f;
+
+        e_magik_gran_turismo_7_mode_types vt_gt7_mode = MAGIK_GRAN_TURISMO_7_MODE_JZAZBZ;
+        float vt_gt7_sdr_paper_white = 250.0f;
+        float vt_gt7_reference_luminance = 100.0f;
+        float vt_gt7_jzazbz_exponent_scale_factor = 1.7f;
     };
 }

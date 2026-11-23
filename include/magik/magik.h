@@ -357,8 +357,8 @@ typedef enum e_magik_view_transform_types
 
 typedef enum e_magik_gran_turismo_7_mode_types
 {
-    MAGIK_GRANTURISMO_7_MODE_ICTCP = 0,
-    MAGIK_GRANTURISMO_7_MODE_JZAZBZ = 1
+    MAGIK_GRAN_TURISMO_7_MODE_ICTCP = 0,
+    MAGIK_GRAN_TURISMO_7_MODE_JZAZBZ = 1
 } e_magik_gran_turismo_7_mode_types;
 
 typedef enum e_magik_output_format_types

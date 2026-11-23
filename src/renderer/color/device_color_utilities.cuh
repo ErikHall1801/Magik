@@ -53,22 +53,18 @@ namespace magik
         return result_color / static_cast<float>(args.x_sample + 1);
     }
 
-    __device__ __inline__ static vec3f scene_to_display_referred_color(vec3f scene_color, const color_pipeline_descriptor_t& descriptor)
+    template<e_magik_view_transform_types T> __device__ __inline__ static vec3f scene_to_display_referred_color(typename generic_view_transform_t<T>::params_t view_transform_params, vec3f scene_color, const color_pipeline_descriptor_t& descriptor)
     {
         vec3f display_color = {0.0f, 0.0f, 0.0f};
 
-        bool successful_tonemapper = dispatch_list(supported_view_transforms{}, descriptor.view_transform_descriptor.type, [&](auto tag)
-        {
-            constexpr auto T = decltype(tag)::value;
-            display_color = generic_view_transform_t<T>::apply(scene_color, descriptor.view_transform_descriptor.params);
-        });
+        display_color = generic_view_transform_t<T>::apply(scene_color, view_transform_params);
 
         display_color = descriptor.scene_to_display_referred * display_color;
 
         bool successful_encode = dispatch_list(supported_display_colorspaces{}, descriptor.display_colorspace_type, [&](auto tag)
         {
-            constexpr auto T = decltype(tag)::value;
-            display_color = generic_display_colorspace_t<T>::encode(display_color);
+            constexpr auto D = decltype(tag)::value;
+            display_color = generic_display_colorspace_t<D>::encode(display_color);
         });
 
         return display_color;
