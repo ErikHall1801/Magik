@@ -10,6 +10,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <cstring>
 
 struct magik_render_manager
 {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #ifdef __CUDACC__
     #define MAGIK_DEVICE_HOST __device__ __host__ __inline__
     #define MAGIK_HOST __host__ __inline__

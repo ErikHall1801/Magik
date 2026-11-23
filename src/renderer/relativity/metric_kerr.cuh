@@ -146,27 +146,27 @@ namespace magik
                     integrator_parameters.n_integrator_max_substep}; 
     }
 
-    template<> inline MAGIK_DEVICE_HOST float kerr_metric::initial_h_step()
+    template<> MAGIK_DEVICE_HOST float kerr_metric::initial_h_step()
     {
         return 1.0f;
     }
 
-    template<> inline MAGIK_DEVICE_HOST float kerr_metric::length_scale(params_t p)
+    template<> MAGIK_DEVICE_HOST float kerr_metric::length_scale(params_t p)
     {
         return magik::gravitational_constant * p.mass_parameter / (magik::speed_of_light*magik::speed_of_light);
     }
 
-    template<> inline MAGIK_DEVICE_HOST geodesic_step_values_t kerr_metric::solve_step(geodesic_step_values_t y0, params_t p, float* h_step, float* h_taken)
+    template<> MAGIK_DEVICE_HOST geodesic_step_values_t kerr_metric::solve_step(geodesic_step_values_t y0, params_t p, float* h_step, float* h_taken)
     {
         return solve_runge_kutta_fehlberg_45_step(kerr_geodesic_eq_rhs, y0, h_step, h_taken, p.h_max, p.n_max, p.abs_tol, p.rel_tol, p.dimensionless_spin_parameter);
     }
 
-    template<> inline MAGIK_DEVICE_HOST geodesic_step_values_t kerr_metric::geodesic_rhs(geodesic_step_values_t y0, params_t p)
+    template<> MAGIK_DEVICE_HOST geodesic_step_values_t kerr_metric::geodesic_rhs(geodesic_step_values_t y0, params_t p)
     {
         return kerr_geodesic_eq_rhs(y0, p.dimensionless_spin_parameter);
     }
 
-    template<> inline MAGIK_DEVICE_HOST bool kerr_metric::in_domain(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST bool kerr_metric::in_domain(vec4f dimensionless_four_position, params_t p)
     {
         if(fabsf(p.dimensionless_spin_parameter) > 1.0f) return false;
         float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, p.dimensionless_spin_parameter);
@@ -174,7 +174,7 @@ namespace magik
         return true;
     }
 
-    template<> inline MAGIK_DEVICE_HOST sym4_t kerr_metric::compute_g(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST sym4_t kerr_metric::compute_g(vec4f dimensionless_four_position, params_t p)
     {
         const float a  = p.dimensionless_spin_parameter;
         const float r  = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, a);
@@ -189,7 +189,7 @@ namespace magik
                   1.0f + f * kz * kz };
     }
 
-    template<> inline MAGIK_DEVICE_HOST sym4_t kerr_metric::compute_inv_g(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST sym4_t kerr_metric::compute_inv_g(vec4f dimensionless_four_position, params_t p)
     {
         const float a  = p.dimensionless_spin_parameter;
         const float r  = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, a);
@@ -204,7 +204,7 @@ namespace magik
                 1.0f - f * kz * kz };
     }
 
-    template<> inline MAGIK_DEVICE_HOST vec4f kerr_metric::reference_observer(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST vec4f kerr_metric::reference_observer(vec4f dimensionless_four_position, params_t p)
     {
         float r = kerr_schild_r(dimensionless_four_position.x, dimensionless_four_position.y, dimensionless_four_position.z, p.dimensionless_spin_parameter);
         float r_sq = r * r;

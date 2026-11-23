@@ -22,7 +22,7 @@ namespace magik
         bool time_reversed;
     };
 
-    template<> inline MAGIK_DEVICE_HOST float minkowski_metric::initial_h_step()
+    template<> MAGIK_DEVICE_HOST float minkowski_metric::initial_h_step()
     {
         return 1000.0f;
     }
@@ -41,28 +41,28 @@ namespace magik
         return p;
     }
 
-    template<> inline MAGIK_DEVICE_HOST float minkowski_metric::length_scale(params_t p)
+    template<> MAGIK_DEVICE_HOST float minkowski_metric::length_scale(params_t p)
     {
         return 1.0f;
     }
 
-    template<> inline MAGIK_DEVICE_HOST geodesic_step_values_t minkowski_metric::solve_step(geodesic_step_values_t y0, params_t p, float* h_step, float* h_taken)
+    template<> MAGIK_DEVICE_HOST geodesic_step_values_t minkowski_metric::solve_step(geodesic_step_values_t y0, params_t p, float* h_step, float* h_taken)
     {
         *h_taken = *h_step;
         return solve_explicit_euler_step(minkowski_geodesic_eq_rhs, y0, *h_step);
     }
 
-    template<> inline MAGIK_DEVICE_HOST geodesic_step_values_t minkowski_metric::geodesic_rhs(geodesic_step_values_t y0, params_t p)
+    template<> MAGIK_DEVICE_HOST geodesic_step_values_t minkowski_metric::geodesic_rhs(geodesic_step_values_t y0, params_t p)
     {
         return minkowski_geodesic_eq_rhs(y0);
     }
 
-    template<> inline MAGIK_DEVICE_HOST bool minkowski_metric::in_domain(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST bool minkowski_metric::in_domain(vec4f dimensionless_four_position, params_t p)
     {
         return false;
     }
 
-    template<> inline MAGIK_DEVICE_HOST sym4_t minkowski_metric::compute_g(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST sym4_t minkowski_metric::compute_g(vec4f dimensionless_four_position, params_t p)
     {
         return { -1.0f, 0.0f, 0.0f, 0.0f,
                   1.0f, 0.0f, 0.0f,
@@ -70,7 +70,7 @@ namespace magik
                   1.0f, };
     }
 
-    template<> inline MAGIK_DEVICE_HOST sym4_t minkowski_metric::compute_inv_g(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST sym4_t minkowski_metric::compute_inv_g(vec4f dimensionless_four_position, params_t p)
     {
         return { -1.0f, 0.0f, 0.0f, 0.0f,
                   1.0f, 0.0f, 0.0f,
@@ -78,7 +78,7 @@ namespace magik
                   1.0f, };
     }
 
-    template<> inline MAGIK_DEVICE_HOST vec4f minkowski_metric::reference_observer(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST vec4f minkowski_metric::reference_observer(vec4f dimensionless_four_position, params_t p)
     {
         return vec4f{ 0.0f, 0.0f, 0.0f, 1.0f };
     }
