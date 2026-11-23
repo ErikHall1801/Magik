@@ -47,6 +47,8 @@ namespace magik
         // Wavefront initalization stage
         wavefront_buffer_t wavefront_buffer;
 
+        manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(manager->stage.color_settings);
+
         // Render stage
         while(manager->is_running.load(std::memory_order_relaxed))
         {
@@ -64,11 +66,11 @@ namespace magik
 
             // Framebuffer stage
             // Why is this not a member function ????
-            result = allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution);
+            result = allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_system_settings.x_resolution, manager->stage.optical_system_settings.y_resolution);
 
             // Wavefront realloc
             // Why is this not a member function ? 
-            realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.settings.n_spectral_irradiance_bin, manager->stage.optical_systen.x_resolution, manager->stage.optical_systen.y_resolution, manager->stage.settings.n_geodesic_step_limit);
+            realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.color_settings.n_isi_bin, manager->stage.optical_system_settings.x_resolution, manager->stage.optical_system_settings.y_resolution, manager->stage.render_settings.n_geodesic_step_limit);
 
             if(result)
             {
@@ -106,6 +108,7 @@ namespace magik
             {
                 reset_render_buffer(&manager->framebuffer_swapchain);
                 reset_wavefront_process_async(manager, &wavefront_buffer);
+                manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(manager->stage.color_settings);
                 manager->framebuffer_swapchain.clear_render_buffer = false;
             }
 
@@ -124,11 +127,6 @@ namespace magik
             iteration_end_time = std::chrono::steady_clock::now();
 
             // Update performance statistics "work" buffer, which incldues swapping the buffers. 
-
-            // manager->sampled_time_point_seconds.store(std::chrono::duration<double>(iteration_start_time.time_since_epoch()).count(), std::memory_order_release);
-            // manager->average_sample_time_seconds.store(manager->total_render_time_seconds.load(std::memory_order_relaxed) / (double)iteration);
-            // manager->latest_sample_time_seconds.store(std::chrono::duration<double>(iteration_end_time - iteration_start_time).count(), std::memory_order_release);
-            // manager->total_render_time_seconds.fetch_add(manager->latest_sample_time_seconds.load(std::memory_order_relaxed), std::memory_order_release);
         }
 
         // Shutdown stage

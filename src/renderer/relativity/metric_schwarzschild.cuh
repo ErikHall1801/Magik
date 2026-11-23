@@ -92,13 +92,13 @@ namespace magik
     template<> inline schwarzschild_metric::params_t schwarzschild_metric::make_params(magik_render_manager* manager, bool time_reversed)
     {
         return {    time_reversed,
-                    fabsf(manager->stage.schwarzschild_mass), 
-                    manager->stage.schwarzschild_mass > 0.0f ? 1.0f : -1.0f,
-                    manager->stage.event_horizon_scalar, 
+                    fabsf(manager->stage.relativity_settings.schwarzschild_mass_parameter), 
+                    manager->stage.relativity_settings.schwarzschild_mass_parameter > 0.0f ? 1.0f : -1.0f,
+                    manager->stage.relativity_settings.schwarzschild_event_horizon_scalar, 
                     1000.0f, 
-                    manager->stage.settings.integrator_absolute_error_tolerance, 
-                    manager->stage.settings.integrator_relative_error_tolerance, 
-                    manager->stage.settings.n_integrator_max_substep};
+                    manager->stage.relativity_settings.integrator_absolute_error_tolerance, 
+                    manager->stage.relativity_settings.integrator_relative_error_tolerance, 
+                    manager->stage.relativity_settings.n_integrator_max_substep};
     }
 
     template<> inline schwarzschild_metric::params_t schwarzschild_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)
@@ -113,34 +113,34 @@ namespace magik
                     integrator_parameters.n_integrator_max_substep};
     }
 
-    template<> inline MAGIK_DEVICE_HOST float schwarzschild_metric::initial_h_step()
+    template<> MAGIK_DEVICE_HOST float schwarzschild_metric::initial_h_step()
     {
         return 1.0f;
     }
 
-    template<> inline MAGIK_DEVICE_HOST float schwarzschild_metric::length_scale(params_t p)
+    template<> MAGIK_DEVICE_HOST float schwarzschild_metric::length_scale(params_t p)
     {
         return magik::gravitational_constant * p.mass_parameter / (magik::speed_of_light*magik::speed_of_light);
     }
 
-    template<> inline MAGIK_DEVICE_HOST geodesic_step_values_t schwarzschild_metric::solve_step(geodesic_step_values_t y0, params_t p, float* h_step, float* h_taken)
+    template<> MAGIK_DEVICE_HOST geodesic_step_values_t schwarzschild_metric::solve_step(geodesic_step_values_t y0, params_t p, float* h_step, float* h_taken)
     {
         return solve_runge_kutta_fehlberg_45_step(schwarzschild_geodesic_eq_rhs, y0, h_step, h_taken, p.h_max, p.n_max, p.abs_tol, p.rel_tol, p.mass_sign);
     }
 
-    template<> inline MAGIK_DEVICE_HOST geodesic_step_values_t schwarzschild_metric::geodesic_rhs(geodesic_step_values_t y0, params_t p)
+    template<> MAGIK_DEVICE_HOST geodesic_step_values_t schwarzschild_metric::geodesic_rhs(geodesic_step_values_t y0, params_t p)
     {
         return schwarzschild_geodesic_eq_rhs(y0, p.mass_sign);
     }
 
-    template<> inline MAGIK_DEVICE_HOST bool schwarzschild_metric::in_domain(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST bool schwarzschild_metric::in_domain(vec4f dimensionless_four_position, params_t p)
     {
         float r = sqrtf(dimensionless_four_position.x*dimensionless_four_position.x + dimensionless_four_position.y*dimensionless_four_position.y + dimensionless_four_position.z*dimensionless_four_position.z);
         if (p.mass_sign < 0.0f) return r < 1e-3f;
         return r <= 2.0f * p.event_horizon_scalar;
     }
 
-    template<> inline MAGIK_DEVICE_HOST sym4_t schwarzschild_metric::compute_g(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST sym4_t schwarzschild_metric::compute_g(vec4f dimensionless_four_position, params_t p)
     {
         const float r  = sqrtf(dimensionless_four_position.x * dimensionless_four_position.x + dimensionless_four_position.y * dimensionless_four_position.y + dimensionless_four_position.z * dimensionless_four_position.z);
         const float f = 2.0f * p.mass_sign / r;
@@ -152,7 +152,7 @@ namespace magik
                   1.0f + f * kz * kz };
     }
 
-    template<> inline MAGIK_DEVICE_HOST sym4_t schwarzschild_metric::compute_inv_g(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST sym4_t schwarzschild_metric::compute_inv_g(vec4f dimensionless_four_position, params_t p)
     {
         const float r  = sqrtf(dimensionless_four_position.x * dimensionless_four_position.x + dimensionless_four_position.y * dimensionless_four_position.y + dimensionless_four_position.z * dimensionless_four_position.z);
         const float f = 2.0f * p.mass_sign / r;
@@ -164,7 +164,7 @@ namespace magik
                   1.0f - f * kz * kz };
     }
 
-    template<> inline MAGIK_DEVICE_HOST vec4f schwarzschild_metric::reference_observer(vec4f dimensionless_four_position, params_t p)
+    template<> MAGIK_DEVICE_HOST vec4f schwarzschild_metric::reference_observer(vec4f dimensionless_four_position, params_t p)
     {
         const sym4_t g = schwarzschild_metric::compute_g(dimensionless_four_position, p);
         return vec4f{ 0.0f, 0.0f, 0.0f, 1.0f / sqrtf(-g.tt) };

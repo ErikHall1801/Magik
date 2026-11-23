@@ -9,7 +9,7 @@ set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
-set(CMAKE_CUDA_ARCHITECTURES 89)
+set(CMAKE_CUDA_ARCHITECTURES 89;87;86)
 
 # Link static libraries
 
@@ -35,7 +35,6 @@ add_library(magik SHARED
         src/renderer/kernels/kernel_enforce_ray_limits.cu
         src/renderer/kernels/kernel_initialize_random_device.cu
         src/renderer/kernels/kernel_redistribute_radiance.cu
-        src/renderer/kernels/kernel_utility.cu
 
         # memory
 

@@ -39,20 +39,34 @@ namespace magik
 
 
 
-            // #######################
-            // ### 4000-4999 Scene ###
-            // #######################
+            // ############################
+            // ### 4000-4999 Relativity ###
+            // ############################
             case MAGIK_COMMAND_SET_METRIC_MINKOWSKI: { is_valid_ = true; size_ = sizeof(magik_command_set_metric_minkowski_t); break; }
 
             case MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD: { is_valid_ = true; size_ = sizeof(magik_command_set_metric_schwarzschild_t); break; }
 
             case MAGIK_COMMAND_SET_METRIC_KERR: { is_valid_ = true; size_ = sizeof(magik_command_set_metric_kerr_t); break; }
 
-            case MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS: { is_valid_ = true; size_ = sizeof(magik_command_set_schwarzschild_mass_t); break; }
+            case MAGIK_COMMAND_SET_ABSOLUTE_ERROR_TOLERANCE: { is_valid_ = true; size_ = sizeof(magik_command_set_absolute_error_tolerance_t); break; }
 
-            case MAGIK_COMMAND_SET_KERR_MASS: { is_valid_ = true; size_ = sizeof(magik_command_set_kerr_mass_t); break; }
+            case MAGIK_COMMAND_SET_RELATIVE_ERROR_TOLERANCE: { is_valid_ = true; size_ = sizeof(magik_command_set_relative_error_tolerance_t); break; }
 
-            case MAGIK_COMMAND_SET_KERR_SPIN: { is_valid_ = true; size_ = sizeof(magik_command_set_kerr_spin_t); break; }
+            case MAGIK_COMMAND_SET_MAX_SUBSTEPS: { is_valid_ = true; size_ = sizeof(magik_command_set_max_substeps_t); break; }
+
+            case MAGIK_COMMAND_SET_OBSERVER_LOCAL_PROPER_VELOCITY: { is_valid_ = true; size_ = sizeof(magik_command_set_observer_local_proper_velocity_t); break; }
+
+            case MAGIK_COMMAND_SET_CELESTIAL_SPHERE_RADIUS: { is_valid_ = true; size_ = sizeof(magik_command_set_celestial_sphere_radius_t); break; }
+
+            case MAGIK_COMMAND_SET_SCHWARZSCHILD_EVENT_HORIZON_SCALAR: { is_valid_ = true; size_ = sizeof(magik_command_set_schwarzschild_event_horizon_scalar_t); break; }
+
+            case MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS_PARAMETER: { is_valid_ = true; size_ = sizeof(magik_command_set_schwarzschild_mass_parameter_t); break; }
+
+            case MAGIK_COMMAND_SET_KERR_EVENT_HORIZON_SCALAR: { is_valid_ = true; size_ = sizeof(magik_command_set_kerr_event_horizon_scalar_t); break; }
+
+            case MAGIK_COMMAND_SET_KERR_MASS_PARAMETER: { is_valid_ = true; size_ = sizeof(magik_command_set_kerr_mass_parameter_t); break; }
+
+            case MAGIK_COMMAND_SET_KERR_DIMENSIONLESS_SPIN_PARAMETER: { is_valid_ = true; size_ = sizeof(magik_command_set_kerr_dimensionless_spin_parameter_t); break; }
 
 
             
@@ -67,19 +81,57 @@ namespace magik
 
             case MAGIK_COMMAND_SET_CAMERA_RESOLUTION: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_resolution_t); break; }
 
-            case MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY: { is_valid_ = true; size_ = sizeof(magik_command_set_camera_three_velocity_t); break; }
+
+
+            // #######################
+            // ### 6000-6999 Color ###
+            // #######################
+            case MAGIK_COMMAND_SET_N_INTRINSIC_SPECTRAL_IRRADIANCE_BIN: { is_valid_ = true; size_ = sizeof(magik_command_set_n_intrinsic_spectral_irradiance_bin_t); break; }
+
+            case MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MAXIMUM_WAVELENGTH_NM: { is_valid_ = true; size_ = sizeof(magik_command_set_sample_domain_maximum_wavelength_nm_t); break; }
+
+            case MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MINIMUM_WAVELENGTH_NM: { is_valid_ = true; size_ = sizeof(magik_command_set_sample_domain_minimum_wavelength_nm_t); break; }
+
+            case MAGIK_COMMAND_SET_REDISTRIBUTION_STANDARD_DEVIATION_NM: { is_valid_ = true; size_ = sizeof(magik_command_set_redistribution_standard_deviation_nm_t); break; }
+
+            case MAGIK_COMMAND_SET_COLOR_MATCHING_FUNCTION: { is_valid_ = true; size_ = sizeof(magik_command_set_color_matching_function_t); break; }
+
+            case MAGIK_COMMAND_SET_SCENE_COLORSPACE: { is_valid_ = true; size_ = sizeof(magik_command_set_scene_colorspace_t); break; }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_t); break; }
+
+            case MAGIK_COMMAND_SET_DISPLAY_COLORSPACE: { is_valid_ = true; size_ = sizeof(magik_command_set_display_colorspace_t); break; }
+
+            case MAGIK_COMMAND_SET_OUTPUT_FORMAT: { is_valid_ = true; size_ = sizeof(magik_command_set_output_format_t); break; }
+
+            case MAGIK_COMMAND_SET_WHITE_BALANCE_WHITE_POINT: { is_valid_ = true; size_ = sizeof(magik_command_set_white_balance_white_point_t); break; }
+
+            case MAGIK_COMMAND_SET_WHITE_BALANCE_TINT: { is_valid_ = true; size_ = sizeof(magik_command_set_white_balance_tint_t); break; }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_REINHARD_EXTENDED_WHITE_LUMINANCE: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_reinhard_extended_white_luminance_t); break; }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_START_COMPRESSION: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_khronos_pbr_neutral_start_compression_t); break; }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_DESATURATION: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_khronos_pbr_neutral_desaturation_t); break; }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_MODE: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_gt7_mode_t); break; }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_SDR_PAPER_WHITE_BALANCE: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_gt7_sdr_paper_white_balance_t); break; }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_REFERENCE_LUMINANCE: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_gt7_reference_luminance_t); break; }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_JZAZBZ_EXPONENT_SCALE_FACTOR: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_gt7_jzazbz_exponent_scale_factor_t); break; }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_AGX_LOOK: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_agx_look_t); break; }
 
 
 
-            // #################################
-            // ### 6000-6999 Hittable Object ###
-            // #################################
+            // ########################
+            // ### 7000-7999 Render ###
+            // ########################
+            case MAGIK_COMMAND_SET_N_GEODESIC_STEP_LIMIT: { is_valid_ = true; size_ = sizeof(magik_command_set_n_geodesic_step_limit_t); break; }
 
-
-
-            // ################################
-            // ### 7000-7999 bxdf materials ###
-            // ################################ 
+            case MAGIK_COMMAND_SET_N_REFLECTED_LIMIT: { is_valid_ = true; size_ = sizeof(magik_command_set_n_reflected_limit_t); break; }
 
 
 
@@ -154,13 +206,13 @@ namespace magik
 
 
             // #######################
-            // ### 4000-4999 Scene ###
+            // ### 4000-4999 Relativity ###
             // #######################
             case MAGIK_COMMAND_SET_METRIC_MINKOWSKI:
             {
                 magik_command_set_metric_minkowski_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->stage.settings.metric_type = MINKOWSKI;
+                manager->stage.relativity_settings.metric_type = MINKOWSKI;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -170,7 +222,7 @@ namespace magik
             {
                 magik_command_set_metric_schwarzschild_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->stage.settings.metric_type = SCHWARZSCHILD;
+                manager->stage.relativity_settings.metric_type = SCHWARZSCHILD;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -180,49 +232,129 @@ namespace magik
             {
                 magik_command_set_metric_kerr_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->stage.settings.metric_type = KERR;
+                manager->stage.relativity_settings.metric_type = KERR;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
             }
 
-            case MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS:
+            case MAGIK_COMMAND_SET_ABSOLUTE_ERROR_TOLERANCE:
             {
-                magik_command_set_schwarzschild_mass_t cmd;
+                magik_command_set_absolute_error_tolerance_t cmd;
                 memcpy(&cmd, playhead, command_size);
-
-                manager->stage.schwarzschild_mass = cmd.mass_parameter;
-
-                manager->framebuffer_swapchain.clear_render_buffer = true;
-                break;
-            }
-
-            case MAGIK_COMMAND_SET_KERR_MASS:
-            {
-                magik_command_set_kerr_mass_t cmd;
-                memcpy(&cmd, playhead, command_size);
-
-                if(cmd.mass_parameter > 0.0f)
+                if(cmd.absolute_error_tolerance > 0.0f) 
                 {
-                    manager->stage.kerr_mass = cmd.mass_parameter;
+                    manager->stage.relativity_settings.integrator_absolute_error_tolerance = cmd.absolute_error_tolerance;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
                 }
 
-                manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
             }
 
-            case MAGIK_COMMAND_SET_KERR_SPIN:
+            case MAGIK_COMMAND_SET_RELATIVE_ERROR_TOLERANCE:
             {
-                magik_command_set_kerr_spin_t cmd;
+                magik_command_set_relative_error_tolerance_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->stage.kerr_spin = cmd.spin_parameter;
+                if(cmd.relative_error_tolerance > 0.0f)
+                {
+                    manager->stage.relativity_settings.integrator_relative_error_tolerance = cmd.relative_error_tolerance;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
 
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_MAX_SUBSTEPS:
+            {
+                magik_command_set_max_substeps_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                if(cmd.max_substeps > 0)
+                {
+                    manager->stage.relativity_settings.n_integrator_max_substep = cmd.max_substeps;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_OBSERVER_LOCAL_PROPER_VELOCITY:
+            {
+                magik_command_set_observer_local_proper_velocity_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.relativity_settings.observer_local_proper_velocity = vec3f{cmd.velocity_x, cmd.velocity_y, cmd.velocity_z};
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_CELESTIAL_SPHERE_RADIUS:
+            {
+                magik_command_set_celestial_sphere_radius_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                if(cmd.celestial_sphere_radius > 0.0f)
+                {
+                    manager->stage.relativity_settings.celestial_sphere_radius = cmd.celestial_sphere_radius;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_SCHWARZSCHILD_EVENT_HORIZON_SCALAR:
+            {
+                magik_command_set_schwarzschild_event_horizon_scalar_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                if(cmd.scalar > 1.0f)
+                {
+                    manager->stage.relativity_settings.schwarzschild_event_horizon_scalar = cmd.scalar;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS_PARAMETER:
+            {
+                magik_command_set_schwarzschild_mass_parameter_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->stage.relativity_settings.schwarzschild_mass_parameter = cmd.mass_parameter;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_KERR_EVENT_HORIZON_SCALAR:
+            {
+                magik_command_set_kerr_event_horizon_scalar_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                if(cmd.scalar > 1.0f)
+                {
+                    manager->stage.relativity_settings.kerr_event_horizon_scalar = cmd.scalar;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_KERR_MASS_PARAMETER:
+            {
+                magik_command_set_kerr_mass_parameter_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->stage.relativity_settings.kerr_mass_parameter = cmd.mass_parameter;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_KERR_DIMENSIONLESS_SPIN_PARAMETER:
+            {
+                magik_command_set_kerr_dimensionless_spin_parameter_t cmd;
+                memcpy(&cmd, playhead, command_size);
+                manager->stage.relativity_settings.kerr_dimensionless_spin_parameter = cmd.dimensionless_spin_parameter;
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
             }
 
 
-            
+
             // ########################
             // ### 5000-5999 Camera ###
             // ########################
@@ -237,9 +369,9 @@ namespace magik
             {
                 magik_command_set_camera_position_t cmd;
                 memcpy(&cmd, playhead, command_size);
-                manager->stage.optical_systen.position.x = cmd.position_x;
-                manager->stage.optical_systen.position.y = cmd.position_y;
-                manager->stage.optical_systen.position.z = cmd.position_z;
+                manager->stage.optical_system_settings.position.x = cmd.position_x;
+                manager->stage.optical_system_settings.position.y = cmd.position_y;
+                manager->stage.optical_system_settings.position.z = cmd.position_z;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -252,7 +384,7 @@ namespace magik
                 mat3f m;
                 m.make_identity();
                 m = m.rotate(cmd.rotation_z, cmd.rotation_y, cmd.rotation_x);
-                manager->stage.optical_systen.orientation = m;
+                manager->stage.optical_system_settings.orientation = m;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
@@ -266,35 +398,280 @@ namespace magik
                 if(cmd.x_resolution <= 0) {cmd.x_resolution = 2;}
                 if(cmd.y_resolution <= 0) {cmd.y_resolution = 2;}
 
-                manager->stage.optical_systen.x_resolution = cmd.x_resolution;
-                manager->stage.optical_systen.y_resolution = cmd.y_resolution;
+                manager->stage.optical_system_settings.x_resolution = cmd.x_resolution;
+                manager->stage.optical_system_settings.y_resolution = cmd.y_resolution;
 
                 manager->framebuffer_swapchain.clear_render_buffer = true;
                 break;
             }
 
-            case MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY:
+
+
+            // #######################
+            // ### 6000-6999 Color ###
+            // #######################
+            case MAGIK_COMMAND_SET_N_INTRINSIC_SPECTRAL_IRRADIANCE_BIN:
             {
-                magik_command_set_camera_three_velocity_t cmd;
+                magik_command_set_n_intrinsic_spectral_irradiance_bin_t cmd;
                 memcpy(&cmd, playhead, command_size);
 
-                manager->stage.optical_systen.local_proper_velocity = vec3f{cmd.velocity_x, cmd.velocity_y, cmd.velocity_z};
+                if(cmd.n_isi_bin > 0 && cmd.n_isi_bin <= 64)
+                {
+                    manager->stage.color_settings.n_isi_bin = cmd.n_isi_bin;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
 
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MAXIMUM_WAVELENGTH_NM:
+            {
+                magik_command_set_sample_domain_maximum_wavelength_nm_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                if(cmd.maximum_wavelength_nm > 0.0f)
+                {
+                    manager->stage.color_settings.isi_max_wavelength_nm = cmd.maximum_wavelength_nm;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MINIMUM_WAVELENGTH_NM:
+            {
+                magik_command_set_sample_domain_minimum_wavelength_nm_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                if(cmd.minimum_wavelength_nm > 0.0f)
+                {
+                    manager->stage.color_settings.isi_min_wavelength_nm = cmd.minimum_wavelength_nm;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_REDISTRIBUTION_STANDARD_DEVIATION_NM:
+            {
+                magik_command_set_redistribution_standard_deviation_nm_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                if(cmd.standard_deviation_nm > 0.0f)
+                {
+                    manager->stage.color_settings.redistribution_standard_deviation_nm = cmd.standard_deviation_nm;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_COLOR_MATCHING_FUNCTION:
+            {
+                magik_command_set_color_matching_function_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.cmf_type = cmd.cmf_type;
                 manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_SCENE_COLORSPACE:
+            {
+                magik_command_set_scene_colorspace_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.scene_colorspace_type = cmd.scene_colorspace;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM:
+            {
+                magik_command_set_view_transform_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.view_transform_type = cmd.view_transform;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_DISPLAY_COLORSPACE:
+            {
+                magik_command_set_display_colorspace_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.display_colorspace_type = cmd.display_colorspace;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_OUTPUT_FORMAT:
+            {
+                magik_command_set_output_format_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.output_format = cmd.output_format;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_WHITE_BALANCE_WHITE_POINT:
+            {
+                magik_command_set_white_balance_white_point_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.white_point = cmd.white_point_kelvin;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_WHITE_BALANCE_TINT:
+            {
+                magik_command_set_white_balance_tint_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.tint = cmd.tint;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_REINHARD_EXTENDED_WHITE_LUMINANCE:
+            {
+                magik_command_set_view_transform_reinhard_extended_white_luminance_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.vt_reinhard_extended_white_luminance = cmd.white_luminance;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_START_COMPRESSION:
+            {
+                magik_command_set_view_transform_khronos_pbr_neutral_start_compression_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.vt_khronos_pbr_neutral_start_compression = cmd.start_compression;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_DESATURATION:
+            {
+                magik_command_set_view_transform_khronos_pbr_neutral_desaturation_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.vt_khronos_pbr_neutral_desaturation = cmd.desaturation;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_MODE:
+            {
+                magik_command_set_view_transform_gt7_mode_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.vt_gt7_mode= cmd.mode;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_SDR_PAPER_WHITE_BALANCE:
+            {
+                magik_command_set_view_transform_gt7_sdr_paper_white_balance_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                if(cmd.sdr_paper_white_balance > 0.0f)
+                {
+                    manager->stage.color_settings.vt_gt7_sdr_paper_white = cmd.sdr_paper_white_balance;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_REFERENCE_LUMINANCE:
+            {
+                magik_command_set_view_transform_gt7_reference_luminance_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                if(cmd.reference_luminance > 0.0f)
+                {
+                    manager->stage.color_settings.vt_gt7_reference_luminance = cmd.reference_luminance;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_JZAZBZ_EXPONENT_SCALE_FACTOR:
+            {
+                magik_command_set_view_transform_gt7_jzazbz_exponent_scale_factor_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                if(cmd.jzazbz_exponent_scale_factor > 1.0f)
+                {
+                    manager->stage.color_settings.vt_gt7_jzazbz_exponent_scale_factor = cmd.jzazbz_exponent_scale_factor;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_AGX_LOOK:
+            {
+                magik_command_set_view_transform_agx_look_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                manager->stage.color_settings.vt_agx_look = cmd.look;
+                manager->framebuffer_swapchain.clear_render_buffer = true;
+
                 break;
             }
 
 
 
-            // #################################
-            // ### 6000-6999 Hittable Object ###
-            // #################################
+            // ########################
+            // ### 7000-7999 Render ###
+            // ######################## 
+            case MAGIK_COMMAND_SET_N_GEODESIC_STEP_LIMIT:
+            {
+                magik_command_set_n_geodesic_step_limit_t cmd;
+                memcpy(&cmd, playhead, command_size);
 
+                if(cmd.n_geodesic_step_limit > 0)
+                {
+                    manager->stage.render_settings.n_geodesic_step_limit = cmd.n_geodesic_step_limit;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
 
+                break;
+            }
 
-            // ################################
-            // ### 7000-7999 bxdf materials ###
-            // ################################ 
+            case MAGIK_COMMAND_SET_N_REFLECTED_LIMIT:
+            {
+                magik_command_set_n_reflected_limit_t cmd;
+                memcpy(&cmd, playhead, command_size);
+
+                if(cmd.n_reflected_limit > 0)
+                {
+                    manager->stage.render_settings.n_reflected_limit = cmd.n_reflected_limit;
+                    manager->framebuffer_swapchain.clear_render_buffer = true;
+                }
+
+                break;
+            }
 
 
 

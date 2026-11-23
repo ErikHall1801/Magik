@@ -1,5 +1,6 @@
 #pragma once
 
+#include "magik.h"
 #include "internal_math.h"
 #include <cstdint>
 
@@ -13,27 +14,23 @@
 
 namespace magik
 {
-    struct optical_system_t
+    struct optical_system_settings_t
     {
         // Lens
-        // Shutter (Shutter angle, shutter type)
-        // Sensor (As in type and properties)
-        // Body
-        // Video settings (FPS, motion blur) 
-        // Physical properties (Position, velocity, orientation)
-        
-        // But for now, lets not make this more complicated than it has to be
-        // We dont need anything else for a basic camera. We technically do not
-        // even need the sensor diagonal. 
-        // So all of the above is temporary. 
         float focal_length = 12.0f;
 
+        float iso = 500.0f;
+        float fps = 24.0f;
+        // Shutter type
+        // motion blur
+        float shutter_angle = 180.0f;
         float sensor_diagonal_mm = 24.0f;
         uint32_t x_resolution = 2195;
         uint32_t y_resolution = 1860;
 
+        // Body (Parasitic heat etc.)
+
         vec3f position = vec3f{2.0f, 0.0f, 9.0f};
-        vec3f local_proper_velocity;
         mat3f orientation = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
     };
 }

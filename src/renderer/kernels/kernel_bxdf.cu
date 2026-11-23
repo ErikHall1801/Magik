@@ -34,7 +34,7 @@ namespace magik
         vec4f* d_momentum_derivative_start = nullptr;
         vec4f* d_momentum_derivative_end = nullptr;
         float* d_initial_four_vector_contraction = nullptr;
-        float* d_monte_carlo_weight = nullptr;
+        float* d_throughput = nullptr;
         float* d_affine_parameter = nullptr;
         float* d_delta_affine_parameter = nullptr;
 
@@ -60,7 +60,7 @@ namespace magik
             d_momentum_derivative_start = wb->ray_pool.get<momentum_derivative_start_t>();
             d_momentum_derivative_end = wb->ray_pool.get<momentum_derivative_end_t>();
             d_initial_four_vector_contraction = wb->ray_pool.get<initial_four_vector_contraction_t>();
-            d_monte_carlo_weight = wb->ray_pool.get<monte_carlo_weight_t>();
+            d_throughput = wb->ray_pool.get<throughput_t>();
             d_affine_parameter = wb->ray_pool.get<affine_parameter_t>();
             d_delta_affine_parameter = wb->ray_pool.get<delta_affine_parameter_t>();
         }
@@ -74,13 +74,13 @@ namespace magik
         uint32_t matter_slot = args.d_hit_matter_slot[ray_id];
         if(matter_slot != kernel_matter_slot) return;
 
-        bxdf_velocity_context v_context = generate_velocity_context(args.d_sensor_wavelength_nm[ray_id], metric<T>::length_scale(metric_parameters), args.d_initial_four_vector_contraction[ray_id], args.d_affine_parameter[ray_id], args.d_delta_affine_parameter[ray_id], args.d_monte_carlo_weight[ray_id], args.d_current_four_position[ray_id], args.d_current_four_momentum[ray_id], args.d_next_four_position[ray_id], args.d_next_four_momentum[ray_id], args.d_momentum_derivative_start[ray_id], args.d_momentum_derivative_end[ray_id], vec3f{args.d_hit_normal[ray_id].x, args.d_hit_normal[ray_id].y, args.d_hit_normal[ray_id].z}, &args.d_random_device[ray_id]);
+        bxdf_velocity_context v_context = generate_velocity_context(args.d_sensor_wavelength_nm[ray_id], metric<T>::length_scale(metric_parameters), args.d_initial_four_vector_contraction[ray_id], args.d_affine_parameter[ray_id], args.d_delta_affine_parameter[ray_id], args.d_throughput[ray_id], args.d_current_four_position[ray_id], args.d_current_four_momentum[ray_id], args.d_next_four_position[ray_id], args.d_next_four_momentum[ray_id], args.d_momentum_derivative_start[ray_id], args.d_momentum_derivative_end[ray_id], vec3f{args.d_hit_normal[ray_id].x, args.d_hit_normal[ray_id].y, args.d_hit_normal[ray_id].z}, &args.d_random_device[ray_id]);
         vec3f result_three_velocity = -bxdf_matter::local_proper_velocity_function(v_context); // Negated so authors direct physical velocities
 
         bxdf_material_context m_context = generate_material_context<T>(metric_parameters, v_context, -result_three_velocity / magik::speed_of_light);
         bxdf_result result_material = bxdf_matter::material_function(m_context);
 
-        apply_bxdf_result<T>(metric_parameters, result_material, ray_id, args.d_n_reflected, args.d_spectral_radiance, args.d_current_four_position, args.d_current_four_momentum, args.d_next_four_position, args.d_next_four_momentum, args.d_initial_four_vector_contraction, args.d_monte_carlo_weight, m_context.redshift_factor, m_context.dimensionless_four_velocity, m_context.global_frame_facing_normal);
+        apply_bxdf_result<T>(metric_parameters, result_material, ray_id, args.d_n_reflected, args.d_spectral_radiance, args.d_current_four_position, args.d_current_four_momentum, args.d_next_four_position, args.d_next_four_momentum, args.d_initial_four_vector_contraction, args.d_throughput, m_context.redshift_factor, m_context.dimensionless_four_velocity, m_context.global_frame_facing_normal);
 
         if(result_material.type == ABSORBED)
         {
@@ -114,14 +114,14 @@ namespace magik
 
     void launch_kernel_bxdf_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
-        uint32_t threads_per_block = manager->stage.settings.wavefront_threads_per_block;
+        uint32_t threads_per_block = manager->stage.render_settings.wavefront_threads_per_block;
         uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
 
         kernel_bxdf_args_t args;
         args.create(wavefront_buffer);
         bool time_reversed = true;
 
-        bool successful = dispatch_metric(manager->stage.settings.metric_type, [&](auto tag)
+        bool successful = dispatch_list(supported_metrics{}, manager->stage.relativity_settings.metric_type, [&](auto tag)
         {
             constexpr auto T = decltype(tag)::value;
             launch_all_matter_types<T>(metric<T>::make_params(manager, time_reversed), threads_per_block, n_block, static_cast<cudaStream_t>(manager->cuda_stream), args, registered_matter{});
@@ -129,7 +129,7 @@ namespace magik
 
         check_cuda_errors(cudaGetLastError());
 
-        wavefront_buffer->queue_pool.store_count_in_history<bxdf_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.settings.n_geodesic_step_limit);
+        wavefront_buffer->queue_pool.store_count_in_history<bxdf_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.render_settings.n_geodesic_step_limit);
         wavefront_buffer->queue_pool.zero_count_async<bxdf_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
 
         if(!successful)

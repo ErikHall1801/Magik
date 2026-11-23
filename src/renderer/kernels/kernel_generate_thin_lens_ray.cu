@@ -2,7 +2,6 @@
 #include "cuda_device_utilities.cuh"
 #include "cuda_host_utilities.h"
 #include "device_sensor_utilities.cuh"
-#include "device_spectral_utilities.cuh"
 #include "thin_lens.cuh"
 
 namespace magik
@@ -13,7 +12,7 @@ namespace magik
         vec4f* d_initial_observer_spatial_direction = nullptr;
         vec4f* d_initial_observer_spatial_position = nullptr;
         float* d_sensor_wavelength_nm = nullptr;
-        float* d_monte_carlo_weight = nullptr;
+        float* d_throughput = nullptr;
         uint32_t* d_advance_A_queue_id = nullptr;
 
         uint32_t x_resolution;
@@ -25,23 +24,27 @@ namespace magik
         vec3f position;
         mat3f orientation;
 
+        color_pipeline_descriptor_t color_pipeline_descriptor;
+
         __host__ void create(magik_render_manager* manager, wavefront_buffer_t* wb)
         {
             d_random_device = wb->ray_pool.get<random_device_t>();
             d_initial_observer_spatial_direction = wb->ray_pool.get<initial_observer_spatial_direction_t>();
             d_initial_observer_spatial_position = wb->ray_pool.get<initial_observer_spatial_position_t>();
             d_sensor_wavelength_nm = wb->ray_pool.get<sensor_wavelength_nm_t>();
-            d_monte_carlo_weight = wb->ray_pool.get<monte_carlo_weight_t>();
+            d_throughput = wb->ray_pool.get<throughput_t>();
             d_advance_A_queue_id = wb->queue_pool.get_id_ptr<advance_A_queue_t>();
 
             x_resolution = wb->x_resolution;
             y_resolution = wb->y_resolution;
-            max_wavelength_nm = manager->stage.settings.max_wavelength_nm;
-            min_wavelength_nm = manager->stage.settings.min_wavelength_nm;
-            focal_length = manager->stage.optical_systen.focal_length;
-            sensor_diagonal_mm = manager->stage.optical_systen.sensor_diagonal_mm;
-            position = manager->stage.optical_systen.position;
-            orientation = manager->stage.optical_systen.orientation;
+            max_wavelength_nm = manager->stage.color_settings.isi_max_wavelength_nm;
+            min_wavelength_nm = manager->stage.color_settings.isi_min_wavelength_nm;
+            focal_length = manager->stage.optical_system_settings.focal_length;
+            sensor_diagonal_mm = manager->stage.optical_system_settings.sensor_diagonal_mm;
+            position = manager->stage.optical_system_settings.position;
+            orientation = manager->stage.optical_system_settings.orientation;
+
+            color_pipeline_descriptor = manager->color_pipeline_descriptor;
         }
     };
 
@@ -49,8 +52,6 @@ namespace magik
     {
         if(!magik::is_valid_thread(args.x_resolution, args.y_resolution)) return;
 
-        uint32_t i_x = threadIdx.x + blockIdx.x * blockDim.x;
-        uint32_t i_y = threadIdx.y + blockIdx.y * blockDim.y;
         uint32_t thread_id = magik::get_n_dimensional_thread_id(args.x_resolution, 1);
 
         // Logic for making the ray dir and orig. 
@@ -68,15 +69,17 @@ namespace magik
         args.d_initial_observer_spatial_direction[thread_id] = vec4f{ray_dir.x, ray_dir.y, ray_dir.z, 0.0f};
         args.d_initial_observer_spatial_position[thread_id] = vec4f{ray_orig.x, ray_orig.y, ray_orig.z, 0.0f};
 
-        draw_random_wavelength_uniform(&args.d_sensor_wavelength_nm[thread_id], &args.d_monte_carlo_weight[thread_id], args.max_wavelength_nm, args.min_wavelength_nm, &args.d_random_device[thread_id]);
+        float pdf; // Setting for the sampling strategy ? 
+        draw_random_wavelength_cmf_inverse_cdf(&args.d_sensor_wavelength_nm[thread_id], &pdf, args.color_pipeline_descriptor, &args.d_random_device[thread_id]);
+        args.d_throughput[thread_id] = 1.0f / pdf;
 
         args.d_advance_A_queue_id[thread_id] = thread_id;
     }
 
     void launch_kernel_generate_thin_lens_ray_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
-        dim3 threads_per_block = dim3(manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y, 1);
-        dim3 n_block = magik::compute_n_blocks(wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.settings.threads_per_block_x, manager->stage.settings.threads_per_block_y);
+        dim3 threads_per_block = dim3(manager->stage.render_settings.threads_per_block_x, manager->stage.render_settings.threads_per_block_y, 1);
+        dim3 n_block = magik::compute_n_blocks(wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.render_settings.threads_per_block_x, manager->stage.render_settings.threads_per_block_y);
 
         kernel_generate_thin_lens_ray_args_t args;
         args.create(manager, wavefront_buffer);

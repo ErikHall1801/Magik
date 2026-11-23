@@ -2498,6 +2498,16 @@ namespace magik
                 return (f0 + f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10);
             }
 
+            template<typename T> MAGIK_DEVICE_HOST constexpr auto evaluate_white_led_spectrum(T wavelength)
+            {
+                T f0 = gaussian_distribution(wavelength, static_cast<T>(577.0), static_cast<T>(50.7937003968), static_cast<T>(157.0));
+                T f1 = gaussian_distribution(wavelength, static_cast<T>(451.0), static_cast<T>(7.07106781187), static_cast<T>(200.0));
+                T f2 = gaussian_distribution(wavelength, static_cast<T>(455.0), static_cast<T>(14.1421356237), static_cast<T>(50.0));
+                T f3 = gaussian_distribution(wavelength, static_cast<T>(528.0), static_cast<T>(13.7840487521), static_cast<T>(20.0));
+                T f4 = gaussian_distribution(wavelength, static_cast<T>(690.0), static_cast<T>(44.72135955), static_cast<T>(10.0));
+                return (f0 + f1 + f2 + f3 + f4);
+            }
+
             template<typename T> MAGIK_DEVICE_HOST constexpr auto sample_plancks_law(T wavelength_nm, T temperature)
             {
                 using ::exp;

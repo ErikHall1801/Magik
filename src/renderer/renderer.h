@@ -6,9 +6,11 @@
 #include "command.h"
 #include "stage.h"
 #include "cuda_host_utilities.h"
+#include "color_pipeline.cuh"
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <cstring>
 
 struct magik_render_manager
 {
@@ -26,6 +28,8 @@ struct magik_render_manager
     magik::command_context_t command_context;
     magik::framebuffer_swapchain_t framebuffer_swapchain;
     magik::stage_t stage;
+
+    magik::color_pipeline_descriptor_t color_pipeline_descriptor;
 
     std::atomic<uint32_t> x_sample = 0;
 };

@@ -8,16 +8,17 @@
 #include "kernel_enforce_ray_limits.cuh"
 #include "kernel_initialize_random_device.cuh"
 #include "kernel_redistribute_radiance.cuh"
-#include "kernel_utility.cuh"
 
 namespace magik
 {
     void realloc_wavefront_buffer(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t n_bin, uint32_t x_resolution_target, uint32_t y_resolution_target, uint32_t n_geodesic_step_limit)
     {
-        if(wavefront_buffer->x_resolution == x_resolution_target && wavefront_buffer->y_resolution == y_resolution_target) return;
+        if(wavefront_buffer->x_resolution == x_resolution_target && wavefront_buffer->y_resolution == y_resolution_target && wavefront_buffer->n_isi_bin == n_bin && wavefront_buffer->n_geodesic_step == n_geodesic_step_limit) return;
 
         wavefront_buffer->x_resolution = x_resolution_target;
         wavefront_buffer->y_resolution = y_resolution_target;
+        wavefront_buffer->n_isi_bin = n_bin;
+        wavefront_buffer->n_geodesic_step = n_geodesic_step_limit;
 
         wavefront_buffer->release_async(static_cast<cudaStream_t>(user_stream));
 
@@ -48,7 +49,7 @@ namespace magik
     void reset_wavefront_process_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
     {
         wavefront_buffer->ray_pool.memset_async<sensor_wavelength_nm_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<monte_carlo_weight_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        wavefront_buffer->ray_pool.memset_async<throughput_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
         wavefront_buffer->ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
         wavefront_buffer->ray_pool.memset_async<intrinsic_spectral_irradiance_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
 
@@ -80,7 +81,7 @@ namespace magik
         bool working = true;
         auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
 
-        prepair_wavefront_buffer_async(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer, manager->stage.settings.n_geodesic_step_limit);
+        prepair_wavefront_buffer_async(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer, manager->stage.render_settings.n_geodesic_step_limit);
  
         launch_kernel_generate_thin_lens_ray_async(manager, wavefront_buffer);
 

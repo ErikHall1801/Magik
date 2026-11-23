@@ -194,22 +194,10 @@ namespace magik
         return contract(g, p_up);
     }
 
-    template<e_magik_spacetime_metric_types... Ts> struct metric_list {};
-
-    using supported_metrics = metric_list
+    using supported_metrics = value_list
     <
-    e_magik_spacetime_metric_types::MINKOWSKI,
-    e_magik_spacetime_metric_types::SCHWARZSCHILD,
-    e_magik_spacetime_metric_types::KERR
+        e_magik_spacetime_metric_types::MINKOWSKI,
+        e_magik_spacetime_metric_types::SCHWARZSCHILD,
+        e_magik_spacetime_metric_types::KERR
     >;
-
-    template<class F, e_magik_spacetime_metric_types... Ts> bool match_metric(e_magik_spacetime_metric_types type, F&& f, metric_list<Ts...>)
-    {
-        return ((type == Ts ? (f(std::integral_constant<e_magik_spacetime_metric_types, Ts>{}), true) : false) || ...);
-    }
-
-    template<class F> bool dispatch_metric(e_magik_spacetime_metric_types type, F&& f)
-    {
-        return match_metric(type, std::forward<F>(f), supported_metrics{});
-    }
 }
