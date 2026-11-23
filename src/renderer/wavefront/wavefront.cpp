@@ -13,10 +13,12 @@ namespace magik
 {
     void realloc_wavefront_buffer(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t n_bin, uint32_t x_resolution_target, uint32_t y_resolution_target, uint32_t n_geodesic_step_limit)
     {
-        if(wavefront_buffer->x_resolution == x_resolution_target && wavefront_buffer->y_resolution == y_resolution_target) return;
+        if(wavefront_buffer->x_resolution == x_resolution_target && wavefront_buffer->y_resolution == y_resolution_target && wavefront_buffer->n_isi_bin == n_bin && wavefront_buffer->n_geodesic_step == n_geodesic_step_limit) return;
 
         wavefront_buffer->x_resolution = x_resolution_target;
         wavefront_buffer->y_resolution = y_resolution_target;
+        wavefront_buffer->n_isi_bin = n_bin;
+        wavefront_buffer->n_geodesic_step = n_geodesic_step_limit;
 
         wavefront_buffer->release_async(static_cast<cudaStream_t>(user_stream));
 

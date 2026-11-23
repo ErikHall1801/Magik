@@ -11,10 +11,12 @@ namespace magik
     {
         uint32_t x_resolution = 0;
         uint32_t y_resolution = 0;
+        uint32_t n_isi_bin = 0;
+        uint32_t n_geodesic_step = 0;
 
         uint32_t queue_ceiling = 0;
         uint32_t iteration = 0;
-
+ 
         device_mem_arena arena;
 
         queue_pool_t<

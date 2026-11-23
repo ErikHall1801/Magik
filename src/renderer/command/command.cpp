@@ -106,7 +106,9 @@ namespace magik
 
             case MAGIK_COMMAND_SET_WHITE_BALANCE_WHITE_POINT: { is_valid_ = true; size_ = sizeof(magik_command_set_white_balance_white_point_t); break; }
 
-            case MAGIK_COMMAND_SET_WHITE_BALANCE_TINT: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_reinhard_extended_white_luminance_t); break; }
+            case MAGIK_COMMAND_SET_WHITE_BALANCE_TINT: { is_valid_ = true; size_ = sizeof(magik_command_set_white_balance_tint_t); break; }
+
+            case MAGIK_COMMAND_SET_VIEW_TRANSFORM_REINHARD_EXTENDED_WHITE_LUMINANCE: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_reinhard_extended_white_luminance_t); break; }
 
             case MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_START_COMPRESSION: { is_valid_ = true; size_ = sizeof(magik_command_set_view_transform_khronos_pbr_neutral_start_compression_t); break; }
 
