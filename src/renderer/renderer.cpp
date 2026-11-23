@@ -108,6 +108,7 @@ namespace magik
             {
                 reset_render_buffer(&manager->framebuffer_swapchain);
                 reset_wavefront_process_async(manager, &wavefront_buffer);
+                manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(manager->stage.color_settings);
                 manager->framebuffer_swapchain.clear_render_buffer = false;
             }
 

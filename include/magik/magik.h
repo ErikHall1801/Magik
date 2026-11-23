@@ -706,6 +706,7 @@ typedef enum e_magik_cqs_command_types
     MAGIK_COMMAND_REMOVE_AOV = 1004,
 
 
+
     // ################################
     // ### 2000-2999 Built-in tests ###
     // ################################
@@ -722,38 +723,81 @@ typedef enum e_magik_cqs_command_types
 
 
 
-    // #######################
-    // ### 4000-4999 Scene ###
-    // #######################
+    // ############################
+    // ### 4000-4999 Relativity ###
+    // ############################
     /**
-    * @brief Changes metric to Minkowski
+    * @brief Sets the global spacetime metric
     */
-   MAGIK_COMMAND_SET_METRIC_MINKOWSKI = 4100,
+    MAGIK_COMMAND_SET_METRIC_MINKOWSKI = 4000,
+    MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD = 4001,
+    MAGIK_COMMAND_SET_METRIC_KERR = 4002,
 
     /**
-    * @brief Changes metric to Schwarzschild
+    * @brief Sets the integrators tolerances and 
+    * maximum number of per iteration substeps. 
     */
-   MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD = 4101,
+    MAGIK_COMMAND_SET_ABSOLUTE_ERROR_TOLERANCE = 4100,
+    MAGIK_COMMAND_SET_RELATIVE_ERROR_TOLERANCE = 4101,
+    MAGIK_COMMAND_SET_MAX_SUBSTEPS = 4102,
 
     /**
-    * @brief Changes metric to Kerr
+    * @brief Sets the observers, cameras, local 
+    * proper velocity. This velocity can exceed 
+    * the speed of light locally, but is naturally
+    * bounded to it globally. 
     */
-   MAGIK_COMMAND_SET_METRIC_KERR = 4102,
+    MAGIK_COMMAND_SET_OBSERVER_LOCAL_PROPER_VELOCITY = 4200,
 
     /**
-    * @brief Set Schwarzschild mass (M >= 0)
+    * @brief Set the radius of the celestial sphere
+    * centered about the observer. 
     */
-   MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS = 4103,
+    MAGIK_COMMAND_SET_CELESTIAL_SPHERE_RADIUS = 4300,
 
     /**
-    * @brief Set Kerr mass (M >= 0)
+    * @brief Sets the schwarzschild black hole event
+    * horizon scale multiplier. This value cannot be 
+    * less than 1. The scalar increases the size of 
+    * the horizon slightly to prevent geodesics from
+    * taking too long to hit the boundary. 
     */
-   MAGIK_COMMAND_SET_KERR_MASS = 4104,
+    MAGIK_COMMAND_SET_SCHWARZSCHILD_EVENT_HORIZON_SCALAR = 4400,
 
-    /**
-    * @brief Set Kerr spin (|a| > 0)
+    /** 
+    * @brief Sets the schwarzschild black holes mass
+    * parameter. Magik supports a negative mass. This
+    * is a mathematically valid, if physically meaningless
+    * solution.  
     */
-   MAGIK_COMMAND_SET_KERR_SPIN = 4105,
+    MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS_PARAMETER = 4401,
+    
+    /**
+    * @brief Sets the Kerr black hole event horizon
+    * scalar. This value cannot be smaller than 1. 
+    * It artifically scales the event horizon to 
+    * ensure geodesics terminate without spending 
+    * hundreds of steps orbiting. 
+    */
+    MAGIK_COMMAND_SET_KERR_EVENT_HORIZON_SCALAR = 4402,
+    
+    /**
+    * @brief Sets the kerr black hole's mass 
+    * parameter. This value cannot be negative. 
+    */
+    MAGIK_COMMAND_SET_KERR_MASS_PARAMETER = 4403,
+    
+    /**
+    * @brief Sets the kerr black hole's dimensionless
+    * spin parameter. Conventionally the spin parameter
+    * would be denoted as the angular momentum over 
+    * mass. The angular momentum is factored out to
+    * arrive at a dimensionless quantity. For physical
+    * results use values between -1 and 1. Values 
+    * outside this range are rendered and represent a 
+    * naked singularity. 
+    */
+    MAGIK_COMMAND_SET_KERR_DIMENSIONLESS_SPIN_PARAMETER = 4404,
 
 
     
@@ -780,22 +824,97 @@ typedef enum e_magik_cqs_command_types
     */
     MAGIK_COMMAND_SET_CAMERA_RESOLUTION = 5003,
 
+
+
+    // #######################
+    // ### 6000-6999 Color ###
+    // #######################
     /**
-    * @brief Set the cameras local three velocity. The velocity is naturally bound to 
-    * the speed of light.      
+    * @brief Magik accumulates irradiance, energy, onto a per 
+    * pixel buffer whoms dimensions are set by this command. 
+    * The bins are equally spaced apart in the spectral domain. 
+    * A higher number of bins results in higher color accuracy,
+    * yet a count past 36 runs into deminishing returns. 
+    * "Intrinsic" in this case simply refers to the fact Magik 
+    * does not accumulate raw irradiance, but instead the energy
+    * after having passed through the sensor. This means the 
+    * sensor specific response, such as Halation, is baked into
+    * the buffer.   
     */
-    MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY = 5004,
+    MAGIK_COMMAND_SET_N_INTRINSIC_SPECTRAL_IRRADIANCE_BIN = 6000,
+
+    /**
+    * @brief Sets the bounds of the spectral domain in which Magik
+    * samples random wavelengths. This range should generally be 
+    * the same as the chosen color matching function. The values
+    * need to be provided in nanometres. 
+    */
+    MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MAXIMUM_WAVELENGTH_NM = 6001,
+    MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MINIMUM_WAVELENGTH_NM = 6002,
+    
+    /**
+    * @brief Magik samples individual wavelengths continiously
+    * in the user-defined domain. Yet the spectral radiance, per
+    * sample energy, is ultimatley converted to and discriticed 
+    * into the intrinisc spectral irradiance buffer. 
+    * To avoid spectral aliasing the energy is not simply added
+    * to the closest bin, but redistributed across adjacent ones. 
+    * The kernel used is a gaussian normal distribution. The SD 
+    * of which is set by this command and measured in nanometre. 
+    */
+    MAGIK_COMMAND_SET_REDISTRIBUTION_STANDARD_DEVIATION_NM = 6003,
+
+    /**
+    * @brief Set the color matching function Magik uses to convert
+    * the intrinsic spectral irradiance buffer into the CIE color 
+    * system. 
+    */
+    MAGIK_COMMAND_SET_COLOR_MATCHING_FUNCTION = 6100,
+
+    /**
+    * @brief I dont know what to write here. These all explain 
+    * themselves. 
+    */
+    MAGIK_COMMAND_SET_SCENE_COLORSPACE = 6101,
+    MAGIK_COMMAND_SET_VIEW_TRANSFORM = 6102,
+    MAGIK_COMMAND_SET_DISPLAY_COLORSPACE = 6103,
+    MAGIK_COMMAND_SET_OUTPUT_FORMAT = 6104,
+
+    MAGIK_COMMAND_SET_WHITE_BALANCE_WHITE_POINT = 6200,
+    MAGIK_COMMAND_SET_WHITE_BALANCE_TINT = 6201,
+
+    MAGIK_COMMAND_SET_VIEW_TRANSFORM_REINHARD_EXTENDED_WHITE_LUMINANCE = 6300,
+
+    MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_START_COMPRESSION = 6301,
+    MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_DESATURATION = 6302,
+
+    MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_MODE = 6304,
+    MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_SDR_PAPER_WHITE_BALANCE = 6305,
+    MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_REFERENCE_LUMINANCE = 6306,
+    MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_JZAZBZ_EXPONENT_SCALE_FACTOR = 6407,
 
 
 
-    // #################################
-    // ### 6000-6999 Hittable Object ###
-    // #################################
+    // ########################
+    // ### 7000-7999 Render ###
+    // ########################
+    /**
+    * @brief Sets the maximum number of geodesic steps Magik is
+    * allowed to take throughout an entire path's trajectory. This 
+    * is not the same as the bounce limits ! For every interaction,
+    * such as reflections, many geodesic steps might be consumed. 
+    */
+    MAGIK_COMMAND_SET_N_GEODESIC_STEP_LIMIT = 7000,
+    
+    /**
+    * @brief Sets the maximum number of reflections. 
+    */
+    MAGIK_COMMAND_SET_N_REFLECTED_LIMIT = 7001,
 
 
 
     // ################################
-    // ### 7000-7999 bxdf materials ###
+    // ### 8000-8999 bxdf materials ###
     // ################################ 
 
     // Prohibited
@@ -863,47 +982,85 @@ typedef struct MAGIK_ALIGN4 magik_command_printf_t
 
 
 
-// #######################
-// ### 4000-4999 Scene ###
-// #######################
+// ############################
+// ### 4000-4999 Relativity ###
+// ############################
 typedef struct MAGIK_ALIGN4 magik_command_set_metric_minkowski_t
 {
     const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_MINKOWSKI;
-    uint32_t id = 0;
 } magik_command_set_metric_minkowski_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_metric_schwarzschild_t
 {
     const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD;
-    uint32_t id = 0;
 } magik_command_set_metric_schwarzschild_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_metric_kerr_t
 {
     const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_KERR;
-    uint32_t id = 0;
 } magik_command_set_metric_kerr_t;
 
-typedef struct MAGIK_ALIGN4 magik_command_set_schwarzschild_mass_t
+typedef struct MAGIK_ALIGN4 magik_command_set_absolute_error_tolerance_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS;
-    float mass_parameter = 6.7329546075E26f;
-    uint32_t id = 0;
-} magik_command_set_schwarzschild_mass_t;
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_ABSOLUTE_ERROR_TOLERANCE;
+    float absolute_error_tolerance; // 1e-3f
+} magik_command_set_absolute_error_tolerance_t;
 
-typedef struct MAGIK_ALIGN4 magik_command_set_kerr_mass_t
+typedef struct MAGIK_ALIGN4 magik_command_set_relative_error_tolerance_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_MASS;
-    float mass_parameter = 6.7329546075E26f;
-    uint32_t id = 0;
-} magik_command_set_kerr_mass_t;
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_RELATIVE_ERROR_TOLERANCE;
+    float relative_error_tolerance; // 1e-10f
+} magik_command_set_relative_error_tolerance_t;
 
-typedef struct MAGIK_ALIGN4 magik_command_set_kerr_spin_t
+typedef struct MAGIK_ALIGN4 magik_command_set_max_substeps_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_SPIN;
-    float spin_parameter = 0.999f;
-    uint32_t id = 0;
-} magik_command_set_kerr_spin_t;
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_MAX_SUBSTEPS;
+    uint32_t max_substeps; // 56
+} magik_command_set_max_substeps_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_observer_local_proper_velocity_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_OBSERVER_LOCAL_PROPER_VELOCITY;
+    float velocity_x;
+    float velocity_y;
+    float velocity_z;
+} magik_command_set_observer_local_proper_velocity_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_celestial_sphere_radius_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CELESTIAL_SPHERE_RADIUS;
+    float celestial_sphere_radius;
+} magik_command_set_celestial_sphere_radius_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_schwarzschild_event_horizon_scalar_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SCHWARZSCHILD_EVENT_HORIZON_SCALAR;
+    float scalar;
+} magik_command_set_schwarzschild_event_horizon_scalar_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_schwarzschild_mass_parameter_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS_PARAMETER;
+    float mass_parameter; // 6.7329546075E26f
+} magik_command_set_schwarzschild_mass_parameter_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_kerr_event_horizon_scalar_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_EVENT_HORIZON_SCALAR;
+    float scalar;
+} magik_command_set_kerr_event_horizon_scalar_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_kerr_mass_parameter_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_MASS_PARAMETER;
+    float mass_parameter; // 6.7329546075E26f
+} magik_command_set_kerr_mass_parameter_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_kerr_dimensionless_spin_parameter_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_DIMENSIONLESS_SPIN_PARAMETER;
+    float dimensionless_spin_parameter; // 0.999f
+} magik_command_set_kerr_dimensionless_spin_parameter_t;
 
 
 
@@ -941,25 +1098,135 @@ typedef struct MAGIK_ALIGN4 magik_command_set_camera_resolution_t
     uint32_t y_resolution = 2;
 } magik_command_set_camera_resolution_t;
 
-typedef struct MAGIK_ALIGN4 magik_command_set_camera_three_velocity_t
+
+
+// #######################
+// ### 6000-6999 Color ###
+// #######################
+typedef struct MAGIK_ALIGN4 magik_command_set_n_intrinsic_spectral_irradiance_bin_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_THREE_VELOCITY;
-    float velocity_x = 0.0f;
-    float velocity_y = 0.0f;
-    float velocity_z = 0.0f;
-} magik_command_set_camera_three_velocity_t;
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_N_INTRINSIC_SPECTRAL_IRRADIANCE_BIN;
+    uint32_t n_isi_bin; // 24
+} magik_command_set_n_intrinsic_spectral_irradiance_bin_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_sample_domain_maximum_wavelength_nm_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MAXIMUM_WAVELENGTH_NM;
+    float maximum_wavelength_nm; // 830.0f
+} magik_command_set_sample_domain_maximum_wavelength_nm_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_sample_domain_minimum_wavelength_nm_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MINIMUM_WAVELENGTH_NM;
+    float minimum_wavelength_nm; // 380.0f
+} magik_command_set_sample_domain_minimum_wavelength_nm_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_redistribution_standard_deviation_nm_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_REDISTRIBUTION_STANDARD_DEVIATION_NM;
+    float standard_deviation_nm; // 10.0f
+} magik_command_set_redistribution_standard_deviation_nm_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_color_matching_function_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_COLOR_MATCHING_FUNCTION;
+    e_magik_color_matching_function_types cmf_type; // CIE 1931
+} magik_command_set_color_matching_function_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_scene_colorspace_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SCENE_COLORSPACE;
+    e_magik_scene_colorspace_types scene_colorspace;
+} magik_command_set_scene_colorspace_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM;
+    e_magik_view_transform_types view_transform;
+} magik_command_set_view_transform_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_display_colorspace_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_DISPLAY_COLORSPACE;
+    e_magik_display_colorspace_types display_colorspace;
+} magik_command_set_display_colorspace_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_output_format_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_OUTPUT_FORMAT;
+    e_magik_output_format_types output_format;
+} magik_command_set_output_format_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_white_balance_white_point_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_WHITE_BALANCE_WHITE_POINT;
+    float white_point_kelvin;
+} magik_command_set_white_balance_white_point_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_white_balance_tint_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_WHITE_BALANCE_TINT;
+    float tint;
+} magik_command_set_white_balance_tint_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_reinhard_extended_white_luminance_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_REINHARD_EXTENDED_WHITE_LUMINANCE;
+    float white_luminance;
+} magik_command_set_view_transform_reinhard_extended_white_luminance_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_khronos_pbr_neutral_start_compression_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_START_COMPRESSION;
+    float start_compression;
+} magik_command_set_view_transform_khronos_pbr_neutral_start_compression_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_khronos_pbr_neutral_desaturation_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_DESATURATION;
+    float desaturation;
+} magik_command_set_view_transform_khronos_pbr_neutral_desaturation_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_gt7_mode_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_MODE;
+    e_magik_gran_turismo_7_mode_types mode;
+} magik_command_set_view_transform_gt7_mode_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_gt7_sdr_paper_white_balance_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_SDR_PAPER_WHITE_BALANCE;
+    float sdr_paper_white_balance;
+} magik_command_set_view_transform_gt7_sdr_paper_white_balance_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_gt7_reference_luminance_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_REFERENCE_LUMINANCE;
+    float reference_luminance;
+} magik_command_set_view_transform_gt7_reference_luminance_t;
+
+typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_gt7_jzazbz_exponent_scale_factor_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_JZAZBZ_EXPONENT_SCALE_FACTOR;
+    float jzazbz_exponent_scale_factor;
+} magik_command_set_view_transform_gt7_jzazbz_exponent_scale_factor_t;
 
 
 
-// #################################
-// ### 6000-6999 Hittable Object ###
-// #################################
+// ########################
+// ### 7000-7999 Render ###
+// ########################
+typedef struct MAGIK_ALIGN4 magik_command_set_n_geodesic_step_limit_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_N_GEODESIC_STEP_LIMIT;
+    uint32_t n_geodesic_step_limit;
+} magik_command_set_n_geodesic_step_limit_t;
 
-
-
-// ################################
-// ### 7000-7999 bxdf materials ###
-// ################################
+typedef struct MAGIK_ALIGN4 magik_command_set_n_reflected_limit_t
+{
+    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_N_REFLECTED_LIMIT;
+    uint32_t n_reflected_limit;
+} magik_command_set_n_reflected_limit_t;
 
 
 
