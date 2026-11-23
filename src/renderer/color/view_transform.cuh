@@ -115,6 +115,32 @@ namespace magik
     template<> struct generic_view_transform_t<MAGIK_VIEW_TRANSFORM_GRAN_TURISMO_7>
     {
         static constexpr bool does_gamut_mapping = false;
+        
+        struct params_t
+        {
+            e_magik_gran_turismo_7_mode_types mode;
+            float sdr_paper_white;
+            float reference_luminance;
+            float jzazbz_exponent_scale_factor;
+            
+            mat3f to_linear_rec_2020;
+            mat3f to_scene_colorspace;
+
+            float peak_intensity_;
+            float alpha_;
+            float mid_point_;
+            float linear_section_;
+            float toe_strength_;
+            float kA_, kB_, kC_;
+
+            float sdr_correction_factor_;
+            float framebuffer_luminance_target_;
+            float framebuffer_luminance_target_ucs;
+
+            float blend_ratio_;
+            float fade_start_;
+            float fade_end_;
+        };
 
         static MAGIK_DEVICE_HOST float framebuffer_value_to_physical_value(float fb_value, float reference_luminance)
         {
@@ -146,53 +172,6 @@ namespace magik
         {
             return 1.0f - smooth_step(x, a, b);
         }
-
-        struct gt_tone_mapping_curve_v2_t
-        {
-            float peak_intensity_;
-            float alpha_;
-            float mid_point_;
-            float linear_section_;
-            float toe_strength_;
-            float kA_, kB_, kC_;
-
-            MAGIK_DEVICE_HOST void initialize_curve(float monitor_intensity, float alpha, float gray_point, float linear_section, float toe_strength)
-            {
-                peak_intensity_ = monitor_intensity;
-                alpha_ = alpha;
-                mid_point_ = gray_point;
-                linear_section_ = linear_section;
-                toe_strength_ = toe_strength;
-
-                float k = (linear_section_ - 1.0f) / (alpha_ - 1.0f);
-                kA_ = peak_intensity_ * linear_section_ + peak_intensity_ * k;
-                kB_ = -peak_intensity_ * k * expf(linear_section_ / k);
-                kC_ = -1.0f / (k * peak_intensity_);
-            }
-
-            MAGIK_DEVICE_HOST float evaluate_curve(float x)
-            {
-                if(x < 0.0f)
-                {
-                    return 0.0f;
-                }
-
-                float weight_linear = smooth_step(x, 0.0f, mid_point_);
-                float weight_toe = 1.0f - weight_linear;
-
-                float shoulder = kA_ + kB_ * expf(x * kC_);
-
-                if(x < linear_section_ * peak_intensity_)
-                {
-                    float toe_mapped = mid_point_ * powf(x / mid_point_, toe_strength_);
-                    return weight_toe * toe_mapped + weight_linear * x;
-                }
-                else
-                {
-                    return shoulder;
-                }
-            }
-        };
 
         static MAGIK_DEVICE_HOST float eotf_st2084(float n, float reference_luminance, float exponent_scale_factor)
         {
@@ -344,83 +323,97 @@ namespace magik
             }
         }
 
-        struct gt7_tonemapping_t
+        static MAGIK_DEVICE_HOST void initialize_curve(params_t& p, float monitor_intensity, float alpha, float gray_point, float linear_section, float toe_strength)
         {
-            float sdr_correction_factor_;
+            p.peak_intensity_ = monitor_intensity;
+            p.alpha_ = alpha;
+            p.mid_point_ = gray_point;
+            p.linear_section_ = linear_section;
+            p.toe_strength_ = toe_strength;
 
-            float framebuffer_luminance_target_;
-            float framebuffer_luminance_target_ucs;
-            gt_tone_mapping_curve_v2_t curve_;
+            float k = (p.linear_section_ - 1.0f) / (p.alpha_ - 1.0f);
+            p.kA_ = p.peak_intensity_ * p.linear_section_ + p.peak_intensity_ * k;
+            p.kB_ = -p.peak_intensity_ * k * expf(p.linear_section_ / k);
+            p.kC_ = -1.0f / (k * p.peak_intensity_);
+        }
 
-            float blend_ratio_;
-            float fade_start_;
-            float fade_end_;
-
-            MAGIK_DEVICE_HOST void initialize_parameters(float physical_target_luminance, float reference_luminance, float jzazbz_exponent_scale_factor, e_magik_gran_turismo_7_mode_types type)
-            {
-                framebuffer_luminance_target_ = physical_value_to_framebuffer_value(physical_target_luminance, reference_luminance);
-
-                // This could be user defined parameters ! 
-                curve_.initialize_curve(framebuffer_luminance_target_, 0.25f, 0.538f, 0.444f, 1.280f);
-
-                blend_ratio_ = 0.6f;
-                fade_start_ = 0.98f;
-                fade_end_ = 1.16f;
-
-                float ucs[3];
-                float rgb[3] = {framebuffer_luminance_target_, framebuffer_luminance_target_, framebuffer_luminance_target_};
-
-                rgb_to_ucs(rgb, ucs, reference_luminance, jzazbz_exponent_scale_factor, type);
-
-                framebuffer_luminance_target_ucs = ucs[0];
-            }
-
-            MAGIK_DEVICE_HOST void initialize_as_hdr(float sdr_paper_white, float reference_luminance, float jzazbz_exponent_scale_factor, e_magik_gran_turismo_7_mode_types type)
-            {
-                sdr_correction_factor_ = 1.0f;
-                initialize_parameters(sdr_paper_white, reference_luminance, jzazbz_exponent_scale_factor, type);
-            }
-
-            MAGIK_DEVICE_HOST void initialize_as_sdr(float sdr_paper_white, float reference_luminance, float jzazbz_exponent_scale_factor, e_magik_gran_turismo_7_mode_types type)
-            {
-                sdr_correction_factor_ = 1.0f / physical_value_to_framebuffer_value(sdr_paper_white, reference_luminance);
-                initialize_parameters(sdr_paper_white, reference_luminance, jzazbz_exponent_scale_factor, type);
-            }
-
-            MAGIK_DEVICE_HOST void apply_tonemapping(const float* rgb, float* out, float reference_luminance, float jzazbz_exponent_scale_factor, e_magik_gran_turismo_7_mode_types type)
-            {
-                float ucs[3];
-                rgb_to_ucs(rgb, ucs, reference_luminance, jzazbz_exponent_scale_factor, type);
-
-                float skewed_rgb[3] = { curve_.evaluate_curve(rgb[0]), curve_.evaluate_curve(rgb[1]), curve_.evaluate_curve(rgb[2]) };
-
-                float skewed_ucs[3];
-                rgb_to_ucs(skewed_rgb, skewed_ucs, reference_luminance, jzazbz_exponent_scale_factor, type);
-
-                float chroma_scale = chroma_curve(ucs[0] / framebuffer_luminance_target_ucs, fade_start_, fade_end_);
-
-                float scaled_ucs[3] = {skewed_ucs[0], ucs[1] * chroma_scale, ucs[2] * chroma_scale};
-
-                float scaled_rgb[3];
-                ucs_to_rgb(scaled_ucs, scaled_rgb, reference_luminance, jzazbz_exponent_scale_factor, type);
-
-                for(int i = 0; i < 3; ++i)
-                {
-                    float blended = (1.0f - blend_ratio_) * skewed_rgb[i] + blend_ratio_ * scaled_rgb[i];
-                    out[i] = sdr_correction_factor_ * fminf(blended, framebuffer_luminance_target_);
-                }
-            }
-        };
-        
-        struct params_t
+        static MAGIK_DEVICE_HOST float evaluate_curve(const params_t& p, float x)
         {
-            e_magik_gran_turismo_7_mode_types mode;
-            float sdr_paper_white;
-            float reference_luminance;
-            float jzazbz_exponent_scale_factor;
-            mat3f to_linear_rec_2020;
-            mat3f to_scene_colorspace;
-        };
+            if(x < 0.0f)
+            {
+                return 0.0f;
+            }
+
+            float weight_linear = smooth_step(x, 0.0f, p.mid_point_);
+            float weight_toe = 1.0f - weight_linear;
+
+            float shoulder = p.kA_ + p.kB_ * expf(x * p.kC_);
+
+            if(x < p.linear_section_ * p.peak_intensity_)
+            {
+                float toe_mapped = p.mid_point_ * powf(x / p.mid_point_, p.toe_strength_);
+                return weight_toe * toe_mapped + weight_linear * x;
+            }
+            else
+            {
+                return shoulder;
+            }
+        }
+
+        static MAGIK_DEVICE_HOST void initialize_parameters(params_t& p)
+        {
+            p.framebuffer_luminance_target_ = physical_value_to_framebuffer_value(p.sdr_paper_white, p.reference_luminance);
+
+            // This could be user defined parameters ! 
+            initialize_curve(p, p.framebuffer_luminance_target_, 0.25f, 0.538f, 0.444f, 1.280f);
+
+            p.blend_ratio_ = 0.6f;
+            p.fade_start_ = 0.98f;
+            p.fade_end_ = 1.16f;
+
+            float ucs[3];
+            float rgb[3] = {p.framebuffer_luminance_target_, p.framebuffer_luminance_target_, p.framebuffer_luminance_target_};
+
+            rgb_to_ucs(rgb, ucs, p.reference_luminance, p.jzazbz_exponent_scale_factor, p.mode);
+
+            p.framebuffer_luminance_target_ucs = ucs[0];
+        }
+
+        static MAGIK_DEVICE_HOST void initialize_as_hdr(params_t& p)
+        {
+            p.sdr_correction_factor_ = 1.0f;
+            initialize_parameters(p);
+        }
+
+        static MAGIK_DEVICE_HOST void initialize_as_sdr(params_t& p)
+        {
+            p.sdr_correction_factor_ = 1.0f / physical_value_to_framebuffer_value(p.sdr_paper_white, p.reference_luminance);
+            initialize_parameters(p);
+        }
+
+        static MAGIK_DEVICE_HOST void apply_tonemapping(const params_t& p, const float* rgb, float* out)
+        {
+            float ucs[3];
+            rgb_to_ucs(rgb, ucs, p.reference_luminance, p.jzazbz_exponent_scale_factor, p.mode);
+
+            float skewed_rgb[3] = { evaluate_curve(p, rgb[0]), evaluate_curve(p, rgb[1]), evaluate_curve(p, rgb[2]) };
+
+            float skewed_ucs[3];
+            rgb_to_ucs(skewed_rgb, skewed_ucs, p.reference_luminance, p.jzazbz_exponent_scale_factor, p.mode);
+
+            float chroma_scale = chroma_curve(ucs[0] / p.framebuffer_luminance_target_ucs, p.fade_start_, p.fade_end_);
+
+            float scaled_ucs[3] = {skewed_ucs[0], ucs[1] * chroma_scale, ucs[2] * chroma_scale};
+
+            float scaled_rgb[3];
+            ucs_to_rgb(scaled_ucs, scaled_rgb, p.reference_luminance, p.jzazbz_exponent_scale_factor, p.mode);
+
+            for(int i = 0; i < 3; ++i)
+            {
+                float blended = (1.0f - p.blend_ratio_) * skewed_rgb[i] + p.blend_ratio_ * scaled_rgb[i];
+                out[i] = p.sdr_correction_factor_ * fminf(blended, p.framebuffer_luminance_target_);
+            }
+        }
 
         static MAGIK_HOST params_t make_params(const color_settings_t& color_settings)
         {
@@ -437,6 +430,16 @@ namespace magik
             p.to_linear_rec_2020 = convert_scene_colorspace(scene_colorspace_info, rec2020_info);
             p.to_scene_colorspace = convert_scene_colorspace(rec2020_info, scene_colorspace_info);
 
+            bool is_sdr = false; // Future, automatically detect if a display colorspace is SDR or HDR
+            if(is_sdr)
+            {
+                initialize_as_sdr(p);
+            }
+            else
+            {
+                initialize_as_hdr(p);
+            }
+
             return p; 
         }
 
@@ -448,11 +451,10 @@ namespace magik
             float rgb_in[3] = {color.x, color.y, color.z};
             float rgb_out[3] = {0.0f, 0.0f, 0.0f};
 
-            gt7_tonemapping_t gt7_tonemapping;
-            gt7_tonemapping.initialize_as_hdr(p.sdr_paper_white, p.reference_luminance, p.jzazbz_exponent_scale_factor, p.mode);
-            gt7_tonemapping.apply_tonemapping(rgb_in, rgb_out, p.reference_luminance, p.jzazbz_exponent_scale_factor, p.mode);
+            apply_tonemapping(p, rgb_in, rgb_out);
 
             color = p.to_scene_colorspace * vec3f{rgb_out[0], rgb_out[1], rgb_out[2]};
+            color = { fmaxf(color.x, 0.0f), fmaxf(color.y, 0.0f), fmaxf(color.z, 0.0f) };
             return color;
         }
     };
