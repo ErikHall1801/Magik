@@ -19,7 +19,7 @@ namespace magik
         // Lens
         float focal_length = 12.0f;
 
-        float iso = 100.0f;
+        float iso = 500.0f;
         float fps = 24.0f;
         // Shutter type
         // motion blur

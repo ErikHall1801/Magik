@@ -169,10 +169,11 @@ namespace magik
         }
 
         float k = 1.0f / sum_y;
+        float inv_bin_width = 1.0f / isi_bin_range;
 
         for(uint32_t i = 0; i < n_isi_bin; i++)
         {
-            isi_to_scene_referred_weights[i] *= k;
+            isi_to_scene_referred_weights[i] *= k * inv_bin_width;
         }
     }
 
