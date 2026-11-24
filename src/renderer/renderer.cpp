@@ -57,6 +57,54 @@ namespace magik
             // Command stage
             result = magik::consume_back_command_buffer(manager);
 
+            {
+                switch(manager->update_policy)
+                {
+                    case MAGIK_COMMAND_UPDATE_POLICY_NONE:
+                    {
+                        break;
+                    }
+
+                    case MAGIK_COMMAND_UPDATE_POLICY_RESET_ISI:
+                    {
+                        // reset_render_buffer(&manager->framebuffer_swapchain);
+                        reset_wavefront_process_async(manager, &wavefront_buffer);
+                        break;
+                    }
+
+                    case MAGIK_COMMAND_UPDATE_POLICY_REBUILD_COLOR_PIPELINE:
+                    {
+                        reset_render_buffer(&manager->framebuffer_swapchain);
+                        reset_wavefront_process_async(manager, &wavefront_buffer);
+                        manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(manager->stage.color_settings);
+                        break;
+                    }
+
+                    case MAGIK_COMMAND_UPDATE_POLICY_REBUILD_TLAS:
+                    {
+                        break;
+                    }
+
+                    case MAGIK_COMMAND_UPDATE_POLICY_REBUILD_BLAS:
+                    {
+                        break;
+                    }
+
+                    case MAGIK_COMMAND_UPDATE_POLICY_REALLOC_WAVEFRONT_BUFFER:
+                    {
+                        // realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.color_settings.n_isi_bin, manager->stage.optical_system_settings.x_resolution, manager->stage.optical_system_settings.y_resolution, manager->stage.render_settings.n_geodesic_step_limit);
+                        break;
+                    }
+
+                    case MAGIK_COMMAND_UPDATE_POLICY_REALLOC_ALL:
+                    {
+                        break;
+                    }
+                }
+
+                manager->update_policy = MAGIK_COMMAND_UPDATE_POLICY_NONE;
+            }
+
             if(result)
             {
                 manager->is_running.store(false, std::memory_order_release);
@@ -104,14 +152,6 @@ namespace magik
             }
 
             // Rendering stage
-            if(manager->framebuffer_swapchain.clear_render_buffer)
-            {
-                reset_render_buffer(&manager->framebuffer_swapchain);
-                reset_wavefront_process_async(manager, &wavefront_buffer);
-                manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(manager->stage.color_settings);
-                manager->framebuffer_swapchain.clear_render_buffer = false;
-            }
-
             auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test");
             if(tmp_element != manager->framebuffer_swapchain.render_framebuffer.collection.end())
             {

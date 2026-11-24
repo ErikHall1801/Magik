@@ -1,5 +1,5 @@
 #include "command.h"
-#include "renderer.h"
+#include "renderer.h" 
 #include <string> // ???
 #include <array>
 #include <cmath>
@@ -290,7 +290,7 @@ namespace magik
         (
             [](magik_render_manager_t mgr, const magik_command_set_n_intrinsic_spectral_irradiance_bin_t& cmd)
             {
-                if(isnan(cmd.n_isi_bin) || isinf(cmd.n_isi_bin) || (cmd.n_isi_bin < 64) || (cmd.n_isi_bin == 0)) return warning(MAGIK_ERROR_INVALID_BIN_COUNT);
+                if(isnan(cmd.n_isi_bin) || isinf(cmd.n_isi_bin) || (cmd.n_isi_bin > 64) || (cmd.n_isi_bin == 0)) return warning(MAGIK_ERROR_INVALID_BIN_COUNT);
                 mgr->stage.color_settings.n_isi_bin = cmd.n_isi_bin;
                 return ok();
             }
@@ -573,7 +573,7 @@ namespace magik
 
                 if(r.severity == e_magik_severity_types::MAGIK_RESULT_SEVERITY_NONE || r.severity == e_magik_severity_types::MAGIK_RESULT_SEVERITY_WARNING)
                 {
-                    pending = static_cast<e_magik_command_update_policy >(static_cast<uint32_t>(pending) | static_cast<uint32_t>(r.severity));
+                    pending = static_cast<e_magik_command_update_policy >(static_cast<uint32_t>(pending) | static_cast<uint32_t>(entry->update_policy));
                 }
                 else
                 {
@@ -586,7 +586,7 @@ namespace magik
         }
 
         command_buffer->n_occupied_chunk = 0;
-        manager->update_policy = static_cast<e_magik_command_update_policy >(static_cast<uint32_t>(manager->update_policy) | static_cast<uint32_t>(pending));
+        manager->update_policy = pending; // static_cast<e_magik_command_update_policy >(static_cast<uint32_t>(manager->update_policy) | static_cast<uint32_t>(pending));
         return MAGIK_SUCCESS;
     }
 
