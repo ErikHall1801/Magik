@@ -1,7 +1,6 @@
 #pragma once
 
 #include "magik.h"
-#include "magik_error.h"
 #include "internal_memory.h"
 #include "opengl_interop.cuh"
 

@@ -56,7 +56,6 @@ add_library(magik SHARED
         # cuda
 
         # error
-        src/utility/error/magik_error.cpp
 
         # math
 

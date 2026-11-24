@@ -1,24 +1,13 @@
 #pragma once
 
 #include "magik.h"
-#include "magik_error.h"
+#include "internal_error.h"
 
 #include <atomic>
 #include <memory>
 
 namespace magik
 {
-    typedef enum e_magik_command_update_policy : uint32_t // The idea, obviously, is that each successive policy does the work the lower ones as well 
-    {
-        MAGIK_COMMAND_UPDATE_POLICY_NONE = 0u,
-        MAGIK_COMMAND_UPDATE_POLICY_RESET_ISI = 1u,
-        MAGIK_COMMAND_UPDATE_POLICY_REBUILD_COLOR_PIPELINE = 2u,
-        MAGIK_COMMAND_UPDATE_POLICY_REBUILD_TLAS = 3u,
-        MAGIK_COMMAND_UPDATE_POLICY_REBUILD_BLAS = 4u,
-        MAGIK_COMMAND_UPDATE_POLICY_REALLOC_WAVEFRONT_BUFFER = 5u,
-        MAGIK_COMMAND_UPDATE_POLICY_REALLOC_ALL = 6u
-    } e_magik_command_update_policy;
-
     struct command_result_t
     {
         e_magik_result_severity_types severity = MAGIK_RESULT_SEVERITY_NONE;
@@ -29,7 +18,7 @@ namespace magik
     {
         uint32_t id;
         uint32_t size;
-        e_magik_command_update_policy update_policy;
+        e_magik_command_update_policy_types update_policy;
         command_result_t (*apply)(magik_render_manager_t, const void*);
     };
 

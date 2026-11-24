@@ -12,7 +12,7 @@ namespace magik
 
     template<typename F, typename P> struct command_traits_t<command_result_t (F::*)(magik_render_manager_t, const P&) const> { using payload_t = P; };
 
-    template<e_magik_cqs_command_types cmd_id, e_magik_command_update_policy update_policy, typename F> consteval command_element_t command(F)
+    template<e_magik_cqs_command_types cmd_id, e_magik_command_update_policy_types update_policy, typename F> consteval command_element_t command(F)
     {
         using P = typename command_traits_t<decltype(&F::operator())>::payload_t;
 
@@ -554,7 +554,7 @@ namespace magik
         size_t playhead_offset = 0;
 
         e_magik_result_types status = MAGIK_SUCCESS;
-        e_magik_command_update_policy pending = e_magik_command_update_policy::MAGIK_COMMAND_UPDATE_POLICY_NONE;
+        e_magik_command_update_policy_types pending = MAGIK_COMMAND_UPDATE_POLICY_NONE;
 
         while(command_buffer_occupancy > playhead_offset)
         {
@@ -573,7 +573,7 @@ namespace magik
 
                 if(r.severity == e_magik_severity_types::MAGIK_RESULT_SEVERITY_NONE || r.severity == e_magik_severity_types::MAGIK_RESULT_SEVERITY_WARNING)
                 {
-                    pending = static_cast<e_magik_command_update_policy >(static_cast<uint32_t>(pending) | static_cast<uint32_t>(entry->update_policy));
+                    pending = static_cast<e_magik_command_update_policy_types>(static_cast<uint32_t>(pending) | static_cast<uint32_t>(entry->update_policy));
                 }
                 else
                 {

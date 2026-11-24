@@ -1,7 +1,5 @@
 #pragma once
 
-#include "magik_error.h"
-
 #include <stdint.h>
 
 namespace magik
