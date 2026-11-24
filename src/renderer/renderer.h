@@ -31,6 +31,8 @@ struct magik_render_manager
 
     magik::color_pipeline_descriptor_t color_pipeline_descriptor;
 
+    magik::e_magik_command_update_policy update_policy = magik::e_magik_command_update_policy::MAGIK_COMMAND_UPDATE_POLICY_NONE;
+
     std::atomic<uint32_t> x_sample = 0;
 };
 

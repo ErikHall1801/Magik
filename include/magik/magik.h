@@ -35,7 +35,23 @@ extern "C" {
 /**
 * [SECTION] Error handling & result types
 */
-typedef enum e_magik_result_types
+typedef enum e_magik_result_severity_types
+{
+    MAGIK_RESULT_SEVERITY_NONE = 0,
+    MAGIK_RESULT_SEVERITY_WARNING = 1,
+    MAGIK_RESULT_SEVERITY_FATAL = 2
+
+} e_magik_severity_types;
+
+typedef enum e_magik_manager_status_types
+{
+    MAGIK_STATUS_0 = 0, // Nominal - Internally, everything is fine
+    MAGIK_STATUS_1 = 1, // Suspended - Such as bad allocs 
+    MAGIK_STATUS_2 = 2, // Rebuild - Such as the CUDA device being dropped
+    MAGIK_STATUS_3 = 3  // Irrecoverable - God have mercy 
+} e_magik_manager_status_types;
+
+typedef enum e_magik_result_types // Rename to MAGIK_RESULT_ We also need to cull these down. 
 {
     MAGIK_SUCCESS = 0, // The operation was successful
 
@@ -64,6 +80,7 @@ typedef enum e_magik_result_types
     MAGIK_ERROR_COMMAND_BUFFER_ALLOCATION_FAILED = 406,
     MAGIK_ERROR_COMMAND_SIZE_NOT_A_MULTIPLE_OF_4 = 407,
     MAGIK_ERROR_OUT_OF_BOUNDS_COMMAND_BUFFER_READ = 408,
+    MAGIK_ERROR_COMMAND_SIZE_MISMATCH = 409,
 
     // General rendering 500 - 599
     MAGIK_ERROR_NEGATIVE_WAVELENGTH = 500,
@@ -82,6 +99,15 @@ typedef enum e_magik_result_types
     MAGIK_ERROR_INCORRECT_PHOTON_NORM_FOUR_VECTOR = 705,
     MAGIK_ERROR_INCORRECT_PARTICLE_NORM_FOUR_VECTOR = 706,
     MAGIK_ERROR_UNKNOWN_METRIC = 707,
+    MAGIK_ERROR_ABSOLUTE_TOLERANCE_LESS_THAN_ZERO = 708,
+    MAGIK_ERROR_RELATIVE_TOLERANCE_LESS_THAN_ZERO = 709,
+    MAGIK_ERROR_INSUFFICIENT_SUBSTEPS = 710,
+    MAGIK_ERROR_INVALID_PROPER_LOCAL_VELOCITY = 711,
+    MAGIK_ERROR_INVALID_CELESTIAL_SPHERE_RADIUS = 712,
+    MAGIK_ERROR_INVALID_HORIZON_SCALAR = 713,
+    MAGIK_ERROR_INVALID_METRIC_PARAMETER = 714,
+    MAGIK_ERROR_INVALID_OBSERVER_POSITION = 715,
+    MAGIK_ERROR_INVALID_OBSERVER_ORIENTATION = 716,
 
     // Lens simulation 800 - 899
     MAGIK_ERROR_LENSLETS_OUT_OF_ORDER = 801,
@@ -101,9 +127,11 @@ typedef enum e_magik_result_types
 
     // Color 1100 - 1199
     MAGIK_ERROR_UNKNOWN_COLOR_MATCHING_FUNCTION = 1100,
+    MAGIK_ERROR_INVALID_BIN_COUNT = 1101,
 
     // General 10000 - 10099
     MAGIK_ERROR_UNKNOWN = 10000,
+    MAGIK_ERROR_INVALID_VALUE_RANGE = 10001,
 
     // Prohibited
     MAGIK_PROHIBITED_FORCE_SIZE = 0x7FFFFFFF // Internal use only. Forces the C compiler to use uint32_t
@@ -266,13 +294,13 @@ typedef enum e_magik_manager_display_types
 */
 typedef struct magik_manager_descriptor_t
 {
-    e_magik_manager_display_types display_type = MAGIK_DISPLAY_SWAPCHAIN;
+    e_magik_manager_display_types display_type;
 
-    uint32_t user_device_id = 0;
-    void* user_stream = nullptr;
+    uint32_t user_device_id;
+    void* user_stream;
 
-    uint32_t cqs_n_reserved_chunk = 4096;
-    bool cqs_drop_overflow = false;
+    uint32_t cqs_n_reserved_chunk;
+    bool cqs_drop_overflow;
 
 } magik_manager_descriptor_t;
 
@@ -389,28 +417,28 @@ typedef enum e_magik_output_format_types
 typedef struct magik_renderer_statistics_t
 {
     // Sample 
-    size_t x_sample = 0;
+    size_t x_sample;
 
     // Render loop timings
-    double total_render_time_seconds = 0.0;
-    double latest_render_loop_iteration_time_seconds = 0.0;
+    double total_render_time_seconds;
+    double latest_render_loop_iteration_time_seconds;
 
     // Wavefront sample timings
-    double total_wavefront_sample_time_seconds = 0.0;
-    double latest_wavefront_sample_time_seconds = 0.0;
+    double total_wavefront_sample_time_seconds;
+    double latest_wavefront_sample_time_seconds;
 
     // Wavefront queue
-    size_t latest_wavefront_history_length = 0;
-    uint32_t* h_latest_advance_A_queue_count_history = nullptr;
-    uint32_t* h_latest_advance_B_queue_count_history = nullptr;
-    uint32_t* h_latest_intersect_queue_count_history = nullptr;
-    uint32_t* h_latest_bxdf_queue_count_history = nullptr;
-    uint32_t* h_latest_redistribute_queue_count_history = nullptr;
-    uint32_t* h_latest_splat_queue_count_history = nullptr;
+    size_t latest_wavefront_history_length;
+    uint32_t* h_latest_advance_A_queue_count_history;
+    uint32_t* h_latest_advance_B_queue_count_history;
+    uint32_t* h_latest_intersect_queue_count_history;
+    uint32_t* h_latest_bxdf_queue_count_history;
+    uint32_t* h_latest_redistribute_queue_count_history;
+    uint32_t* h_latest_splat_queue_count_history;
 
     // Memory usage
-    size_t total_framebuffer_swapchain_size = 0;
-    size_t total_wavefront_buffer_size = 0;
+    size_t total_framebuffer_swapchain_size;
+    size_t total_wavefront_buffer_size;
 } magik_renderer_statistics_t;
 
 /**
@@ -490,11 +518,11 @@ MAGIK_API e_magik_result_types magik_framebuffer_collection_fetch(magik_render_m
 */
 typedef struct magik_framebuffer_container_config_host_t
 {
-    uint32_t x_resolution = 0;
-    uint32_t y_resolution = 0;
-    uint32_t channels = 0;
-    size_t size_of_data = 0;
-    float* h_data = nullptr;
+    uint32_t x_resolution;
+    uint32_t y_resolution;
+    uint32_t channels;
+    size_t size_of_data;
+    float* h_data;
 } magik_framebuffer_container_config_host_t;
 
 /**
@@ -528,10 +556,10 @@ MAGIK_API e_magik_result_types magik_extract_config_cuda(magik_framebuffer_conta
 */
 typedef struct magik_framebuffer_container_config_opengl_interop_t
 {
-    uint32_t x_resolution = 0;
-    uint32_t y_resolution = 0;
-    uint32_t channels = 0;
-    uint32_t gl_buffer_id = 0;
+    uint32_t x_resolution;
+    uint32_t y_resolution;
+    uint32_t channels;
+    uint32_t gl_buffer_id;
     void* cuda_resources = nullptr; // true type is cudaGraphicsResource_t
 } magik_framebuffer_container_config_opengl_interop_t;
 
@@ -937,36 +965,42 @@ typedef enum e_magik_cqs_command_types
 * throughout the API. 
 */
 
+typedef struct MAGIK_ALIGN4 magik_command_header_t
+{
+    uint32_t type;
+    uint32_t size; // Size of the whole struct, including the header
+} magik_command_header_t;
+
 // ##################################
 // ### 1000-1999 Basic operations ###
 // ##################################
 typedef struct MAGIK_ALIGN4 magik_command_set_state_render_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_STATE_RENDER;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_STATE_RENDER;
 } magik_command_set_state_render_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_state_pause_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_STATE_PAUSE;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_STATE_PAUSE;
 } magik_command_set_state_pause_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_clear_render_buffer_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_CLEAR_RENDER_BUFFER;
+    magik_command_header_t header; // MAGIK_COMMAND_CLEAR_RENDER_BUFFER;
 } magik_command_clear_render_buffer_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_add_aov_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_ADD_AOV;
-    uint32_t length_of_name = 0;
+    magik_command_header_t header; // MAGIK_COMMAND_ADD_AOV;
+    uint32_t length_of_name;
     char name[512];
-    uint32_t channels = 0;
+    uint32_t channels;
 } magik_command_add_aov_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_remove_aov_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_REMOVE_AOV;
-    uint32_t length_of_name = 0;
+    magik_command_header_t header; // MAGIK_COMMAND_REMOVE_AOV;
+    uint32_t length_of_name;
     char name[512];
 } magik_command_remove_aov_t;
 
@@ -977,8 +1011,8 @@ typedef struct MAGIK_ALIGN4 magik_command_remove_aov_t
 // ################################
 typedef struct MAGIK_ALIGN4 magik_command_printf_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_PRINTF;
-    uint32_t length_of_text = 0;
+    magik_command_header_t header; // MAGIK_COMMAND_PRINTF;
+    uint32_t length_of_text;
     char text[512];
 } magik_command_printf_t;
 
@@ -995,40 +1029,40 @@ typedef struct MAGIK_ALIGN4 magik_command_printf_t
 // ############################
 typedef struct MAGIK_ALIGN4 magik_command_set_metric_minkowski_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_MINKOWSKI;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_METRIC_MINKOWSKI;
 } magik_command_set_metric_minkowski_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_metric_schwarzschild_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_METRIC_SCHWARZSCHILD;
 } magik_command_set_metric_schwarzschild_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_metric_kerr_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_METRIC_KERR;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_METRIC_KERR;
 } magik_command_set_metric_kerr_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_absolute_error_tolerance_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_ABSOLUTE_ERROR_TOLERANCE;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_ABSOLUTE_ERROR_TOLERANCE;
     float absolute_error_tolerance; // 1e-3f
 } magik_command_set_absolute_error_tolerance_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_relative_error_tolerance_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_RELATIVE_ERROR_TOLERANCE;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_RELATIVE_ERROR_TOLERANCE;
     float relative_error_tolerance; // 1e-10f
 } magik_command_set_relative_error_tolerance_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_max_substeps_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_MAX_SUBSTEPS;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_MAX_SUBSTEPS;
     uint32_t max_substeps; // 56
 } magik_command_set_max_substeps_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_observer_local_proper_velocity_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_OBSERVER_LOCAL_PROPER_VELOCITY;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_OBSERVER_LOCAL_PROPER_VELOCITY;
     float velocity_x;
     float velocity_y;
     float velocity_z;
@@ -1036,37 +1070,37 @@ typedef struct MAGIK_ALIGN4 magik_command_set_observer_local_proper_velocity_t
 
 typedef struct MAGIK_ALIGN4 magik_command_set_celestial_sphere_radius_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CELESTIAL_SPHERE_RADIUS;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_CELESTIAL_SPHERE_RADIUS;
     float celestial_sphere_radius;
 } magik_command_set_celestial_sphere_radius_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_schwarzschild_event_horizon_scalar_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SCHWARZSCHILD_EVENT_HORIZON_SCALAR;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_SCHWARZSCHILD_EVENT_HORIZON_SCALAR;
     float scalar;
 } magik_command_set_schwarzschild_event_horizon_scalar_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_schwarzschild_mass_parameter_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS_PARAMETER;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_SCHWARZSCHILD_MASS_PARAMETER;
     float mass_parameter; // 6.7329546075E26f
 } magik_command_set_schwarzschild_mass_parameter_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_kerr_event_horizon_scalar_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_EVENT_HORIZON_SCALAR;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_KERR_EVENT_HORIZON_SCALAR;
     float scalar;
 } magik_command_set_kerr_event_horizon_scalar_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_kerr_mass_parameter_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_MASS_PARAMETER;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_KERR_MASS_PARAMETER;
     float mass_parameter; // 6.7329546075E26f
 } magik_command_set_kerr_mass_parameter_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_kerr_dimensionless_spin_parameter_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_KERR_DIMENSIONLESS_SPIN_PARAMETER;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_KERR_DIMENSIONLESS_SPIN_PARAMETER;
     float dimensionless_spin_parameter; // 0.999f
 } magik_command_set_kerr_dimensionless_spin_parameter_t;
 
@@ -1077,13 +1111,13 @@ typedef struct MAGIK_ALIGN4 magik_command_set_kerr_dimensionless_spin_parameter_
 // ########################
 typedef struct MAGIK_ALIGN4 magik_command_set_active_camera_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_ACTIVE_CAMERA;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_ACTIVE_CAMERA;
     uint32_t id = 0;
 } magik_command_set_active_camera_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_camera_position_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_POSITION;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_CAMERA_POSITION;
     uint32_t id = 0;
     float position_x = 0.0f;
     float position_y = 0.0f;
@@ -1092,7 +1126,7 @@ typedef struct MAGIK_ALIGN4 magik_command_set_camera_position_t
 
 typedef struct MAGIK_ALIGN4 magik_command_set_camera_orientation_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_ORIENTATION;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_CAMERA_ORIENTATION;
     uint32_t id = 0;
     float rotation_x = 0.0f;
     float rotation_y = 0.0f;
@@ -1101,7 +1135,7 @@ typedef struct MAGIK_ALIGN4 magik_command_set_camera_orientation_t
 
 typedef struct MAGIK_ALIGN4 magik_command_set_camera_resolution_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_CAMERA_RESOLUTION;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_CAMERA_RESOLUTION;
     uint32_t x_resolution = 2;
     uint32_t y_resolution = 2;
 } magik_command_set_camera_resolution_t;
@@ -1113,115 +1147,115 @@ typedef struct MAGIK_ALIGN4 magik_command_set_camera_resolution_t
 // #######################
 typedef struct MAGIK_ALIGN4 magik_command_set_n_intrinsic_spectral_irradiance_bin_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_N_INTRINSIC_SPECTRAL_IRRADIANCE_BIN;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_N_INTRINSIC_SPECTRAL_IRRADIANCE_BIN;
     uint32_t n_isi_bin; // 24
 } magik_command_set_n_intrinsic_spectral_irradiance_bin_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_sample_domain_maximum_wavelength_nm_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MAXIMUM_WAVELENGTH_NM;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MAXIMUM_WAVELENGTH_NM;
     float maximum_wavelength_nm; // 830.0f
 } magik_command_set_sample_domain_maximum_wavelength_nm_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_sample_domain_minimum_wavelength_nm_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MINIMUM_WAVELENGTH_NM;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_SAMPLE_DOMAIN_MINIMUM_WAVELENGTH_NM;
     float minimum_wavelength_nm; // 380.0f
 } magik_command_set_sample_domain_minimum_wavelength_nm_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_redistribution_standard_deviation_nm_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_REDISTRIBUTION_STANDARD_DEVIATION_NM;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_REDISTRIBUTION_STANDARD_DEVIATION_NM;
     float standard_deviation_nm; // 10.0f
 } magik_command_set_redistribution_standard_deviation_nm_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_color_matching_function_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_COLOR_MATCHING_FUNCTION;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_COLOR_MATCHING_FUNCTION;
     e_magik_color_matching_function_types cmf_type; // CIE 1931
 } magik_command_set_color_matching_function_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_scene_colorspace_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_SCENE_COLORSPACE;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_SCENE_COLORSPACE;
     e_magik_scene_colorspace_types scene_colorspace;
 } magik_command_set_scene_colorspace_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_VIEW_TRANSFORM;
     e_magik_view_transform_types view_transform;
 } magik_command_set_view_transform_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_display_colorspace_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_DISPLAY_COLORSPACE;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_DISPLAY_COLORSPACE;
     e_magik_display_colorspace_types display_colorspace;
 } magik_command_set_display_colorspace_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_output_format_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_OUTPUT_FORMAT;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_OUTPUT_FORMAT;
     e_magik_output_format_types output_format;
 } magik_command_set_output_format_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_white_balance_white_point_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_WHITE_BALANCE_WHITE_POINT;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_WHITE_BALANCE_WHITE_POINT;
     float white_point_kelvin;
 } magik_command_set_white_balance_white_point_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_white_balance_tint_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_WHITE_BALANCE_TINT;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_WHITE_BALANCE_TINT;
     float tint;
 } magik_command_set_white_balance_tint_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_reinhard_extended_white_luminance_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_REINHARD_EXTENDED_WHITE_LUMINANCE;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_VIEW_TRANSFORM_REINHARD_EXTENDED_WHITE_LUMINANCE;
     float white_luminance;
 } magik_command_set_view_transform_reinhard_extended_white_luminance_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_khronos_pbr_neutral_start_compression_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_START_COMPRESSION;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_START_COMPRESSION;
     float start_compression;
 } magik_command_set_view_transform_khronos_pbr_neutral_start_compression_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_khronos_pbr_neutral_desaturation_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_DESATURATION;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_VIEW_TRANSFORM_KHRONOS_PBR_NEUTRAL_DESATURATION;
     float desaturation;
 } magik_command_set_view_transform_khronos_pbr_neutral_desaturation_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_gt7_mode_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_MODE;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_MODE;
     e_magik_gran_turismo_7_mode_types mode;
 } magik_command_set_view_transform_gt7_mode_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_gt7_sdr_paper_white_balance_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_SDR_PAPER_WHITE_BALANCE;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_SDR_PAPER_WHITE_BALANCE;
     float sdr_paper_white_balance;
 } magik_command_set_view_transform_gt7_sdr_paper_white_balance_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_gt7_reference_luminance_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_REFERENCE_LUMINANCE;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_REFERENCE_LUMINANCE;
     float reference_luminance;
 } magik_command_set_view_transform_gt7_reference_luminance_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_gt7_jzazbz_exponent_scale_factor_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_JZAZBZ_EXPONENT_SCALE_FACTOR;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_VIEW_TRANSFORM_GT7_JZAZBZ_EXPONENT_SCALE_FACTOR;
     float jzazbz_exponent_scale_factor;
 } magik_command_set_view_transform_gt7_jzazbz_exponent_scale_factor_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_agx_look_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_VIEW_TRANSFORM_AGX_LOOK;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_VIEW_TRANSFORM_AGX_LOOK;
     e_magik_agx_look_types look;
 } magik_command_set_view_transform_agx_look_t;
 
@@ -1232,13 +1266,13 @@ typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_agx_look_t
 // ########################
 typedef struct MAGIK_ALIGN4 magik_command_set_n_geodesic_step_limit_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_N_GEODESIC_STEP_LIMIT;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_N_GEODESIC_STEP_LIMIT;
     uint32_t n_geodesic_step_limit;
 } magik_command_set_n_geodesic_step_limit_t;
 
 typedef struct MAGIK_ALIGN4 magik_command_set_n_reflected_limit_t
 {
-    const e_magik_cqs_command_types embedded_type = MAGIK_COMMAND_SET_N_REFLECTED_LIMIT;
+    magik_command_header_t header; // MAGIK_COMMAND_SET_N_REFLECTED_LIMIT;
     uint32_t n_reflected_limit;
 } magik_command_set_n_reflected_limit_t;
 
