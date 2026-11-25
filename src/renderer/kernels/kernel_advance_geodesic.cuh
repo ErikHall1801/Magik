@@ -3,6 +3,7 @@
 #include <cstdint>
 #include "internal_math.h"
 #include "wavefront.h"
+#include "stage.h"
 
 namespace magik
 {

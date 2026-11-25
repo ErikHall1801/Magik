@@ -1,5 +1,6 @@
 #pragma once
 
+#include "internal_error.h"
 #include <stdint.h>
 
 namespace magik

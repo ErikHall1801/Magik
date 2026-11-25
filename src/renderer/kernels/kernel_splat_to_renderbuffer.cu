@@ -2,7 +2,7 @@
 #include "cuda_device_utilities.cuh"
 #include "cuda_host_utilities.h"
 #include "device_color_utilities.cuh"
-#include "color_pipeline.cuh"
+#include "color_pipeline.h"
 #include "color_settings.h"
 #include "render_settings.h"
 

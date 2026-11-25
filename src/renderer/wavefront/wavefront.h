@@ -4,6 +4,7 @@
 #include "ray.h"
 #include "device_arena.h"
 #include "color_pipeline.h" 
+#include "stage.h"
 
 namespace magik
 {

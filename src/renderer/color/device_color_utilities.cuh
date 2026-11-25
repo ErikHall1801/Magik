@@ -2,7 +2,7 @@
 
 #include "internal_math.h"
 #include <curand_kernel.h>
-#include "color_pipeline.cuh"
+#include "color_pipeline.h"
 
 namespace magik
 {

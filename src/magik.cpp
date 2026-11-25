@@ -195,4 +195,5 @@ MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t man
 MAGIK_API e_magik_result_types magik_cqs_dispatch_command_buffer(magik_render_manager_t manager, bool* is_dispatched)
 {
     *is_dispatched = magik::dispatch_command_buffer(manager->command_swpachain);
+    return MAGIK_SUCCESS;
 }
