@@ -1,185 +1,142 @@
 #include "renderer.h"
-#include "wavefront.h"
 
 namespace magik
 {
-    static e_magik_result_types initalize_manager(magik_render_manager* manager)
+    struct initialize_t
     {
-        e_magik_result_types result = MAGIK_SUCCESS;
+        uint32_t* cuda_device;
+        void** cuda_stream;
+        bool* owns_stream;
+        std::atomic<bool>* is_running;
+        size_t* total_iterations;
+        e_magik_manager_status_types* status;
+        e_magik_result_types* status_reason;
+        e_magik_manager_status_types* initial_status;
 
-        magik::set_cuda_device(manager->cuda_device);
-
-        if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
+        static MAGIK_HOST initialize_t create(magik_render_manager* manager)
         {
-            result = magik::initialize_framebuffer_swapchain(&manager->framebuffer_swapchain);
-            if(result) return result;
+            initialize_t result;
+
+            result.cuda_device = &manager->cuda_device;
+            result.cuda_stream = &manager->cuda_stream;
+            result.owns_stream = &manager->owns_stream;
+            result.is_running = &manager->is_running;
+            result.total_iterations = &manager->total_iterations;
+            result.status = &manager->status;
+            result.status_reason = &manager->status_reason;
+            result.initial_status = &manager->initial_status;
+
+            return result;
+        }
+    };
+
+    static MAGIK_HOST void initialize(initialize_t args)
+    {
+        set_cuda_device(*args.cuda_device);
+
+        if(!*args.owns_stream)
+        {
+            *args.owns_stream = true;
+            create_cuda_stream(args.cuda_stream);
         }
 
-        manager->is_running.store(true, std::memory_order_release);
+        *args.total_iterations = 0;
 
-        return MAGIK_SUCCESS;
+        *args.status = MAGIK_STATUS_0;
+        *args.status_reason = MAGIK_SUCCESS;
+        *args.initial_status = MAGIK_STATUS_0;
+
+        *args.is_running = true;
+    }
+
+    struct process_command_buffers_t
+    {
+        e_magik_manager_status_types& mgr_status;
+        e_magik_result_types& mgr_status_reason;
+        command_swapchain_t& mgr_command_swpachain;
+        framebuffer_swapchain_t& mgr_framebuffer_swapchain;
+        stage_t& mgr_stage;
+
+        static MAGIK_HOST process_command_buffers_t create(magik_render_manager* manager)
+        {
+            process_command_buffers_t result{manager->status, manager->status_reason, manager->command_swpachain, manager->framebuffer_swapchain, manager->stage};
+            return result;
+        }
+    };
+
+    static MAGIK_HOST void process_command_buffers(process_command_buffers_t args)
+    {
+        command_context_t ctx{args.mgr_status, args.mgr_status_reason, args.mgr_command_swpachain, args.mgr_framebuffer_swapchain, args.mgr_stage};
+        consume_back_command_buffer(ctx);
+    }
+
+    struct apply_update_policy_t
+    {
+        static MAGIK_HOST apply_update_policy_t create(magik_render_manager* manager)
+        {
+
+        }
+    };
+
+    static MAGIK_HOST void apply_update_policy(apply_update_policy_t args)
+    {
+
+    }
+
+    struct compute_wavefront_sample_t
+    {
+        static MAGIK_HOST compute_wavefront_sample_t create(magik_render_manager* manager)
+        {
+
+        }
+    };
+
+    static MAGIK_HOST void compute_wavefront_sample(compute_wavefront_sample_t args)
+    {
+
+    }
+
+    struct present_renderbuffer_t
+    {
+        static MAGIK_HOST present_renderbuffer_t create(magik_render_manager* manager)
+        {
+
+        }
+    };
+
+    static MAGIK_HOST void present_renderbuffer(present_renderbuffer_t args)
+    {
+
+    }
+
+    struct release_t
+    {
+        static MAGIK_HOST release_t create(magik_render_manager* manager)
+        {
+
+        }
+    };
+
+    static MAGIK_HOST void release(release_t args)
+    {
+
     }
 
     void run(magik_render_manager* manager)
     {
-        // A lot of this logic is more than suspect. 
-        // The error callback needs to be part of the manager ??? 
-        // Some of these names need to be modified. 
+        initialize(initialize_t::create(manager));
 
-        e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_SUCCESS;
-
-        size_t iteration = 0;
-
-        // Timing stage
-        auto iteration_start_time = std::chrono::steady_clock::now();
-        auto iteration_end_time = std::chrono::steady_clock::now();
-
-        bool is_dirty = false; // What is dirty ? 
-
-        // Init stage
-        result = initalize_manager(manager);
-        if(result)
+        while(manager->is_nominal())
         {
-            manager->is_running.store(false, std::memory_order_release);
-            manager->atomic_last_error_type.compare_exchange_strong(expected, result);
+            process_command_buffers(process_command_buffers_t::create(manager));
+
+            apply_update_policy(apply_update_policy_t::create(manager));
+
+            compute_wavefront_sample(compute_wavefront_sample_t::create(manager));
+
+            present_renderbuffer(present_renderbuffer_t::create(manager));
         }
 
-        // Wavefront initalization stage
-        wavefront_buffer_t wavefront_buffer;
-
-        manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(manager->stage.color_settings);
-
-        // Render stage
-        while(manager->is_running.load(std::memory_order_relaxed))
-        {
-            iteration_start_time = std::chrono::steady_clock::now();
-
-            // Command stage
-            result = magik::consume_back_command_buffer(manager);
-
-            {
-                switch(manager->update_policy)
-                {
-                    case MAGIK_COMMAND_UPDATE_POLICY_NONE:
-                    {
-                        break;
-                    }
-
-                    case MAGIK_COMMAND_UPDATE_POLICY_RESET_ISI:
-                    {
-                        // reset_render_buffer(&manager->framebuffer_swapchain);
-                        reset_wavefront_process_async(manager, &wavefront_buffer);
-                        break;
-                    }
-
-                    case MAGIK_COMMAND_UPDATE_POLICY_REBUILD_COLOR_PIPELINE:
-                    {
-                        reset_render_buffer(&manager->framebuffer_swapchain);
-                        reset_wavefront_process_async(manager, &wavefront_buffer);
-                        manager->color_pipeline_descriptor = manager->color_pipeline_descriptor.create(manager->stage.color_settings);
-                        break;
-                    }
-
-                    case MAGIK_COMMAND_UPDATE_POLICY_REBUILD_TLAS:
-                    {
-                        break;
-                    }
-
-                    case MAGIK_COMMAND_UPDATE_POLICY_REBUILD_BLAS:
-                    {
-                        break;
-                    }
-
-                    case MAGIK_COMMAND_UPDATE_POLICY_REALLOC_WAVEFRONT_BUFFER:
-                    {
-                        // realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.color_settings.n_isi_bin, manager->stage.optical_system_settings.x_resolution, manager->stage.optical_system_settings.y_resolution, manager->stage.render_settings.n_geodesic_step_limit);
-                        break;
-                    }
-
-                    case MAGIK_COMMAND_UPDATE_POLICY_REALLOC_ALL:
-                    {
-                        break;
-                    }
-                }
-
-                manager->update_policy = MAGIK_COMMAND_UPDATE_POLICY_NONE;
-            }
-
-            if(result)
-            {
-                manager->is_running.store(false, std::memory_order_release);
-                manager->atomic_last_error_type.compare_exchange_strong(expected, result);
-                return;
-            }
-
-            // Framebuffer stage
-            // Why is this not a member function ????
-            result = allocate_render_framebuffer_swapchain(&manager->framebuffer_swapchain, &is_dirty, manager->stage.optical_system_settings.x_resolution, manager->stage.optical_system_settings.y_resolution);
-
-            // Wavefront realloc
-            // Why is this not a member function ? 
-            realloc_wavefront_buffer(static_cast<cudaStream_t>(manager->cuda_stream), &wavefront_buffer, manager->stage.color_settings.n_isi_bin, manager->stage.optical_system_settings.x_resolution, manager->stage.optical_system_settings.y_resolution, manager->stage.render_settings.n_geodesic_step_limit);
-
-            if(result)
-            {
-                manager->is_running.store(false, std::memory_order_release);
-                manager->atomic_last_error_type.compare_exchange_strong(expected, result);
-                return;
-            }
-
-            if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN && !is_dirty)
-            {
-                result = magik::memcpy_render_to_back_framebuffer(&manager->framebuffer_swapchain);
-
-                if(result)
-                {
-                    manager->is_running.store(false, std::memory_order_release);
-                    manager->atomic_last_error_type.compare_exchange_strong(expected, result);
-                    return;
-                }
-            }
-
-            if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
-            {
-                result = swap_back_framebuffer(&manager->framebuffer_swapchain);
-
-                if(result)
-                {
-                    manager->is_running.store(false, std::memory_order_release);
-                    manager->atomic_last_error_type.compare_exchange_strong(expected, result);
-                    return;
-                }
-            }
-
-            // Rendering stage
-            auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test");
-            if(tmp_element != manager->framebuffer_swapchain.render_framebuffer.collection.end())
-            {
-                wavefront_sample(manager, &wavefront_buffer);
-            }
-            else
-            {
-                using namespace std::chrono_literals;
-                std::this_thread::sleep_for(100ms);
-            }
-
-            iteration++;
-            iteration_end_time = std::chrono::steady_clock::now();
-
-            // Update performance statistics "work" buffer, which incldues swapping the buffers. 
-        }
-
-        // Shutdown stage
-        if(manager->display_type == MAGIK_DISPLAY_SWAPCHAIN)
-        {
-            // why is this not a member function ?
-            result = destroy_framebuffer_swpachain(&manager->framebuffer_swapchain);
-            if(result)
-            {
-                manager->atomic_last_error_type.compare_exchange_strong(expected, result);
-            }
-        }
-
-        wavefront_buffer.release_async(static_cast<cudaStream_t>(manager->cuda_stream));
+        release(release_t::create(manager));
     }
 }

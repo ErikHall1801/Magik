@@ -11,29 +11,10 @@
 
 namespace magik
 {
-    void realloc_wavefront_buffer(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t n_bin, uint32_t x_resolution_target, uint32_t y_resolution_target, uint32_t n_geodesic_step_limit)
+    static void is_work_done_sync(bool* working, uint32_t* queue_ceiling, uint32_t* advance_d_count, cudaStream_t user_stream)
     {
-        if(wavefront_buffer->x_resolution == x_resolution_target && wavefront_buffer->y_resolution == y_resolution_target && wavefront_buffer->n_isi_bin == n_bin && wavefront_buffer->n_geodesic_step == n_geodesic_step_limit) return;
-
-        wavefront_buffer->x_resolution = x_resolution_target;
-        wavefront_buffer->y_resolution = y_resolution_target;
-        wavefront_buffer->n_isi_bin = n_bin;
-        wavefront_buffer->n_geodesic_step = n_geodesic_step_limit;
-
-        wavefront_buffer->release_async(static_cast<cudaStream_t>(user_stream));
-
-        wavefront_buffer->allocate_async(user_stream, n_bin, x_resolution_target, y_resolution_target, n_geodesic_step_limit, true);
-
-        launch_kernel_initialize_random_device_async(user_stream, wavefront_buffer, x_resolution_target, y_resolution_target);
-
+        check_cuda_errors(cudaMemcpyAsync(queue_ceiling, advance_d_count, sizeof(uint32_t), cudaMemcpyDeviceToHost, user_stream));
         check_cuda_errors(cudaStreamSynchronize(user_stream));
-        check_cuda_errors(cudaGetLastError());
-    }
-
-    static void is_work_done_sync(bool* working, uint32_t* queue_ceiling, uint32_t* advance_d_count, void** user_stream)
-    {
-        memcpy_device_to_host_async(advance_d_count, queue_ceiling, sizeof(uint32_t), user_stream);
-        // check_cuda_errors(cudaStreamSynchronize(static_cast<cudaStream_t>(*user_stream)));
         check_cuda_errors(cudaGetLastError());
 
         if(*queue_ceiling == 0)
@@ -46,50 +27,107 @@ namespace magik
         }
     }
 
-    void reset_wavefront_process_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
+    static void prepare_wavefront_buffer_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream)
     {
-        wavefront_buffer->ray_pool.memset_async<sensor_wavelength_nm_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<throughput_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<intrinsic_spectral_irradiance_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        wavefront_buffer.queue_pool.reset_all_counts(user_stream);
+        wavefront_buffer.queue_pool.reset_all_count_histories(user_stream, wavefront_buffer.n_geodesic_step_limit);
 
-        manager->x_sample.store(0, std::memory_order_release);
+        wavefront_buffer.ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, 0x0);
+        wavefront_buffer.ray_pool.memset_async<initial_four_vector_contraction_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, 0x0);
+        wavefront_buffer.ray_pool.memset_async<affine_parameter_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, 0x0);
+        wavefront_buffer.ray_pool.memset_async<delta_affine_parameter_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, 0x0);
+        wavefront_buffer.ray_pool.memset_async<n_geodesic_step_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, 0x0);
+        wavefront_buffer.ray_pool.memset_async<n_reflected_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, 0x0);
+
+        wavefront_buffer.queue_pool.set_count_async<advance_A_queue_t>(wavefront_buffer.x_resolution*wavefront_buffer.y_resolution, user_stream);
+        wavefront_buffer.queue_ceiling = wavefront_buffer.x_resolution*wavefront_buffer.y_resolution;
+
+        wavefront_buffer.iteration = 0;
     }
 
-    static void prepair_wavefront_buffer_async(cudaStream_t user_stream, wavefront_buffer_t* wavefront_buffer, uint32_t n_geodesic_step_limit)
+    static void allocate_wavefront_buffer_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream)
     {
-        wavefront_buffer->queue_pool.reset_all_counts(user_stream);
-        wavefront_buffer->queue_pool.reset_all_count_histories(user_stream, n_geodesic_step_limit);
+        auto constexpr align_up = [](size_t x)
+        {
+            return (x+255) & ~(255);
+        };
 
-        wavefront_buffer->ray_pool.memset_async<spectral_radiance_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        wavefront_buffer.ray_pool.set_n_dimension<intrinsic_spectral_irradiance_t>(wavefront_buffer.n_isi_bin);
 
-        wavefront_buffer->ray_pool.memset_async<initial_four_vector_contraction_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<affine_parameter_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<delta_affine_parameter_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        size_t total_size_bytes = 0;
+        total_size_bytes += align_up(wavefront_buffer.queue_pool.total_bytes(wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, wavefront_buffer.n_geodesic_step_limit) + wavefront_buffer.ray_pool.total_bytes(wavefront_buffer.x_resolution, wavefront_buffer.y_resolution));
 
-        wavefront_buffer->ray_pool.memset_async<n_geodesic_step_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
-        wavefront_buffer->ray_pool.memset_async<n_reflected_t>(static_cast<cudaStream_t>(user_stream), wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, 0x0);
+        wavefront_buffer.arena = device_arena_create_async(user_stream, total_size_bytes);
+        wavefront_buffer.queue_pool.assign(&wavefront_buffer.arena, wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, wavefront_buffer.n_geodesic_step_limit);
+        wavefront_buffer.ray_pool.assign(&wavefront_buffer.arena, wavefront_buffer.x_resolution, wavefront_buffer.y_resolution);
 
-        wavefront_buffer->queue_pool.set_count_async<advance_A_queue_t>(wavefront_buffer->x_resolution*wavefront_buffer->y_resolution, user_stream);
-        wavefront_buffer->queue_ceiling = wavefront_buffer->x_resolution*wavefront_buffer->y_resolution;
-
-        wavefront_buffer->iteration = 0;
+        check_cuda_errors(cudaMemsetAsync(wavefront_buffer.arena.d_base, 0x0, total_size_bytes, user_stream));
     }
 
-    void wavefront_sample(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
+    static void reset_wavefront_progress_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, uint32_t& x_sample)
     {
+        wavefront_buffer.ray_pool.memset_async<sensor_wavelength_nm_t>(user_stream, wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, 0x0);
+        wavefront_buffer.ray_pool.memset_async<throughput_t>(user_stream, wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, 0x0);
+        wavefront_buffer.ray_pool.memset_async<spectral_radiance_t>(user_stream, wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, 0x0);
+        wavefront_buffer.ray_pool.memset_async<intrinsic_spectral_irradiance_t>(user_stream, wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, 0x0);
+        x_sample = 0;
+    }
+
+    static void realloc_wavefront_buffer(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, uint32_t& x_sample, uint32_t x_resolution_target, uint32_t y_resolution_target, uint32_t n_isi_bin, uint32_t n_geodesic_step_limit)
+    {
+        wavefront_buffer.x_resolution = x_resolution_target;
+        wavefront_buffer.y_resolution = y_resolution_target;
+        wavefront_buffer.n_isi_bin = n_isi_bin;
+        wavefront_buffer.n_geodesic_step_limit = n_geodesic_step_limit;
+
+        release_wavefront_buffer(&wavefront_buffer.arena, user_stream);
+        allocate_wavefront_buffer_async(wavefront_buffer, user_stream);
+        launch_kernel_initialize_random_device_async(wavefront_buffer, user_stream);
+
+        check_cuda_errors(cudaStreamSynchronize(user_stream));
+        check_cuda_errors(cudaGetLastError());
+
+        x_sample = 0;
+    }
+
+    void update_wavefront_buffer(update_wavefront_buffer_t args)
+    {
+        switch(args.update_policy)
+        {
+            case MAGIK_WAVEFRONT_UPDATE_POLICY_NONE:
+            {
+                break;
+            }
+
+            case MAGIK_WAVEFRONT_UPDATE_POLICY_RESET:
+            {
+                reset_wavefront_progress_async(args.wavefront_buffer, args.user_stream, args.x_sample);
+                break;
+            }
+
+            case MAGIK_WAVEFRONT_UPDATE_POLICY_REALLOC:
+            {
+                realloc_wavefront_buffer(args.wavefront_buffer, args.user_stream, args.x_sample, args.x_resolution_target, args.y_resolution_target, args.n_isi_bin, args.n_geodesic_step_limit);
+                break;
+            }
+        }
+    }
+
+    void wavefront_sample(wavefront_sample_args_t args)
+    {
+        // once this works we will further break the stage up into what each kernel ACTUALLY needs
+
         bool working = true;
-        auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test"); // Eh, not ideal. 
 
-        prepair_wavefront_buffer_async(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer, manager->stage.render_settings.n_geodesic_step_limit);
- 
-        launch_kernel_generate_thin_lens_ray_async(manager, wavefront_buffer);
+        prepare_wavefront_buffer_async(args.wavefront_buffer, args.user_stream);
 
-        launch_kernel_generate_initial_conditions_async(manager, wavefront_buffer);
+        launch_kernel_generate_thin_lens_ray_async(args.wavefront_buffer, args.user_stream, args.stage, args.color_pipeline);
+
+        launch_kernel_generate_initial_conditions_async(args.wavefront_buffer, args.user_stream, args.stage);
 
         while(working)
         {
-            launch_kernel_advance_geodesic_async(manager, wavefront_buffer);
+            launch_kernel_advance_geodesic_async(args.wavefront_buffer, args.user_stream, args.stage);
 
             // launch_kernel_intersect_tlas_affine_async
 
@@ -99,23 +137,31 @@ namespace magik
 
             // launch_kernel_intersect_blas_hermite_async
 
-            launch_kernel_intersect_async(manager, wavefront_buffer);
+            launch_kernel_intersect_async(args.wavefront_buffer, args.user_stream, args.stage);
 
-            launch_kernel_bxdf_async(manager, wavefront_buffer);
+            launch_kernel_bxdf_async(args.wavefront_buffer, args.user_stream, args.stage);
 
-            launch_kernel_redistribute_radiance_async(manager, wavefront_buffer);
+            launch_kernel_redistribute_radiance_async(args.wavefront_buffer, args.user_stream, args.stage);
 
-            launch_kernel_enforce_ray_limits_async(manager, wavefront_buffer);
+            launch_kernel_enforce_ray_limits_async(args.wavefront_buffer, args.user_stream, args.stage.render_settings);
 
-            wavefront_buffer->queue_pool.swap_advance_queues();
+            args.wavefront_buffer.queue_pool.swap_advance_queues();
 
-            launch_kernel_splat_to_renderbuffer_async(manager, wavefront_buffer, tmp_element->second.d_data);
+            launch_kernel_splat_to_renderbuffer_async(args.wavefront_buffer, args.user_stream, args.stage.render_settings, args.stage.color_settings, args.color_pipeline, args.x_sample, args.d_renderbuffer);
 
-            is_work_done_sync(&working, &wavefront_buffer->queue_ceiling, wavefront_buffer->queue_pool.get_count_ptr<advance_A_queue_t>(), &manager->cuda_stream);
+            is_work_done_sync(&working, &args.wavefront_buffer.queue_ceiling, args.wavefront_buffer.queue_pool.get_count_ptr<advance_A_queue_t>(), args.user_stream);
 
-            wavefront_buffer->iteration++; // This is safe despite the Async kernels for two reasons. 1. The sync point is above us; 2. When a kernel is launched all arguments are captured. 
+            args.wavefront_buffer.iteration++; // This is safe despite the Async kernels for two reasons. 1. The sync point is above us; 2. When a kernel is launched all arguments are captured. 
         }
 
-        manager->x_sample.fetch_add(1, std::memory_order_relaxed);
+        args.x_sample++;
     }
+
+    void release_wavefront_buffer(device_mem_arena* wavefront_buffer_arena, cudaStream_t user_stream)
+    {
+        device_arena_destroy_async(user_stream, wavefront_buffer_arena);
+        check_cuda_errors(cudaStreamSynchronize(user_stream));
+        check_cuda_errors(cudaGetLastError());
+    }
+
 }

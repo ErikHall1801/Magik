@@ -122,16 +122,16 @@ namespace magik
         uint32_t n_max;
     };
 
-    template<> inline kerr_metric::params_t kerr_metric::make_params(magik_render_manager* manager, bool time_reversed)
+    template<> inline kerr_metric::params_t kerr_metric::make_params(relativity_settings_t& relativity_settings, bool time_reversed)
     {
         return {    time_reversed,
-                    manager->stage.relativity_settings.kerr_mass_parameter, 
-                    time_reversed ? -manager->stage.relativity_settings.kerr_dimensionless_spin_parameter : manager->stage.relativity_settings.kerr_dimensionless_spin_parameter, 
-                    manager->stage.relativity_settings.kerr_event_horizon_scalar, 
+                    relativity_settings.kerr_mass_parameter, 
+                    time_reversed ? -relativity_settings.kerr_dimensionless_spin_parameter : relativity_settings.kerr_dimensionless_spin_parameter, 
+                    relativity_settings.kerr_event_horizon_scalar, 
                     1000.0f, 
-                    manager->stage.relativity_settings.integrator_absolute_error_tolerance, 
-                    manager->stage.relativity_settings.integrator_relative_error_tolerance, 
-                    manager->stage.relativity_settings.n_integrator_max_substep}; 
+                    relativity_settings.integrator_absolute_error_tolerance, 
+                    relativity_settings.integrator_relative_error_tolerance, 
+                    relativity_settings.n_integrator_max_substep}; 
     }
 
     template<> inline kerr_metric::params_t kerr_metric::make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed)

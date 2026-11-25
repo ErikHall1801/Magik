@@ -3,8 +3,9 @@
 #include <cstdint>
 #include "internal_math.h"
 #include "wavefront.h"
+#include "stage.h"
 
 namespace magik
 {
-    void launch_kernel_generate_thin_lens_ray_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer);
+    void launch_kernel_generate_thin_lens_ray_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, stage_t& stage, color_pipeline_descriptor_t& color_pipeline_descriptor);
 }

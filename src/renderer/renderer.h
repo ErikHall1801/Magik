@@ -25,6 +25,7 @@ struct magik_render_manager
     // Status 
     e_magik_manager_status_types status;
     e_magik_result_types status_reason;
+    e_magik_manager_status_types initial_status;
 
     // CUDA
     void* cuda_stream = nullptr;
@@ -32,15 +33,21 @@ struct magik_render_manager
     uint32_t cuda_device = 0;
 
     // DCC <-> worker
-    magik::command_context_t command_context;
+    magik::stage_t stage;
+    magik::command_swapchain_t command_swpachain;
     magik::framebuffer_swapchain_t framebuffer_swapchain;
     e_magik_manager_display_types display_type;
 
     // Worker only
-    magik::stage_t stage;
-    e_magik_command_update_policy_types pending_update_policy;
+    uint32_t x_sample;
+    size_t total_iterations;
     magik::wavefront_buffer_t wavefront_buffer;
     magik::color_pipeline_descriptor_t color_pipeline_descriptor;
+
+    MAGIK_HOST bool is_nominal()
+    {
+        return is_running.load(std::memory_order_relaxed) && (initial_status == MAGIK_STATUS_0);
+    }
 };
 
 namespace magik

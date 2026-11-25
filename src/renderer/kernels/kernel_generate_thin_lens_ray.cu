@@ -26,25 +26,25 @@ namespace magik
 
         color_pipeline_descriptor_t color_pipeline_descriptor;
 
-        __host__ void create(magik_render_manager* manager, wavefront_buffer_t* wb)
+        __host__ void create(wavefront_buffer_t& wavefront_buffer, stage_t& stage, color_pipeline_descriptor_t& color_pipeline_descriptor)
         {
-            d_random_device = wb->ray_pool.get<random_device_t>();
-            d_initial_observer_spatial_direction = wb->ray_pool.get<initial_observer_spatial_direction_t>();
-            d_initial_observer_spatial_position = wb->ray_pool.get<initial_observer_spatial_position_t>();
-            d_sensor_wavelength_nm = wb->ray_pool.get<sensor_wavelength_nm_t>();
-            d_throughput = wb->ray_pool.get<throughput_t>();
-            d_advance_A_queue_id = wb->queue_pool.get_id_ptr<advance_A_queue_t>();
+            d_random_device = wavefront_buffer.ray_pool.get<random_device_t>();
+            d_initial_observer_spatial_direction = wavefront_buffer.ray_pool.get<initial_observer_spatial_direction_t>();
+            d_initial_observer_spatial_position = wavefront_buffer.ray_pool.get<initial_observer_spatial_position_t>();
+            d_sensor_wavelength_nm = wavefront_buffer.ray_pool.get<sensor_wavelength_nm_t>();
+            d_throughput = wavefront_buffer.ray_pool.get<throughput_t>();
+            d_advance_A_queue_id = wavefront_buffer.queue_pool.get_id_ptr<advance_A_queue_t>();
 
-            x_resolution = wb->x_resolution;
-            y_resolution = wb->y_resolution;
-            max_wavelength_nm = manager->stage.color_settings.isi_max_wavelength_nm;
-            min_wavelength_nm = manager->stage.color_settings.isi_min_wavelength_nm;
-            focal_length = manager->stage.optical_system_settings.focal_length;
-            sensor_diagonal_mm = manager->stage.optical_system_settings.sensor_diagonal_mm;
-            position = manager->stage.optical_system_settings.position;
-            orientation = manager->stage.optical_system_settings.orientation;
+            x_resolution = wavefront_buffer.x_resolution;
+            y_resolution = wavefront_buffer.y_resolution;
+            max_wavelength_nm = stage.color_settings.isi_max_wavelength_nm;
+            min_wavelength_nm = stage.color_settings.isi_min_wavelength_nm;
+            focal_length = stage.optical_system_settings.focal_length;
+            sensor_diagonal_mm = stage.optical_system_settings.sensor_diagonal_mm;
+            position = stage.optical_system_settings.position;
+            orientation = stage.optical_system_settings.orientation;
 
-            color_pipeline_descriptor = manager->color_pipeline_descriptor;
+            color_pipeline_descriptor = color_pipeline_descriptor;
         }
     };
 
@@ -76,15 +76,15 @@ namespace magik
         args.d_advance_A_queue_id[thread_id] = thread_id;
     }
 
-    void launch_kernel_generate_thin_lens_ray_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
+    void launch_kernel_generate_thin_lens_ray_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, stage_t& stage, color_pipeline_descriptor_t& color_pipeline_descriptor)
     {
-        dim3 threads_per_block = dim3(manager->stage.render_settings.threads_per_block_x, manager->stage.render_settings.threads_per_block_y, 1);
-        dim3 n_block = magik::compute_n_blocks(wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.render_settings.threads_per_block_x, manager->stage.render_settings.threads_per_block_y);
+        dim3 threads_per_block = dim3(stage.render_settings.threads_per_block_x, stage.render_settings.threads_per_block_y, 1);
+        dim3 n_block = magik::compute_n_blocks(wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, stage.render_settings.threads_per_block_x, stage.render_settings.threads_per_block_y);
 
         kernel_generate_thin_lens_ray_args_t args;
-        args.create(manager, wavefront_buffer);
+        args.create(wavefront_buffer, stage, color_pipeline_descriptor);
 
-        kernel_generate_thin_lens_ray<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(args);
+        kernel_generate_thin_lens_ray<<<n_block, threads_per_block, 0, user_stream>>>(args);
         check_cuda_errors(cudaGetLastError());
     }
 }

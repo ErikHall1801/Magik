@@ -27,7 +27,7 @@ namespace magik
         return 1000.0f;
     }
 
-    template<> inline minkowski_metric::params_t minkowski_metric::make_params(magik_render_manager* manager, bool time_reversed)
+    template<> inline minkowski_metric::params_t minkowski_metric::make_params(relativity_settings_t& relativity_settings, bool time_reversed)
     {
         minkowski_metric::params_t p;
         p.time_reversed = time_reversed;

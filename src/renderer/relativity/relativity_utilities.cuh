@@ -4,6 +4,7 @@
 #include "cuda_host_device_utilities.h"
 #include "internal_math.h"
 #include <cuda_runtime.h>
+#include "relativity_settings.h"
 
 namespace magik
 {
@@ -98,7 +99,7 @@ namespace magik
     {
         struct params_t;
 
-        static params_t make_params(magik_render_manager* manager, bool time_reversed);
+        static params_t make_params(relativity_settings_t& relativity_settings, bool time_reversed);
 
         static params_t make_params(magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters, bool time_reversed);
 

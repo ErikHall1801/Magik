@@ -1,6 +1,7 @@
 #include "kernel_enforce_ray_limits.cuh"
 #include "cuda_device_utilities.cuh"
 #include "cuda_host_utilities.h"
+#include "render_settings.h"
 
 namespace magik
 {
@@ -18,19 +19,19 @@ namespace magik
         uint32_t n_geodesic_step_limit;
         uint32_t n_reflected_limit;
 
-        __host__ void create(magik_render_manager* manager, wavefront_buffer_t* wb)
+        __host__ void create(wavefront_buffer_t& wavefront_buffer, render_settings_t& render_settings)
         {
-            d_n_geodesic_step = wb->ray_pool.get<n_geodesic_step_t>();
-            d_n_reflected = wb->ray_pool.get<n_reflected_t>();
-            d_advance_A_queue_count = wb->queue_pool.get_count_ptr<advance_A_queue_t>();
-            d_advance_A_queue_id = wb->queue_pool.get_id_ptr<advance_A_queue_t>();
-            d_advance_B_queue_count = wb->queue_pool.get_count_ptr<advance_B_queue_t>();
-            d_advance_B_queue_id = wb->queue_pool.get_id_ptr<advance_B_queue_t>();
-            d_splat_queue_count = wb->queue_pool.get_count_ptr<splat_queue_t>();
-            d_splat_queue_id = wb->queue_pool.get_id_ptr<splat_queue_t>();
+            d_n_geodesic_step = wavefront_buffer.ray_pool.get<n_geodesic_step_t>();
+            d_n_reflected = wavefront_buffer.ray_pool.get<n_reflected_t>();
+            d_advance_A_queue_count = wavefront_buffer.queue_pool.get_count_ptr<advance_A_queue_t>();
+            d_advance_A_queue_id = wavefront_buffer.queue_pool.get_id_ptr<advance_A_queue_t>();
+            d_advance_B_queue_count = wavefront_buffer.queue_pool.get_count_ptr<advance_B_queue_t>();
+            d_advance_B_queue_id = wavefront_buffer.queue_pool.get_id_ptr<advance_B_queue_t>();
+            d_splat_queue_count = wavefront_buffer.queue_pool.get_count_ptr<splat_queue_t>();
+            d_splat_queue_id = wavefront_buffer.queue_pool.get_id_ptr<splat_queue_t>();
 
-            n_geodesic_step_limit = manager->stage.render_settings.n_geodesic_step_limit;
-            n_reflected_limit = manager->stage.render_settings.n_reflected_limit;
+            n_geodesic_step_limit = render_settings.n_geodesic_step_limit;
+            n_reflected_limit = render_settings.n_reflected_limit;
         }
     };
 
@@ -63,18 +64,18 @@ namespace magik
         }
     }
 
-    void launch_kernel_enforce_ray_limits_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
+    void launch_kernel_enforce_ray_limits_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, render_settings_t& render_settings)
     {
-        uint32_t threads_per_block = manager->stage.render_settings.wavefront_threads_per_block;
-        uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
+        uint32_t threads_per_block = render_settings.wavefront_threads_per_block;
+        uint32_t n_block = (wavefront_buffer.queue_ceiling + threads_per_block - 1) / threads_per_block;
 
         kernel_enforce_ray_limits_args_t args;
-        args.create(manager, wavefront_buffer);
+        args.create(wavefront_buffer, render_settings);
 
-        kernel_enforce_ray_limits<<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(args);
+        kernel_enforce_ray_limits<<<n_block, threads_per_block, 0, user_stream>>>(args);
         check_cuda_errors(cudaGetLastError());
 
-        wavefront_buffer->queue_pool.store_count_in_history<advance_A_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.render_settings.n_geodesic_step_limit);
-        wavefront_buffer->queue_pool.zero_count_async<advance_A_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
+        wavefront_buffer.queue_pool.store_count_in_history<advance_A_queue_t>(user_stream, wavefront_buffer.iteration, render_settings.n_geodesic_step_limit);
+        wavefront_buffer.queue_pool.zero_count_async<advance_A_queue_t>(user_stream);
     }
 }

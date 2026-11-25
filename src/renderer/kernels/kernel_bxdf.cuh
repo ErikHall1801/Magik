@@ -6,5 +6,5 @@
 
 namespace magik
 {
-    void launch_kernel_bxdf_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer);
+    void launch_kernel_bxdf_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, stage_t& stage);
 }

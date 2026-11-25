@@ -7,6 +7,13 @@
 
 namespace magik
 {
+    typedef enum e_magik_color_pipeline_update_policy_types : uint32_t
+    {
+        COLOR_PIPELINE_UPDATE_POLICY_NONE = 0,
+        COLOR_PIPELINE_UPDATE_POLICY_RELAXED = 1,
+        COLOR_PIPELINE_UPDATE_POLICY_STRICT = 2
+    } e_magik_color_pipeline_update_policy_types;
+
     struct color_pipeline_descriptor_t
     {
         uint32_t n_spectral_bin;
@@ -17,6 +24,7 @@ namespace magik
         mat3f scene_to_display_referred;
         e_magik_output_format_types output_format;
         e_magik_view_transform_types view_transform_type;
+        e_magik_color_pipeline_update_policy_types update_policy = COLOR_PIPELINE_UPDATE_POLICY_NONE;
 
         static __host__ color_pipeline_descriptor_t create(color_settings_t settings)
         {
@@ -45,6 +53,11 @@ namespace magik
             result.view_transform_type = settings.view_transform_type;
 
             return result;
+        }
+
+        __host__ void raise_update_policy(e_magik_color_pipeline_update_policy_types policy)
+        {
+            update_policy = static_cast<e_magik_color_pipeline_update_policy_types>(update_policy | policy);
         }
     };
 }

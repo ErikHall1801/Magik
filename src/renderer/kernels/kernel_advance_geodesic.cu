@@ -1,6 +1,7 @@
 #include "kernel_advance_geodesic.cuh"
 #include "cuda_device_utilities.cuh"
 #include "cuda_host_utilities.h"
+#include "stage.h"
 
 #include "kernel_advance_geodesic.cuh"
 #include "relativity_utilities.cuh"
@@ -27,22 +28,22 @@ namespace magik
         float* d_delta_affine_parameter = nullptr;
         uint32_t* d_n_geodesic_step = nullptr;
 
-        __host__ void create(wavefront_buffer_t* wb)
+        __host__ void create(wavefront_buffer_t& wavefront_buffer)
         {
-            d_advance_queue_count = wb->queue_pool.get_count_ptr<advance_A_queue_t>();
-            d_advance_queue_id = wb->queue_pool.get_id_ptr<advance_A_queue_t>();
-            d_intersect_queue_count = wb->queue_pool.get_count_ptr<intersect_queue_t>();
-            d_intersect_queue_id = wb->queue_pool.get_id_ptr<intersect_queue_t>();  
+            d_advance_queue_count = wavefront_buffer.queue_pool.get_count_ptr<advance_A_queue_t>();
+            d_advance_queue_id = wavefront_buffer.queue_pool.get_id_ptr<advance_A_queue_t>();
+            d_intersect_queue_count = wavefront_buffer.queue_pool.get_count_ptr<intersect_queue_t>();
+            d_intersect_queue_id = wavefront_buffer.queue_pool.get_id_ptr<intersect_queue_t>();  
 
-            d_next_four_position = wb->ray_pool.get<next_four_position_t>();
-            d_next_four_momentum = wb->ray_pool.get<next_four_momentum_t>();
-            d_current_four_position = wb->ray_pool.get<current_four_position_t>();
-            d_current_four_momentum = wb->ray_pool.get<current_four_momentum_t>();
-            d_momentum_derivative_start = wb->ray_pool.get<momentum_derivative_start_t>();
-            d_momentum_derivative_end = wb->ray_pool.get<momentum_derivative_end_t>();
-            d_affine_parameter = wb->ray_pool.get<affine_parameter_t>();
-            d_delta_affine_parameter = wb->ray_pool.get<delta_affine_parameter_t>();
-            d_n_geodesic_step = wb->ray_pool.get<n_geodesic_step_t>(); 
+            d_next_four_position = wavefront_buffer.ray_pool.get<next_four_position_t>();
+            d_next_four_momentum = wavefront_buffer.ray_pool.get<next_four_momentum_t>();
+            d_current_four_position = wavefront_buffer.ray_pool.get<current_four_position_t>();
+            d_current_four_momentum = wavefront_buffer.ray_pool.get<current_four_momentum_t>();
+            d_momentum_derivative_start = wavefront_buffer.ray_pool.get<momentum_derivative_start_t>();
+            d_momentum_derivative_end = wavefront_buffer.ray_pool.get<momentum_derivative_end_t>();
+            d_affine_parameter = wavefront_buffer.ray_pool.get<affine_parameter_t>();
+            d_delta_affine_parameter = wavefront_buffer.ray_pool.get<delta_affine_parameter_t>();
+            d_n_geodesic_step = wavefront_buffer.ray_pool.get<n_geodesic_step_t>(); 
         }
     };
 
@@ -77,31 +78,26 @@ namespace magik
         args.d_intersect_queue_id[slot] = ray_id;
     }
 
-    void launch_kernel_advance_geodesic_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
+    void launch_kernel_advance_geodesic_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, stage_t& stage)
     {
-        uint32_t threads_per_block = manager->stage.render_settings.wavefront_threads_per_block;
-        uint32_t n_block = (wavefront_buffer->queue_ceiling + threads_per_block - 1) / threads_per_block;
+        uint32_t threads_per_block = stage.render_settings.wavefront_threads_per_block;
+        uint32_t n_block = (wavefront_buffer.queue_ceiling + threads_per_block - 1) / threads_per_block;
 
         kernel_advance_geodesic_args_t args;
         args.create(wavefront_buffer);
         bool time_reversed = true;
 
-        bool successful = dispatch_list(supported_metrics{}, manager->stage.relativity_settings.metric_type, [&](auto tag)
+        bool successful = dispatch_list(supported_metrics{}, stage.relativity_settings.metric_type, [&](auto tag)
         {
             constexpr auto T = decltype(tag)::value;
-            kernel_advance_geodesic<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager, time_reversed), args);
+            kernel_advance_geodesic<T><<<n_block, threads_per_block, 0, user_stream>>>(metric<T>::make_params(stage.relativity_settings, time_reversed), args);
         });
 
         check_cuda_errors(cudaGetLastError());
 
-        wavefront_buffer->queue_pool.store_count_in_history<advance_A_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream), wavefront_buffer->iteration, manager->stage.render_settings.n_geodesic_step_limit);
-        wavefront_buffer->queue_pool.zero_count_async<advance_A_queue_t>(static_cast<cudaStream_t>(manager->cuda_stream));
+        wavefront_buffer.queue_pool.store_count_in_history<advance_A_queue_t>(user_stream, wavefront_buffer.iteration, stage.render_settings.n_geodesic_step_limit);
+        wavefront_buffer.queue_pool.zero_count_async<advance_A_queue_t>(user_stream);
 
-        if(!successful)
-        {
-            e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_ERROR_UNKNOWN_METRIC;
-            manager->atomic_last_error_type.compare_exchange_strong(expected, result);
-            manager->is_running.store(false, std::memory_order_release);
-        }
+        // Do status 
     }
 }

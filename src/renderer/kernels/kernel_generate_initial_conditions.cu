@@ -26,28 +26,28 @@ namespace magik
         contravariant_seed_vectors_t seed_vector;
         vec3f local_proper_velocity;
 
-        __host__ void create(magik_render_manager* manager, wavefront_buffer_t* wb)
+        __host__ void create(wavefront_buffer_t& wavefront_buffer, stage_t& stage)
         {
-            d_initial_observer_spatial_direction = wb->ray_pool.get<initial_observer_spatial_direction_t>();
-            d_initial_observer_spatial_position = wb->ray_pool.get<initial_observer_spatial_position_t>();
-            d_current_four_position = wb->ray_pool.get<current_four_position_t>();
-            d_current_four_momentum = wb->ray_pool.get<current_four_momentum_t>();
-            d_next_four_position = wb->ray_pool.get<next_four_position_t>();
-            d_next_four_momentum = wb->ray_pool.get<next_four_momentum_t>();
-            d_initial_four_vector_contraction = wb->ray_pool.get<initial_four_vector_contraction_t>();
-            d_delta_affine_parameter = wb->ray_pool.get<delta_affine_parameter_t>();
+            d_initial_observer_spatial_direction = wavefront_buffer.ray_pool.get<initial_observer_spatial_direction_t>();
+            d_initial_observer_spatial_position = wavefront_buffer.ray_pool.get<initial_observer_spatial_position_t>();
+            d_current_four_position = wavefront_buffer.ray_pool.get<current_four_position_t>();
+            d_current_four_momentum = wavefront_buffer.ray_pool.get<current_four_momentum_t>();
+            d_next_four_position = wavefront_buffer.ray_pool.get<next_four_position_t>();
+            d_next_four_momentum = wavefront_buffer.ray_pool.get<next_four_momentum_t>();
+            d_initial_four_vector_contraction = wavefront_buffer.ray_pool.get<initial_four_vector_contraction_t>();
+            d_delta_affine_parameter = wavefront_buffer.ray_pool.get<delta_affine_parameter_t>();
 
-            x_resolution = wb->x_resolution;
-            y_resolution = wb->y_resolution;
+            x_resolution = wavefront_buffer.x_resolution;
+            y_resolution = wavefront_buffer.y_resolution;
 
-            vec3f local_basis_x = manager->stage.optical_system_settings.orientation * vec3f{1.0f, 0.0f, 0.0f};
-            vec3f local_basis_y = manager->stage.optical_system_settings.orientation * vec3f{0.0f, 1.0f, 0.0f};
-            vec3f local_basis_z = manager->stage.optical_system_settings.orientation * vec3f{0.0f, 0.0f, 1.0f};
+            vec3f local_basis_x = stage.optical_system_settings.orientation * vec3f{1.0f, 0.0f, 0.0f};
+            vec3f local_basis_y = stage.optical_system_settings.orientation * vec3f{0.0f, 1.0f, 0.0f};
+            vec3f local_basis_z = stage.optical_system_settings.orientation * vec3f{0.0f, 0.0f, 1.0f};
             seed_vector.X = { local_basis_x.x, local_basis_x.y, local_basis_x.z, 0.0f };
             seed_vector.Y = { local_basis_y.x, local_basis_y.y, local_basis_y.z, 0.0f };
             seed_vector.Z = { local_basis_z.x, local_basis_z.y, local_basis_z.z, 0.0f };
 
-            local_proper_velocity = manager->stage.relativity_settings.observer_local_proper_velocity;
+            local_proper_velocity = stage.relativity_settings.observer_local_proper_velocity;
         }
     };
 
@@ -73,28 +73,23 @@ namespace magik
         args.d_delta_affine_parameter[thread_id] = metric<T>::initial_h_step();
     }
 
-    void launch_kernel_generate_initial_conditions_async(magik_render_manager* manager, wavefront_buffer_t* wavefront_buffer)
+    void launch_kernel_generate_initial_conditions_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, stage_t& stage)
     {
-        dim3 threads_per_block = dim3(manager->stage.render_settings.threads_per_block_x, manager->stage.render_settings.threads_per_block_y, 1);
-        dim3 n_block = magik::compute_n_blocks(wavefront_buffer->x_resolution, wavefront_buffer->y_resolution, manager->stage.render_settings.threads_per_block_x, manager->stage.render_settings.threads_per_block_y);
+        dim3 threads_per_block = dim3(stage.render_settings.threads_per_block_x, stage.render_settings.threads_per_block_y, 1);
+        dim3 n_block = magik::compute_n_blocks(wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, stage.render_settings.threads_per_block_x, stage.render_settings.threads_per_block_y);
 
         kernel_generate_initial_conditions_args_t args;
-        args.create(manager, wavefront_buffer);
+        args.create(wavefront_buffer, stage);
         bool time_reversed = true;
 
-        bool successful = dispatch_list(supported_metrics{}, manager->stage.relativity_settings.metric_type, [&](auto tag)
+        bool successful = dispatch_list(supported_metrics{}, stage.relativity_settings.metric_type, [&](auto tag)
         {
             constexpr auto T = decltype(tag)::value;
-            kernel_generate_initial_conditions<T><<<n_block, threads_per_block, 0, static_cast<cudaStream_t>(manager->cuda_stream)>>>(metric<T>::make_params(manager, time_reversed), args);
+            kernel_generate_initial_conditions<T><<<n_block, threads_per_block, 0, user_stream>>>(metric<T>::make_params(stage.relativity_settings, time_reversed), args);
         });
 
         check_cuda_errors(cudaGetLastError());
 
-        if(!successful)
-        {
-            e_magik_result_types expected = MAGIK_SUCCESS, result = MAGIK_ERROR_UNKNOWN_METRIC;
-            manager->atomic_last_error_type.compare_exchange_strong(expected, result);
-            manager->is_running.store(false, std::memory_order_release);
-        }
+        // Do status update 
     }
 }

@@ -105,12 +105,7 @@ MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_
     
     new_manager->cuda_device = descriptor.user_device_id;
 
-    if(descriptor.user_stream == nullptr)
-    {
-        new_manager->owns_stream = true;
-        magik::create_cuda_stream(&new_manager->cuda_stream);
-    }
-    else
+    if(descriptor.user_stream != nullptr)
     {
         new_manager->owns_stream = false;
         new_manager->cuda_stream = descriptor.user_stream;

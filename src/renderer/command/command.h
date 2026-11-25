@@ -2,12 +2,43 @@
 
 #include "magik.h"
 #include "internal_error.h"
-
+#include "stage.h"
+#include "framebuffer.h"
+#include <string> // ???
+#include <array>
+#include <cmath>
+#include <cstring>
+#include <type_traits>
 #include <atomic>
 #include <memory>
 
 namespace magik
 {
+    struct command_buffer_t
+    {
+        uint32_t n_occupied_chunk = 0;
+        std::unique_ptr<uint32_t[]> data;
+    };
+
+    struct command_swapchain_t
+    {
+        std::atomic<bool> is_swap_ready = false;
+        uint32_t n_reserved_chunk = 0;
+        bool drop_overflows = false;
+
+        std::unique_ptr<command_buffer_t> front;
+        std::unique_ptr<command_buffer_t> back;
+    };
+
+    struct command_context_t
+    {
+        e_magik_manager_status_types& status;
+        e_magik_result_types& status_reason;
+        command_swapchain_t& command_swapchain;
+        framebuffer_swapchain_t& framebuffer_swapchain;
+        stage_t& stage;
+    };
+
     struct command_result_t
     {
         e_magik_result_severity_types severity = MAGIK_RESULT_SEVERITY_NONE;
@@ -18,31 +49,14 @@ namespace magik
     {
         uint32_t id;
         uint32_t size;
-        e_magik_command_update_policy_types update_policy;
-        command_result_t (*apply)(magik_render_manager_t, const void*);
+        command_result_t (*apply)(command_context_t, const void*);
     };
 
-    struct command_buffer_t
-    {
-        uint32_t n_occupied_chunk = 0;
-        std::unique_ptr<uint32_t[]> data;
-    };
+    e_magik_result_types push_command(command_buffer_t* front_command_buffer, uint32_t n_reserved_chunk, bool drop_overflows, const void* command);
 
-    struct command_context_t
-    {
-        std::atomic<bool> is_swap_ready = false;
-        uint32_t n_reserved_chunk = 0;
-        bool drop_overflows = false;
+    bool dispatch_command_buffer(command_swapchain_t& swpc);
 
-        std::unique_ptr<command_buffer_t> front;
-        std::unique_ptr<command_buffer_t> back;
-    };
+    void consume_command_buffer(command_context_t ctx, command_buffer_t* command_buffer); 
 
-    e_magik_result_types push_command(magik_render_manager_t manager, const void* command);
-
-    e_magik_result_types dispatch_command_buffer(magik_render_manager_t manager, bool* is_dispatched);
-
-    e_magik_result_types consume_command_buffer(magik_render_manager_t manager, command_buffer_t* command_buffer); 
-
-    e_magik_result_types consume_back_command_buffer(magik_render_manager_t manager);
+    void consume_back_command_buffer(command_context_t ctx);
 }

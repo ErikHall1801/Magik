@@ -37,29 +37,18 @@ extern "C" {
 */
 typedef enum e_magik_result_severity_types
 {
-    MAGIK_RESULT_SEVERITY_NONE = 0,
-    MAGIK_RESULT_SEVERITY_WARNING = 1,
-    MAGIK_RESULT_SEVERITY_FATAL = 2
-} e_magik_severity_types;
+    MAGIK_RESULT_SEVERITY_NONE = 0, // Command was applied
+    MAGIK_RESULT_SEVERITY_WARNING = 1, // Command was applied but changed for safety
+    MAGIK_RESULT_SEVERITY_REJECTED = 2, // Command was not applied because the er
+    MAGIK_RESULT_SEVERITY_FATAL = 3 // Command has caused an error
+} e_magik_result_severity_types;
 
 typedef enum e_magik_manager_status_types
 {
     MAGIK_STATUS_0 = 0, // Nominal - Internally, everything is fine
     MAGIK_STATUS_1 = 1, // Suspended - Such as bad allocs 
     MAGIK_STATUS_2 = 2, // Rebuild - Such as the CUDA device being dropped
-    MAGIK_STATUS_3 = 3  // Irrecoverable - God have mercy 
 } e_magik_manager_status_types;
-
-typedef enum e_magik_command_update_policy_types
-{
-    MAGIK_COMMAND_UPDATE_POLICY_NONE = 0,
-    MAGIK_COMMAND_UPDATE_POLICY_RESET_ISI = 1,
-    MAGIK_COMMAND_UPDATE_POLICY_REBUILD_COLOR_PIPELINE = 2,
-    MAGIK_COMMAND_UPDATE_POLICY_REBUILD_TLAS = 3,
-    MAGIK_COMMAND_UPDATE_POLICY_REBUILD_BLAS = 4,
-    MAGIK_COMMAND_UPDATE_POLICY_REALLOC_WAVEFRONT_BUFFER = 5,
-    MAGIK_COMMAND_UPDATE_POLICY_REALLOC_ALL = 6
-} e_magik_command_update_policy_types;
 
 typedef enum e_magik_result_types // Rename to MAGIK_RESULT_ We also need to cull these down. 
 {
