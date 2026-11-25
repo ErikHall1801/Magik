@@ -2,6 +2,162 @@
 
 namespace magik
 {
+    // DCC
+    static e_magik_result_types memcpy_front_framebuffer_to_external_config_host(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    {
+        for(auto iter = external_collection_framebuffer->collection.begin(); iter != external_collection_framebuffer->collection.end(); )
+        {
+            auto element = framebuffer_swapchain.front_framebuffer->collection.find(iter->first);
+
+            if(element == framebuffer_swapchain.front_framebuffer->collection.end())
+            {
+                auto buffer = iter->second;
+                magik::free_host(buffer.config_host.h_data);
+                iter = external_collection_framebuffer->collection.erase(iter);
+            }
+            else
+            {
+                iter++;
+            }
+        }
+
+        for(const auto& [key, ctx_value] : framebuffer_swapchain.front_framebuffer->collection)
+        {
+            external_collection_framebuffer->collection.try_emplace(key); 
+            auto& dcc_value = external_collection_framebuffer->collection.find(key)->second;
+
+            size_t size_of_buffer = static_cast<size_t>(ctx_value.x_resolution*ctx_value.y_resolution*ctx_value.channels)*sizeof(float);
+
+            if((!dcc_value.config_host.h_data) || (dcc_value.x_resolution != ctx_value.x_resolution) || (dcc_value.y_resolution != ctx_value.y_resolution) || (dcc_value.channels != ctx_value.channels))
+            {
+                magik::free_host(dcc_value.config_host.h_data);
+
+                dcc_value.x_resolution = ctx_value.x_resolution;
+                dcc_value.y_resolution = ctx_value.y_resolution;
+                dcc_value.channels = ctx_value.channels;
+                dcc_value.config_host.h_data = magik::allocate_host<float>(size_of_buffer);
+                dcc_value.config_host.host_size = size_of_buffer;
+            }
+
+            magik::memcpy_device_to_host(ctx_value.d_data, dcc_value.config_host.h_data, size_of_buffer);
+        }
+
+        return MAGIK_SUCCESS;
+    };
+
+    static e_magik_result_types memcpy_front_framebuffer_to_external_config_cuda(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    {
+        return MAGIK_SUCCESS;
+    };
+
+    static e_magik_result_types memcpy_front_framebuffer_to_external_config_opengl(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    {
+        e_magik_result_types _r = MAGIK_SUCCESS;
+
+        for(auto iter = external_collection_framebuffer->collection.begin(); iter != external_collection_framebuffer->collection.end(); )
+        {
+            auto element = framebuffer_swapchain.front_framebuffer->collection.find(iter->first);
+
+            if(element == framebuffer_swapchain.front_framebuffer->collection.end())
+            {
+                auto buffer = iter->second;
+                _r = magik::free_opengl_buffer(&buffer.config_open_gl_interop.gl_buffer_id, &buffer.config_open_gl_interop.cuda_resource);
+                iter = external_collection_framebuffer->collection.erase(iter);
+            }
+            else
+            {
+                iter++;
+            }
+        }
+
+        for(const auto& [key, ctx_value] : framebuffer_swapchain.front_framebuffer->collection)
+        {
+            external_collection_framebuffer->collection.try_emplace(key); 
+            auto& dcc_value = external_collection_framebuffer->collection.find(key)->second; 
+
+            if((dcc_value.x_resolution != ctx_value.x_resolution) || (dcc_value.y_resolution != ctx_value.y_resolution) || (dcc_value.channels != ctx_value.channels) || (!dcc_value.config_open_gl_interop.cuda_resource) || (dcc_value.config_open_gl_interop.gl_buffer_id == 0))
+            {
+                dcc_value.x_resolution = ctx_value.x_resolution;
+                dcc_value.y_resolution = ctx_value.y_resolution;
+                dcc_value.channels = ctx_value.channels;
+
+                _r = magik::free_opengl_buffer(&dcc_value.config_open_gl_interop.gl_buffer_id, &dcc_value.config_open_gl_interop.cuda_resource);
+                _r = magik::allocate_opengl_buffer(dcc_value.x_resolution, dcc_value.y_resolution, dcc_value.channels, &dcc_value.config_open_gl_interop.gl_buffer_id, &dcc_value.config_open_gl_interop.cuda_resource);
+            }
+
+            magik::map_cuda_to_opengl_buffer(dcc_value.x_resolution, dcc_value.y_resolution, dcc_value.channels, &dcc_value.config_open_gl_interop.cuda_resource, ctx_value.d_data);
+        }
+
+        return _r;
+    };
+
+    static e_magik_result_types memcpy_front_framebuffer_to_external_config_vulkan(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    {
+        return MAGIK_SUCCESS;
+    };
+
+    static e_magik_result_types memcpy_front_framebuffer_to_external_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    {
+        if(!external_collection_framebuffer || !framebuffer_swapchain.front_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
+
+        if( external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_HOST && 
+            external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_CUDA && 
+            external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_OPENGL_INTEROP && 
+            external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_VULKAN_INTEROP
+        ) return MAGIK_UNKNOWN_ENUM_TYPE;
+
+        e_magik_result_types result = MAGIK_SUCCESS;
+
+        switch(external_collection_framebuffer->config_type)
+        {
+            case MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_HOST:
+            {
+                result = memcpy_front_framebuffer_to_external_config_host(framebuffer_swapchain, external_collection_framebuffer);
+                break;
+            }
+
+            case MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_CUDA:
+            {
+                result = memcpy_front_framebuffer_to_external_config_cuda(framebuffer_swapchain, external_collection_framebuffer);
+                break;
+            }
+
+            case MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_OPENGL_INTEROP:
+            {
+                result = memcpy_front_framebuffer_to_external_config_opengl(framebuffer_swapchain, external_collection_framebuffer);
+                break;
+            }
+
+            case MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_VULKAN_INTEROP:
+            {
+                result = memcpy_front_framebuffer_to_external_config_vulkan(framebuffer_swapchain, external_collection_framebuffer);
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    static e_magik_result_types try_swap_front_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain, bool* is_swapped)
+    {
+        if(!framebuffer_swapchain.ready_framebuffer.load(std::memory_order_relaxed) || !framebuffer_swapchain.front_framebuffer)
+        {
+            *is_swapped = false;
+            return MAGIK_ERROR_INVALID_POINTER;
+        }
+
+        if(!framebuffer_swapchain.is_ready_framebuffer_updated.exchange(false, std::memory_order_acquire)) 
+        {
+            *is_swapped = false;
+            return MAGIK_SUCCESS;
+        }
+
+        framebuffer_swapchain.front_framebuffer = framebuffer_swapchain.ready_framebuffer.exchange(framebuffer_swapchain.front_framebuffer, std::memory_order_acq_rel);
+
+        *is_swapped = true;
+        return MAGIK_SUCCESS;
+    }
+
     e_magik_result_types configure_external_framebuffer_collection(magik_framebuffer_collection_external_t* external_collection_framebuffer, e_magik_framebuffer_collection_config_types config_type)
     {
         magik_framebuffer_collection_external* buffer = new magik_framebuffer_collection_external();
@@ -159,55 +315,31 @@ namespace magik
         return _r;
     }
 
-    e_magik_result_types initialize_framebuffer_swapchain(framebuffer_swapchain_t* framebuffer_swapchain)
+    // Internal
+    static void realloc_framebuffer(framebuffer_collection_t& framebuffer_collection, uint32_t x_resolution_target, uint32_t y_resolution_target)
     {
-        if(!framebuffer_swapchain)
+        for(auto&[key, value] : framebuffer_collection.collection)
         {
-            return MAGIK_ERROR_INVALID_POINTER;
-        }
-
-        framebuffer_swapchain->front_framebuffer = &framebuffer_swapchain->framebuffer_collection[0];
-        framebuffer_swapchain->ready_framebuffer.store(&framebuffer_swapchain->framebuffer_collection[1], std::memory_order_relaxed);
-        framebuffer_swapchain->back_framebuffer = &framebuffer_swapchain->framebuffer_collection[2];
-
-        return MAGIK_SUCCESS;
-    }
-
-    e_magik_result_types allocate_render_framebuffer_swapchain(framebuffer_swapchain_t* framebuffer_swapchain, bool* is_dirty, uint32_t x_resolution_target, uint32_t y_resolution_target)
-    {
-        size_t size_of_nth_buffer = 0;
-
-        *is_dirty = false;
-
-        for(auto& [key, value] : framebuffer_swapchain->render_framebuffer.collection)
-        {
-            if((x_resolution_target != value.x_resolution) || (y_resolution_target != value.y_resolution))
+            if((value.x_resolution != x_resolution_target) || (value.y_resolution != y_resolution_target))
             {
-                *is_dirty = true;
-
-                size_of_nth_buffer = static_cast<size_t>(x_resolution_target*y_resolution_target*value.channels) * sizeof(float);
-
-                magik::free_device(value.d_data);
-
+                check_cuda_errors(cudaFree(value.d_data));
                 value.x_resolution = x_resolution_target;
                 value.y_resolution = y_resolution_target;
-                value.d_data = magik::allocate_device<float>(size_of_nth_buffer);
+                check_cuda_errors(cudaMalloc(reinterpret_cast<void**>(&value.d_data), static_cast<size_t>(value.x_resolution)*static_cast<size_t>(value.y_resolution)*static_cast<size_t>(value.channels)*sizeof(float)));
             }
         }
-
-        return MAGIK_SUCCESS;
     }
 
-    e_magik_result_types memcpy_render_to_back_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain)
+    static void memcpy_render_to_back_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain)
     {
-        for(auto iter = framebuffer_swapchain->back_framebuffer->collection.begin(); iter != framebuffer_swapchain->back_framebuffer->collection.end();)
+        for(auto iter = framebuffer_swapchain.back_framebuffer->collection.begin(); iter != framebuffer_swapchain.back_framebuffer->collection.end();)
         {
-            auto render_element = framebuffer_swapchain->render_framebuffer.collection.find(iter->first);
+            auto render_element = framebuffer_swapchain.render_framebuffer.collection.find(iter->first);
 
-            if(render_element == framebuffer_swapchain->render_framebuffer.collection.end())
+            if(render_element == framebuffer_swapchain.render_framebuffer.collection.end())
             {
                 magik::free_device(iter->second.d_data);
-                iter = framebuffer_swapchain->back_framebuffer->collection.erase(iter);
+                iter = framebuffer_swapchain.back_framebuffer->collection.erase(iter);
             }
             else
             {
@@ -215,11 +347,11 @@ namespace magik
             }
         }
 
-        for(auto& [target_key, target_value] : framebuffer_swapchain->render_framebuffer.collection)
+        for(auto& [target_key, target_value] : framebuffer_swapchain.render_framebuffer.collection)
         {
-            framebuffer_swapchain->back_framebuffer->collection.emplace(target_key, framebuffer_t());
+            framebuffer_swapchain.back_framebuffer->collection.emplace(target_key, framebuffer_t());
 
-            auto& back_element = framebuffer_swapchain->back_framebuffer->collection.find(target_key)->second;
+            auto& back_element = framebuffer_swapchain.back_framebuffer->collection.find(target_key)->second;
 
             size_t size_of_target = static_cast<size_t>(target_value.x_resolution*target_value.y_resolution*target_value.channels)*sizeof(float);
 
@@ -233,206 +365,60 @@ namespace magik
                 back_element.d_data = magik::allocate_device<float>(size_of_target);
             }
 
-            magik::memcpy_device_to_device(back_element.d_data, target_value.d_data, size_of_target);
+            check_cuda_errors(cudaMemcpy(back_element.d_data, target_value.d_data, size_of_target, cudaMemcpyDeviceToDevice));
         }
-
-        return MAGIK_SUCCESS;
     }
 
-    e_magik_result_types swap_back_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain)
+    static void swap_back_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain)
     {
-        if(!framebuffer_swapchain || !framebuffer_swapchain->ready_framebuffer.load(std::memory_order_relaxed) || !framebuffer_swapchain->back_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
+        if(!framebuffer_swapchain.ready_framebuffer.load(std::memory_order_relaxed) || !framebuffer_swapchain.back_framebuffer);
 
-        framebuffer_swapchain->back_framebuffer = framebuffer_swapchain->ready_framebuffer.exchange(framebuffer_swapchain->back_framebuffer, std::memory_order_acq_rel);
-        framebuffer_swapchain->is_ready_framebuffer_updated.store(true, std::memory_order_release);
-        return MAGIK_SUCCESS;
+        framebuffer_swapchain.back_framebuffer = framebuffer_swapchain.ready_framebuffer.exchange(framebuffer_swapchain.back_framebuffer, std::memory_order_acq_rel);
+        framebuffer_swapchain.is_ready_framebuffer_updated.store(true, std::memory_order_release);
     }
 
-    e_magik_result_types try_swap_front_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain, bool* is_swapped)
+    void update_framebuffer_swapchain(update_framebuffer_swapchain_t args)
     {
-        if(!framebuffer_swapchain.ready_framebuffer.load(std::memory_order_relaxed) || !framebuffer_swapchain.front_framebuffer)
+        if(args.update_policy != MAGIK_FRAMEBUFFER_UPDATE_POLICY_NONE)
         {
-            *is_swapped = false;
-            return MAGIK_ERROR_INVALID_POINTER;
+            realloc_framebuffer(args.framebuffer_swapchain.render_framebuffer, args.x_resolution_target, args.y_resolution_target);
         }
 
-        if(!framebuffer_swapchain.is_ready_framebuffer_updated.exchange(false, std::memory_order_acquire)) 
-        {
-            *is_swapped = false;
-            return MAGIK_SUCCESS;
-        }
+        MAGIK_ASSERT(args.framebuffer_swapchain.back_framebuffer != nullptr, "The back framebuffer collection cannot be null");
 
-        framebuffer_swapchain.front_framebuffer = framebuffer_swapchain.ready_framebuffer.exchange(framebuffer_swapchain.front_framebuffer, std::memory_order_acq_rel);
+        realloc_framebuffer(*args.framebuffer_swapchain.back_framebuffer, args.x_resolution_target, args.y_resolution_target);
 
-        *is_swapped = true;
-        return MAGIK_SUCCESS;
+        memcpy_render_to_back_framebuffer(args.framebuffer_swapchain);
+
+        swap_back_framebuffer(args.framebuffer_swapchain);
+
+        args.update_policy = MAGIK_FRAMEBUFFER_UPDATE_POLICY_NONE;
     }
 
-    e_magik_result_types memcpy_front_framebuffer_to_external_config_host(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    void initialize_framebuffer_swapchain(framebuffer_swapchain_t& framebuffer_swapchain)
     {
-        for(auto iter = external_collection_framebuffer->collection.begin(); iter != external_collection_framebuffer->collection.end(); )
-        {
-            auto element = framebuffer_swapchain.front_framebuffer->collection.find(iter->first);
-
-            if(element == framebuffer_swapchain.front_framebuffer->collection.end())
-            {
-                auto buffer = iter->second;
-                magik::free_host(buffer.config_host.h_data);
-                iter = external_collection_framebuffer->collection.erase(iter);
-            }
-            else
-            {
-                iter++;
-            }
-        }
-
-        for(const auto& [key, ctx_value] : framebuffer_swapchain.front_framebuffer->collection)
-        {
-            external_collection_framebuffer->collection.try_emplace(key); 
-            auto& dcc_value = external_collection_framebuffer->collection.find(key)->second;
-
-            size_t size_of_buffer = static_cast<size_t>(ctx_value.x_resolution*ctx_value.y_resolution*ctx_value.channels)*sizeof(float);
-
-            if((!dcc_value.config_host.h_data) || (dcc_value.x_resolution != ctx_value.x_resolution) || (dcc_value.y_resolution != ctx_value.y_resolution) || (dcc_value.channels != ctx_value.channels))
-            {
-                magik::free_host(dcc_value.config_host.h_data);
-
-                dcc_value.x_resolution = ctx_value.x_resolution;
-                dcc_value.y_resolution = ctx_value.y_resolution;
-                dcc_value.channels = ctx_value.channels;
-                dcc_value.config_host.h_data = magik::allocate_host<float>(size_of_buffer);
-                dcc_value.config_host.host_size = size_of_buffer;
-            }
-
-            magik::memcpy_device_to_host(ctx_value.d_data, dcc_value.config_host.h_data, size_of_buffer);
-        }
-
-        return MAGIK_SUCCESS;
-    };
-
-    static e_magik_result_types memcpy_front_framebuffer_to_external_config_cuda(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
-    {
-        return MAGIK_SUCCESS;
-    };
-
-    static e_magik_result_types memcpy_front_framebuffer_to_external_config_opengl(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
-    {
-        e_magik_result_types _r = MAGIK_SUCCESS;
-
-        for(auto iter = external_collection_framebuffer->collection.begin(); iter != external_collection_framebuffer->collection.end(); )
-        {
-            auto element = framebuffer_swapchain.front_framebuffer->collection.find(iter->first);
-
-            if(element == framebuffer_swapchain.front_framebuffer->collection.end())
-            {
-                auto buffer = iter->second;
-                _r = magik::free_opengl_buffer(&buffer.config_open_gl_interop.gl_buffer_id, &buffer.config_open_gl_interop.cuda_resource);
-                iter = external_collection_framebuffer->collection.erase(iter);
-            }
-            else
-            {
-                iter++;
-            }
-        }
-
-        for(const auto& [key, ctx_value] : framebuffer_swapchain.front_framebuffer->collection)
-        {
-            external_collection_framebuffer->collection.try_emplace(key); 
-            auto& dcc_value = external_collection_framebuffer->collection.find(key)->second; 
-
-            if((dcc_value.x_resolution != ctx_value.x_resolution) || (dcc_value.y_resolution != ctx_value.y_resolution) || (dcc_value.channels != ctx_value.channels) || (!dcc_value.config_open_gl_interop.cuda_resource) || (dcc_value.config_open_gl_interop.gl_buffer_id == 0))
-            {
-                dcc_value.x_resolution = ctx_value.x_resolution;
-                dcc_value.y_resolution = ctx_value.y_resolution;
-                dcc_value.channels = ctx_value.channels;
-
-                _r = magik::free_opengl_buffer(&dcc_value.config_open_gl_interop.gl_buffer_id, &dcc_value.config_open_gl_interop.cuda_resource);
-                _r = magik::allocate_opengl_buffer(dcc_value.x_resolution, dcc_value.y_resolution, dcc_value.channels, &dcc_value.config_open_gl_interop.gl_buffer_id, &dcc_value.config_open_gl_interop.cuda_resource);
-            }
-
-            magik::map_cuda_to_opengl_buffer(dcc_value.x_resolution, dcc_value.y_resolution, dcc_value.channels, &dcc_value.config_open_gl_interop.cuda_resource, ctx_value.d_data);
-        }
-
-        return _r;
-    };
-
-    static e_magik_result_types memcpy_front_framebuffer_to_external_config_vulkan(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
-    {
-        return MAGIK_SUCCESS;
-    };
-
-    e_magik_result_types memcpy_front_framebuffer_to_external_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
-    {
-        if(!external_collection_framebuffer || !framebuffer_swapchain.front_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
-
-        if( external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_HOST && 
-            external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_CUDA && 
-            external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_OPENGL_INTEROP && 
-            external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_VULKAN_INTEROP
-        ) return MAGIK_UNKNOWN_ENUM_TYPE;
-
-        e_magik_result_types result = MAGIK_SUCCESS;
-
-        switch(external_collection_framebuffer->config_type)
-        {
-            case MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_HOST:
-            {
-                result = memcpy_front_framebuffer_to_external_config_host(framebuffer_swapchain, external_collection_framebuffer);
-                break;
-            }
-
-            case MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_CUDA:
-            {
-                result = memcpy_front_framebuffer_to_external_config_cuda(framebuffer_swapchain, external_collection_framebuffer);
-                break;
-            }
-
-            case MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_OPENGL_INTEROP:
-            {
-                result = memcpy_front_framebuffer_to_external_config_opengl(framebuffer_swapchain, external_collection_framebuffer);
-                break;
-            }
-
-            case MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_VULKAN_INTEROP:
-            {
-                result = memcpy_front_framebuffer_to_external_config_vulkan(framebuffer_swapchain, external_collection_framebuffer);
-                break;
-            }
-        }
-
-        return result;
+        framebuffer_swapchain.front_framebuffer = &framebuffer_swapchain.framebuffer_collection[0];
+        framebuffer_swapchain.ready_framebuffer.store(&framebuffer_swapchain.framebuffer_collection[1], std::memory_order_relaxed);
+        framebuffer_swapchain.back_framebuffer = &framebuffer_swapchain.framebuffer_collection[2];
     }
 
-    e_magik_result_types destroy_framebuffer_swpachain(framebuffer_swapchain_t* framebuffer_swapchain)
+    void release_framebuffer_swapchain(framebuffer_swapchain_t& framebuffer_swapchain)
     {
         for(uint32_t i = 0; i < 3; i++)
         {
-            for(const auto& [key, ctx_value] : framebuffer_swapchain->framebuffer_collection[i].collection)
+            for(const auto& [key, ctx_value] : framebuffer_swapchain.framebuffer_collection[i].collection)
             {
-                magik::free_device(ctx_value.d_data);
+                check_cuda_errors(cudaFree(ctx_value.d_data));
             }
 
-            framebuffer_swapchain->framebuffer_collection[i].collection.clear();
+            framebuffer_swapchain.framebuffer_collection[i].collection.clear();
         }
 
-        for(const auto& [key, value] : framebuffer_swapchain->render_framebuffer.collection)
+        for(const auto& [key, value] : framebuffer_swapchain.render_framebuffer.collection)
         {
-            magik::free_device(value.d_data);
+            check_cuda_errors(cudaFree(value.d_data));
         }
 
-        framebuffer_swapchain->render_framebuffer.collection.clear();
-
-        return MAGIK_SUCCESS;
-    }
-
-    e_magik_result_types reset_render_buffer(framebuffer_swapchain_t* framebuffer_swapchain)
-    {
-        for(const auto& [key, value] : framebuffer_swapchain->render_framebuffer.collection)
-        {
-            size_t size_of_render_buffer = value.channels*value.x_resolution*value.y_resolution*sizeof(float);
-            magik::memset_device_sync(value.d_data, 0x0, size_of_render_buffer);
-        }
-
-        return MAGIK_SUCCESS;
+        framebuffer_swapchain.render_framebuffer.collection.clear();
     }
 }

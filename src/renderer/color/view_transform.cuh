@@ -3,7 +3,8 @@
 #include "magik.h"
 #include "cuda_host_device_utilities.h"
 #include "internal_math.h"
-#include "host_color_utilities.cuh"
+#include "host_color_utilities.h"
+#include "color_settings.h"
 
 namespace magik
 {

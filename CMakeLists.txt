@@ -18,6 +18,9 @@ add_library(magik SHARED
     # Renderer
         # bxdf
 
+        # color
+        src/renderer/color/color_pipeline.cpp
+
         # command
         src/renderer/command/command.cpp
 

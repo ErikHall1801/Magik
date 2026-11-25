@@ -26,7 +26,13 @@ namespace magik
         };
     }
 
-    constexpr command_result_t ok() { return {}; }
+    template<typename E> constexpr void raise_update_policy(E& current, E level)
+    {
+        static_assert(std::is_enum_v<E>, "raise() is for update-policy enums");
+        if(level > current) current = level;
+    }
+
+    constexpr command_result_t ok() { return {MAGIK_RESULT_SEVERITY_NONE, MAGIK_SUCCESS}; }
 
     constexpr command_result_t warning(e_magik_result_types c) { return { MAGIK_RESULT_SEVERITY_WARNING, c}; }
 
@@ -57,6 +63,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_clear_render_buffer_t& cmd)
             {
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 return ok();
             }
         ),
@@ -106,6 +113,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_metric_minkowski_t& cmd)
             {
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.metric_type = MINKOWSKI;
                 return ok();
             }
@@ -115,6 +123,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_metric_schwarzschild_t& cmd)
             {
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.metric_type = SCHWARZSCHILD;
                 return ok();
             }
@@ -124,6 +133,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_metric_kerr_t& cmd)
             {
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.metric_type = KERR;
                 return ok();
             }
@@ -134,6 +144,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_absolute_error_tolerance_t& cmd)
             {
                 if(cmd.absolute_error_tolerance <= 0.0f) {  return warning(MAGIK_ERROR_INVALID_VALUE_RANGE); }
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.integrator_absolute_error_tolerance = cmd.absolute_error_tolerance;
                 return ok();
             }
@@ -144,6 +155,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_relative_error_tolerance_t& cmd)
             {
                 if(cmd.relative_error_tolerance<= 0.0f) { return warning(MAGIK_ERROR_INVALID_VALUE_RANGE); }
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.integrator_relative_error_tolerance = cmd.relative_error_tolerance;
                 return ok();
             }
@@ -154,6 +166,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_max_substeps_t& cmd)
             {
                 if(cmd.max_substeps < 2) { return warning(MAGIK_ERROR_INSUFFICIENT_SUBSTEPS); }
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.n_integrator_max_substep = cmd.max_substeps;
                 return ok();
             }
@@ -164,6 +177,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_observer_local_proper_velocity_t& cmd)
             {
                 if(isnan(cmd.velocity_x*cmd.velocity_y*cmd.velocity_z) || isinf(cmd.velocity_x*cmd.velocity_y*cmd.velocity_z)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.observer_local_proper_velocity = vec3f{cmd.velocity_x, cmd.velocity_y, cmd.velocity_z};
                 return ok();
             }
@@ -174,6 +188,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_celestial_sphere_radius_t& cmd)
             {
                 if(isnan(cmd.celestial_sphere_radius) || isinf(cmd.celestial_sphere_radius) || cmd.celestial_sphere_radius < 0.0f) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.celestial_sphere_radius = cmd.celestial_sphere_radius;
                 return ok();
             }
@@ -184,6 +199,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_schwarzschild_event_horizon_scalar_t& cmd)
             {
                 if(isnan(cmd.scalar) || isinf(cmd.scalar) || cmd.scalar < 1.0f) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.schwarzschild_event_horizon_scalar = cmd.scalar;
                 return ok();
             }
@@ -194,6 +210,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_schwarzschild_mass_parameter_t& cmd)
             {
                 if(isnan(cmd.mass_parameter) || isinf(cmd.mass_parameter)) return warning(MAGIK_ERROR_INVALID_METRIC_PARAMETER);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.schwarzschild_mass_parameter = cmd.mass_parameter;
                 return ok();
             }
@@ -204,6 +221,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_kerr_event_horizon_scalar_t& cmd)
             {
                 if(isnan(cmd.scalar) || isinf(cmd.scalar) || cmd.scalar < 1.0f) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.kerr_event_horizon_scalar = cmd.scalar;
                 return ok();
             }
@@ -214,6 +232,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_kerr_mass_parameter_t& cmd)
             {
                 if(isnan(cmd.mass_parameter) || isinf(cmd.mass_parameter)) return warning(MAGIK_ERROR_INVALID_METRIC_PARAMETER);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.kerr_mass_parameter = cmd.mass_parameter;
                 return ok();
             }
@@ -224,6 +243,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_kerr_dimensionless_spin_parameter_t& cmd)
             {
                 if(isnan(cmd.dimensionless_spin_parameter) || isinf(cmd.dimensionless_spin_parameter)) return warning(MAGIK_ERROR_INVALID_METRIC_PARAMETER);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.relativity_settings.kerr_dimensionless_spin_parameter = cmd.dimensionless_spin_parameter;
                 return ok();
             }
@@ -246,6 +266,7 @@ namespace magik
             {
                 vec3f p = vec3f{cmd.position_x, cmd.position_y, cmd.position_z};
                 if(isnan(p.length2()) || isinf(p.length2())) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.optical_system_settings.position = p;
                 return ok();
             }
@@ -259,6 +280,7 @@ namespace magik
                 mat3f m;
                 m.make_identity();
                 m = m.rotate(cmd.rotation_z, cmd.rotation_y, cmd.rotation_x);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.optical_system_settings.orientation = m;
                 return ok();
             }
@@ -270,6 +292,8 @@ namespace magik
             {
                 uint32_t x_ = cmd.x_resolution, y_ = cmd.y_resolution;
                 if(isnan(x_*y_) || isinf(x_*y_) || (x_ <= 2) || (y_ <= 2)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_REALLOC);
+                raise_update_policy(ctx.framebuffer_update_policy, MAGIK_FRAMEBUFFER_UPDATE_POLICY_REALLOC_RENDERBUFFER);
                 ctx.stage.optical_system_settings.x_resolution = x_;
                 ctx.stage.optical_system_settings.y_resolution = y_;
                 return ok();
@@ -284,6 +308,8 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_n_intrinsic_spectral_irradiance_bin_t& cmd)
             {
                 if(isnan(cmd.n_isi_bin) || isinf(cmd.n_isi_bin) || (cmd.n_isi_bin > 64) || (cmd.n_isi_bin == 0)) return warning(MAGIK_ERROR_INVALID_BIN_COUNT);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_REALLOC);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_STRICT);
                 ctx.stage.color_settings.n_isi_bin = cmd.n_isi_bin;
                 return ok();
             }
@@ -294,6 +320,8 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_sample_domain_maximum_wavelength_nm_t& cmd)
             {
                 if(isnan(cmd.maximum_wavelength_nm) || isinf(cmd.maximum_wavelength_nm) || (ctx.stage.color_settings.isi_min_wavelength_nm > cmd.maximum_wavelength_nm) || (cmd.maximum_wavelength_nm < 0.0f)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_STRICT);
                 ctx.stage.color_settings.isi_max_wavelength_nm = cmd.maximum_wavelength_nm;
                 return ok();
             }
@@ -304,6 +332,8 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_sample_domain_minimum_wavelength_nm_t& cmd)
             {
                 if(isnan(cmd.minimum_wavelength_nm) || isinf(cmd.minimum_wavelength_nm) || (ctx.stage.color_settings.isi_max_wavelength_nm < cmd.minimum_wavelength_nm) || (cmd.minimum_wavelength_nm < 0.0f)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_STRICT);
                 ctx.stage.color_settings.isi_min_wavelength_nm = cmd.minimum_wavelength_nm;
                 return ok();
             }
@@ -314,6 +344,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_redistribution_standard_deviation_nm_t& cmd)
             {
                 if(isnan(cmd.standard_deviation_nm) || isinf(cmd.standard_deviation_nm) || (cmd.standard_deviation_nm < 0.0f)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.color_settings.redistribution_standard_deviation_nm = cmd.standard_deviation_nm;
                 return ok();
             }
@@ -323,6 +354,8 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_color_matching_function_t& cmd)
             {
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_STRICT);
                 ctx.stage.color_settings.cmf_type = cmd.cmf_type;
                 return ok();
             }
@@ -332,6 +365,8 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_scene_colorspace_t& cmd)
             {
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_STRICT);
                 ctx.stage.color_settings.scene_colorspace_type = cmd.scene_colorspace;
                 return ok();
             }
@@ -341,6 +376,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_view_transform_t& cmd)
             {
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.view_transform_type = cmd.view_transform;
                 return ok();
             }
@@ -350,6 +386,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_display_colorspace_t& cmd)
             {
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.display_colorspace_type = cmd.display_colorspace;
                 return ok();
             }
@@ -359,6 +396,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_output_format_t& cmd)
             {
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.output_format = cmd.output_format;
                 return ok();
             }
@@ -369,6 +407,8 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_white_balance_white_point_t& cmd)
             {
                 if(isnan(cmd.white_point_kelvin) || isinf(cmd.white_point_kelvin)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_STRICT);
                 ctx.stage.color_settings.white_point = cmd.white_point_kelvin;
                 return ok();
             }
@@ -379,6 +419,8 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_white_balance_tint_t& cmd)
             {
                 if(isnan(cmd.tint) || isinf(cmd.tint)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_STRICT);
                 ctx.stage.color_settings.tint = cmd.tint;
                 return ok();
             }
@@ -389,6 +431,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_view_transform_reinhard_extended_white_luminance_t& cmd)
             {
                 if(isnan(cmd.white_luminance) || isinf(cmd.white_luminance)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.vt_reinhard_extended_white_luminance = cmd.white_luminance;
                 return ok();
             }
@@ -399,6 +442,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_view_transform_khronos_pbr_neutral_start_compression_t& cmd)
             {
                 if(isnan(cmd.start_compression) || isinf(cmd.start_compression)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.vt_khronos_pbr_neutral_start_compression = cmd.start_compression;
                 return ok();
             }
@@ -409,6 +453,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_view_transform_khronos_pbr_neutral_desaturation_t& cmd)
             {
                 if(isnan(cmd.desaturation) || isinf(cmd.desaturation)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.vt_khronos_pbr_neutral_desaturation = cmd.desaturation;
                 return ok();
             }
@@ -418,6 +463,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_view_transform_gt7_mode_t& cmd)
             {
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.vt_gt7_mode = cmd.mode;
                 return ok();
             }
@@ -428,6 +474,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_view_transform_gt7_sdr_paper_white_balance_t& cmd)
             {
                 if(isnan(cmd.sdr_paper_white_balance) || isinf(cmd.sdr_paper_white_balance)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.vt_gt7_sdr_paper_white = cmd.sdr_paper_white_balance;
                 return ok();
             }
@@ -438,6 +485,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_view_transform_gt7_reference_luminance_t& cmd)
             {
                 if(isnan(cmd.reference_luminance) || isinf(cmd.reference_luminance)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.vt_gt7_reference_luminance = cmd.reference_luminance;
                 return ok();
             }
@@ -448,6 +496,7 @@ namespace magik
             [](command_context_t ctx, const magik_command_set_view_transform_gt7_jzazbz_exponent_scale_factor_t& cmd)
             {
                 if(isnan(cmd.jzazbz_exponent_scale_factor) || isinf(cmd.jzazbz_exponent_scale_factor) || (cmd.jzazbz_exponent_scale_factor < 1.0f)) return warning(MAGIK_ERROR_INVALID_VALUE_RANGE);
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.vt_gt7_jzazbz_exponent_scale_factor = cmd.jzazbz_exponent_scale_factor;
                 return ok();
             }
@@ -457,6 +506,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_view_transform_agx_look_t& cmd)
             {
+                raise_update_policy(ctx.color_pipeline_update_policy, MAGIK_COLOR_PIPELINE_UPDATE_POLICY_RELAXED);
                 ctx.stage.color_settings.vt_agx_look = cmd.look;
                 return ok();
             }
@@ -469,6 +519,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_n_geodesic_step_limit_t& cmd)
             {
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.render_settings.n_geodesic_step_limit = cmd.n_geodesic_step_limit;
                 return ok();
             }
@@ -478,6 +529,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_n_reflected_limit_t& cmd)
             {
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
                 ctx.stage.render_settings.n_reflected_limit = cmd.n_reflected_limit;
                 return ok();
             }
@@ -516,7 +568,6 @@ namespace magik
         return MAGIK_SUCCESS;
     }
 
-    // This is fully moved into magik.cpp
     bool dispatch_command_buffer(command_swapchain_t& swpc)
     {
         if(!swpc.is_swap_ready.load(std::memory_order_acquire)) return false;
@@ -525,29 +576,28 @@ namespace magik
         return true;
     }
 
-    void consume_command_buffer(command_context_t ctx, command_buffer_t* command_buffer)
+    static void consume_command_buffer(command_context_t ctx, command_buffer_t* command_buffer)
     {
+        command_result_t result;
+
         size_t command_buffer_occupancy = (size_t)(command_buffer->n_occupied_chunk);
         uint32_t* playhead = command_buffer->data.get();
         size_t playhead_offset = 0;
 
-        e_magik_result_types status = MAGIK_SUCCESS;
-
         while(command_buffer_occupancy > playhead_offset)
         {
-            if((command_buffer_occupancy - playhead_offset) < sizeof(magik_command_header_t) / sizeof(uint32_t)) { status = MAGIK_ERROR_OUT_OF_BOUNDS_COMMAND_BUFFER_READ; break; }
+            if((command_buffer_occupancy - playhead_offset) < sizeof(magik_command_header_t) / sizeof(uint32_t)) { result.error = MAGIK_ERROR_OUT_OF_BOUNDS_COMMAND_BUFFER_READ; break; }
 
             magik_command_header_t header;
             memcpy(&header, playhead + playhead_offset, sizeof(magik_command_header_t));
             size_t command_chunks = header.size / sizeof(uint32_t);
-            if(command_chunks == 0 || command_chunks > (command_buffer_occupancy - playhead_offset)) { status = MAGIK_ERROR_OUT_OF_BOUNDS_COMMAND_BUFFER_READ; break; }
+            if(command_chunks == 0 || command_chunks > (command_buffer_occupancy - playhead_offset)) { result.error = MAGIK_ERROR_OUT_OF_BOUNDS_COMMAND_BUFFER_READ; break; }
 
             const command_element_t* entry = find_command(header.type);
 
             if(entry)
             {
                 command_result_t r = entry->apply(ctx, playhead + playhead_offset);
-                status = r.result;
             }
 
             playhead_offset += command_chunks;

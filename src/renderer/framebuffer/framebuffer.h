@@ -2,6 +2,7 @@
 
 #include "magik.h"
 #include "internal_memory.h"
+#include "internal_error.h"
 #include "opengl_interop.cuh"
 
 #include <atomic>
@@ -50,6 +51,12 @@ struct magik_framebuffer_collection_external //Rename this !!!
 
 namespace magik
 {
+    typedef enum e_magik_framebuffer_update_policy_types : uint32_t
+    {
+        MAGIK_FRAMEBUFFER_UPDATE_POLICY_NONE = 0,
+        MAGIK_FRAMEBUFFER_UPDATE_POLICY_REALLOC_RENDERBUFFER = 1
+    } e_magik_framebuffer_update_policy_types;
+
     struct framebuffer_t
     {
         uint32_t x_resolution = 0;
@@ -76,7 +83,7 @@ namespace magik
         bool clear_render_buffer = false;
     };
 
-    // Obviously all the names in magik.h have to chanbge too. 
+    // DCC 
     e_magik_result_types configure_external_framebuffer_collection(magik_framebuffer_collection_external_t* external_collection_framebuffer, e_magik_framebuffer_collection_config_types config_type);
 
     e_magik_result_types fetch_framebuffer_collection(bool is_running, e_magik_manager_display_types display_type, framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external_t external_collection_framebuffer, bool* is_new_fetch);
@@ -87,19 +94,19 @@ namespace magik
 
     e_magik_result_types destroy_external_framebuffer_collection(magik_framebuffer_collection_external_t external_collection_framebuffer);
 
-    e_magik_result_types initialize_framebuffer_swapchain(framebuffer_swapchain_t* framebuffer_swapchain);
+    // Internal
+    struct update_framebuffer_swapchain_t
+    {
+        e_magik_framebuffer_update_policy_types update_policy;
 
-    e_magik_result_types allocate_render_framebuffer_swapchain(framebuffer_swapchain_t* framebuffer_swapchain, bool* is_dirty, uint32_t x_resolution_target, uint32_t y_resolution_target);
+        framebuffer_swapchain_t& framebuffer_swapchain;
+        uint32_t x_resolution_target;
+        uint32_t y_resolution_target;
+    };
 
-    e_magik_result_types memcpy_render_to_back_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain);
+    void update_framebuffer_swapchain(update_framebuffer_swapchain_t args);
 
-    e_magik_result_types swap_back_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain);
+    void initialize_framebuffer_swapchain(framebuffer_swapchain_t& framebuffer_swapchain);
 
-    e_magik_result_types try_swap_front_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain, bool* is_swapped);
-
-    e_magik_result_types memcpy_front_framebuffer_to_external_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer);
-
-    e_magik_result_types destroy_framebuffer_swpachain(framebuffer_swapchain_t* framebuffer_swapchain);
-
-    e_magik_result_types reset_render_buffer(framebuffer_swapchain_t* framebuffer_swapchain);
+    void release_framebuffer_swapchain(framebuffer_swapchain_t& framebuffer_swapchain);
 }

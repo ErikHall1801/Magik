@@ -30,7 +30,7 @@ namespace magik
 }
 
 #if MAGIK_ASSERTS_ENABLED
-    #define MAGIK_ASSERT(cond, msg) do { if(!(cond)) ::magik::detail::assert_fail(#cond, msg, __FILE__, __LINE__, __func__); } while(0)
+    #define MAGIK_ASSERT(cond, msg) do { if(!(cond)) magik::assert_fail(#cond, msg, __FILE__, __LINE__, __func__); } while(0)
 #else
     #define MAGIK_ASSERT(cond, msg) do { (void)sizeof(!(cond)); } while(0)
 #endif

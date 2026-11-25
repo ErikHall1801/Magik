@@ -4,6 +4,8 @@
 #include "internal_error.h"
 #include "stage.h"
 #include "framebuffer.h"
+#include "wavefront.h"
+#include "color_pipeline.h"
 #include <string> // ???
 #include <array>
 #include <cmath>
@@ -32,6 +34,10 @@ namespace magik
 
     struct command_context_t
     {
+        e_magik_framebuffer_update_policy_types& framebuffer_update_policy;
+        e_magik_wavefront_buffer_update_policy_types& wavefront_update_policy;
+        e_magik_color_pipeline_update_policy_types& color_pipeline_update_policy;
+
         e_magik_manager_status_types& status;
         e_magik_result_types& status_reason;
         command_swapchain_t& command_swapchain;
@@ -42,7 +48,7 @@ namespace magik
     struct command_result_t
     {
         e_magik_result_severity_types severity = MAGIK_RESULT_SEVERITY_NONE;
-        e_magik_result_types result = MAGIK_SUCCESS;
+        e_magik_result_types error = MAGIK_SUCCESS;
     };
 
     struct command_element_t
@@ -55,8 +61,6 @@ namespace magik
     e_magik_result_types push_command(command_buffer_t* front_command_buffer, uint32_t n_reserved_chunk, bool drop_overflows, const void* command);
 
     bool dispatch_command_buffer(command_swapchain_t& swpc);
-
-    void consume_command_buffer(command_context_t ctx, command_buffer_t* command_buffer); 
 
     void consume_back_command_buffer(command_context_t ctx);
 }

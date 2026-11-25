@@ -56,31 +56,66 @@ namespace magik
         command_swapchain_t& mgr_command_swpachain;
         framebuffer_swapchain_t& mgr_framebuffer_swapchain;
         stage_t& mgr_stage;
+        e_magik_framebuffer_update_policy_types& framebuffer_update_policy;
+        e_magik_wavefront_buffer_update_policy_types& wavefront_update_policy;
+        e_magik_color_pipeline_update_policy_types& color_pipeline_update_policy;
 
         static MAGIK_HOST process_command_buffers_t create(magik_render_manager* manager)
         {
-            process_command_buffers_t result{manager->status, manager->status_reason, manager->command_swpachain, manager->framebuffer_swapchain, manager->stage};
+            process_command_buffers_t result{manager->status, manager->status_reason, manager->command_swpachain, manager->framebuffer_swapchain, manager->stage, manager->pending.framebuffer, manager->pending.wavefront, manager->pending.color_pipeline};
             return result;
         }
     };
 
     static MAGIK_HOST void process_command_buffers(process_command_buffers_t args)
     {
-        command_context_t ctx{args.mgr_status, args.mgr_status_reason, args.mgr_command_swpachain, args.mgr_framebuffer_swapchain, args.mgr_stage};
+        command_context_t ctx{args.framebuffer_update_policy, args.wavefront_update_policy, args.color_pipeline_update_policy, args.mgr_status, args.mgr_status_reason, args.mgr_command_swpachain, args.mgr_framebuffer_swapchain, args.mgr_stage};
         consume_back_command_buffer(ctx);
     }
 
     struct apply_update_policy_t
     {
+        update_framebuffer_swapchain_t framebuffer;
+        update_wavefront_buffer_t wavefront;
+        update_color_pipeline_t color_pipeline;
+
         static MAGIK_HOST apply_update_policy_t create(magik_render_manager* manager)
         {
-
+            return
+            {
+                .framebuffer =
+                {
+                    .update_policy = manager->pending.framebuffer,
+                    .framebuffer_swapchain = manager->framebuffer_swapchain,
+                    .x_resolution_target = manager->stage.optical_system_settings.x_resolution,
+                    .y_resolution_target = manager->stage.optical_system_settings.y_resolution,
+                },
+                .wavefront =
+                {
+                    .update_policy = manager->pending.wavefront,
+                    .wavefront_buffer = manager->wavefront_buffer,
+                    .x_sample = manager->x_sample,
+                    .user_stream = static_cast<cudaStream_t>(manager->cuda_stream),
+                    .x_resolution_target = manager->stage.optical_system_settings.x_resolution,
+                    .y_resolution_target = manager->stage.optical_system_settings.y_resolution,
+                    .n_geodesic_step_limit = manager->stage.render_settings.n_geodesic_step_limit,
+                    .n_isi_bin = manager->stage.color_settings.n_isi_bin,
+                },
+                .color_pipeline
+                {
+                    .update_policy = manager->pending.color_pipeline,
+                    .pipeline = manager->color_pipeline_descriptor,
+                    .color_settings = manager->stage.color_settings,
+                },
+            };
         }
     };
 
     static MAGIK_HOST void apply_update_policy(apply_update_policy_t args)
     {
-
+        update_framebuffer_swapchain(args.framebuffer);
+        update_wavefront_buffer(args.wavefront);
+        update_color_pipeline(args.color_pipeline);
     }
 
     struct compute_wavefront_sample_t
@@ -92,19 +127,6 @@ namespace magik
     };
 
     static MAGIK_HOST void compute_wavefront_sample(compute_wavefront_sample_t args)
-    {
-
-    }
-
-    struct present_renderbuffer_t
-    {
-        static MAGIK_HOST present_renderbuffer_t create(magik_render_manager* manager)
-        {
-
-        }
-    };
-
-    static MAGIK_HOST void present_renderbuffer(present_renderbuffer_t args)
     {
 
     }
@@ -133,8 +155,6 @@ namespace magik
             apply_update_policy(apply_update_policy_t::create(manager));
 
             compute_wavefront_sample(compute_wavefront_sample_t::create(manager));
-
-            present_renderbuffer(present_renderbuffer_t::create(manager));
         }
 
         release(release_t::create(manager));

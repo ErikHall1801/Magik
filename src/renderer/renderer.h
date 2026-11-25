@@ -6,7 +6,7 @@
 #include "command.h"
 #include "stage.h"
 #include "cuda_host_utilities.h"
-#include "color_pipeline.cuh"
+#include "color_pipeline.h"
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -43,6 +43,13 @@ struct magik_render_manager
     size_t total_iterations;
     magik::wavefront_buffer_t wavefront_buffer;
     magik::color_pipeline_descriptor_t color_pipeline_descriptor;
+
+    struct sub_system_update_policies_t
+    {
+        magik::e_magik_framebuffer_update_policy_types framebuffer;
+        magik::e_magik_wavefront_buffer_update_policy_types wavefront;
+        magik::e_magik_color_pipeline_update_policy_types color_pipeline;
+    } pending;
 
     MAGIK_HOST bool is_nominal()
     {

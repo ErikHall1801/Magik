@@ -111,6 +111,8 @@ namespace magik
                 break;
             }
         }
+
+        args.update_policy = MAGIK_WAVEFRONT_UPDATE_POLICY_NONE;
     }
 
     void wavefront_sample(wavefront_sample_args_t args)
