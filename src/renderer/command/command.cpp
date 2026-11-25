@@ -519,7 +519,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_n_geodesic_step_limit_t& cmd)
             {
-                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_REALLOC);
                 ctx.stage.render_settings.n_geodesic_step_limit = cmd.n_geodesic_step_limit;
                 return ok();
             }

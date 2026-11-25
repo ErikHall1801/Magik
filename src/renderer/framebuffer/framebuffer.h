@@ -97,7 +97,7 @@ namespace magik
     // Internal
     struct update_framebuffer_swapchain_t
     {
-        e_magik_framebuffer_update_policy_types update_policy;
+        e_magik_framebuffer_update_policy_types& update_policy;
 
         framebuffer_swapchain_t& framebuffer_swapchain;
         uint32_t x_resolution_target;

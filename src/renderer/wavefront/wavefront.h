@@ -37,7 +37,7 @@ namespace magik
 
     struct update_wavefront_buffer_t
     {
-        e_magik_wavefront_buffer_update_policy_types update_policy;
+        e_magik_wavefront_buffer_update_policy_types& update_policy;
 
         wavefront_buffer_t& wavefront_buffer;
         uint32_t& x_sample;

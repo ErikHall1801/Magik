@@ -173,6 +173,8 @@ namespace magik
     {
         initialize(initialize_t::create(manager));
 
+        initialize_framebuffer_swapchain(manager->framebuffer_swapchain);
+
         while(manager->is_nominal())
         {
             process_command_buffers(process_command_buffers_t::create(manager));

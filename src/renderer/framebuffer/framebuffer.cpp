@@ -371,7 +371,7 @@ namespace magik
 
     static void swap_back_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain)
     {
-        if(!framebuffer_swapchain.ready_framebuffer.load(std::memory_order_relaxed) || !framebuffer_swapchain.back_framebuffer);
+        if(!framebuffer_swapchain.ready_framebuffer.load(std::memory_order_relaxed) || !framebuffer_swapchain.back_framebuffer) return;
 
         framebuffer_swapchain.back_framebuffer = framebuffer_swapchain.ready_framebuffer.exchange(framebuffer_swapchain.back_framebuffer, std::memory_order_acq_rel);
         framebuffer_swapchain.is_ready_framebuffer_updated.store(true, std::memory_order_release);
