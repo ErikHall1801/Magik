@@ -120,28 +120,53 @@ namespace magik
 
     struct compute_wavefront_sample_t
     {
+        wavefront_sample_args_t wavefront_args;
+
         static MAGIK_HOST compute_wavefront_sample_t create(magik_render_manager* manager)
         {
+            auto temp = manager->framebuffer_swapchain.render_framebuffer.collection.find("test");
 
+            return
+            {
+                .wavefront_args = 
+                {
+                    .d_renderbuffer = temp->second.d_data,
+                    .wavefront_buffer = manager->wavefront_buffer,
+                    .x_sample = manager->x_sample,
+                    .stage = manager->stage,
+                    .color_pipeline = manager->color_pipeline_descriptor,
+                    .user_stream = static_cast<cudaStream_t>(manager->cuda_stream)
+                },
+            };
         }
     };
 
     static MAGIK_HOST void compute_wavefront_sample(compute_wavefront_sample_t args)
     {
-
+        wavefront_sample(args.wavefront_args);
     }
 
     struct release_t
     {
+        framebuffer_swapchain_t& framebuffer_swapchain;
+        device_mem_arena* wavefront_buffer_arena;
+        cudaStream_t user_stream;
+
         static MAGIK_HOST release_t create(magik_render_manager* manager)
         {
-
+            return
+            {
+                manager->framebuffer_swapchain,
+                &manager->wavefront_buffer.arena,
+                static_cast<cudaStream_t>(manager->cuda_stream)
+            };
         }
     };
 
     static MAGIK_HOST void release(release_t args)
     {
-
+        release_framebuffer_swapchain(args.framebuffer_swapchain);
+        release_wavefront_buffer(args.wavefront_buffer_arena, args.user_stream);
     }
 
     void run(magik_render_manager* manager)
@@ -154,7 +179,14 @@ namespace magik
 
             apply_update_policy(apply_update_policy_t::create(manager));
 
-            compute_wavefront_sample(compute_wavefront_sample_t::create(manager));
+            // We have to do this for now, just so it does not immediatly blow up. 
+            // We will have to think about a proper way to handle the lack of a renderbuffer. I.e what if
+            // the d_ ptr is null ? That is not strictly an error. 
+            auto tmp_element = manager->framebuffer_swapchain.render_framebuffer.collection.find("test");
+            if(tmp_element != manager->framebuffer_swapchain.render_framebuffer.collection.end())
+            {
+                compute_wavefront_sample(compute_wavefront_sample_t::create(manager));
+            }
         }
 
         release(release_t::create(manager));
