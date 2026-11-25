@@ -136,53 +136,6 @@ typedef enum e_magik_result_types // Rename to MAGIK_RESULT_ We also need to cul
     MAGIK_PROHIBITED_FORCE_SIZE = 0x7FFFFFFF // Internal use only. Forces the C compiler to use uint32_t
 } e_magik_result_types;
 
-/**
-* @brief Catches Magik errors and provides debug information
-* 
-* @param [in] val Magik API function which returns the e_magik_result_types type
-* @warning If the return type is not MAGIK_SUCCESS this macro either prints out general debug information or calls a user-defined 
-* callback. The callback uses the magik_error_callback signature and has to be set using magik_set_error_callback. It is highly 
-* adviced to define a callback which handles errors, as many of them, such as MAGIK_ERROR_HOST_OUT_OF_MEMORY will cause a crash 
-* sooner rather than later if left to their own devices. The default behaivor does not cause the application to crash. 
-*/
-#define check_magik_errors(val) check_magik( (val), #val, __FILE__, __LINE__)
-
-/**
-* @brief Typedef for error callbacks
-* 
-* @param [in] result The result of a Magik function which returns e_magik_result_types. It is recommended to use the macro 
-* check_magik_error to automatically fill the next arguments
-* @param [in] func The function in which the error was first caught, not the one in which it necessarily happened. 
-* @param [in] file The file in which the function that caugth the error was located in.
-* @param [in] line The line where the error was caught.
-* @param [in] user_data A void pointer to user data used by the callback. 
-*/
-typedef void (*magik_error_callback)(e_magik_result_types result, const char* func, const char* file, int line, void* user_data);
-
-/**
-* @brief Sets a callback function and user data to be used in the event of an error
-* 
-* @param [in] callback A function of a defined signature 
-* @param [in] user_data A void pointer to user data. 
-* 
-* @warning Only one callback and user data pointer can be set at a time !
-*/
-MAGIK_API void magik_set_error_callback(magik_error_callback callback, void* user_data);
-
-/**
-* @brief This is the default error checking function which the macro "check_magik_errors" uses. 
-* 
-* @param [in] result The result of a function which returns e_magik_result_types. In case an API function does not return this type,
-* you can instead use magik_get_last_error() as the input. All Magik functions record the last error.
-* @param [in] func The name of the function which caused the error. 
-* @param [in] file The file the function which caused the error was located in. You can use the "__FILE__" macro here. 
-* @param [in] line The line in which the error occured. You can use the "__LINE__" macro here. 
-* 
-* @warning This function does not interfer with the programs operation. It only prints that an error has occured. It is strongly 
-* recommended to set a error callback using magik_set_error_callback()
-*/
-MAGIK_API void check_magik(e_magik_result_types result, char const* func, const char* const file, int const line); 
-
 
 
 /**
@@ -323,21 +276,6 @@ MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_
 * @brief TEMP !!! All this does is stop the render thread and call .join(). 
 */
 MAGIK_API e_magik_result_types magik_render_manager_destroy(magik_render_manager_t mananger);
-
-/**
-* @brief Returns the last error recorded by the manager
-* 
-* @param [in] manager Initalized manager
-* 
-* @related Last error
-* 
-* @warning This function is intended for async runtime errors. Most API functions provided in the API have an immediate effect as they run 
-* on the DCC thread. But most of Magiks logic runs on an independent worker thread which may run into issues after the DCC made a function 
-* call due to the async nature. These errors are caught by the manager and can be occasionally fetched by the DCC. It is up to the user to 
-* device how often they want to do so.
-* Do note, the DCC owns the manager. So when the API crashes, the last error is persistent in the manager.  
-*/
-MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_manager_t manager);
 
 
 

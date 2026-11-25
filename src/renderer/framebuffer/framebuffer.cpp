@@ -1,5 +1,4 @@
 #include "framebuffer.h"
-#include "renderer.h"
 
 namespace magik
 {
@@ -19,28 +18,28 @@ namespace magik
         return MAGIK_SUCCESS;
     }
 
-    e_magik_result_types fetch_framebuffer_collection(magik_render_manager_t manager, magik_framebuffer_collection_external_t external_collection_framebuffer, bool* is_new_fetch)
+    e_magik_result_types fetch_framebuffer_collection(bool is_running, e_magik_manager_display_types display_type, framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external_t external_collection_framebuffer, bool* is_new_fetch)
     {
-        if(!manager || !external_collection_framebuffer)
+        if(!external_collection_framebuffer)
         {
             *is_new_fetch = false;
             return MAGIK_ERROR_INVALID_POINTER;
         }
 
-        if(!manager->is_running.load(std::memory_order_acquire))
+        if(!is_running)
         {
             *is_new_fetch = false;
             return MAGIK_SUCCESS;
         }
 
-        if(manager->display_type == MAGIK_DISPLAY_HEADLESS)
+        if(display_type == MAGIK_DISPLAY_HEADLESS)
         {
             *is_new_fetch = false;
             return MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED;
         }
 
         bool is_swapped = false;
-        auto _r = try_swap_front_framebuffer(&manager->framebuffer_swapchain, &is_swapped);
+        auto _r = try_swap_front_framebuffer(framebuffer_swapchain, &is_swapped);
         if(!is_swapped)
         {
             *is_new_fetch = false;
@@ -48,14 +47,14 @@ namespace magik
         }
 
         *is_new_fetch = true;
-        return memcpy_front_framebuffer_to_external_framebuffer(&manager->framebuffer_swapchain, external_collection_framebuffer);
+        return memcpy_front_framebuffer_to_external_framebuffer(framebuffer_swapchain, external_collection_framebuffer);
     }
 
-    e_magik_result_types extract_config_host(magik_render_manager_t manager, magik_framebuffer_container_config_host_t* container, magik_framebuffer_collection_external_t external_collection_framebuffer, const char* name)
+    e_magik_result_types extract_config_host(bool is_running, magik_framebuffer_container_config_host_t* container, magik_framebuffer_collection_external_t external_collection_framebuffer, const char* name)
     {
-        if(!manager || !container || !external_collection_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
+        if(!container || !external_collection_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
 
-        if(!manager->is_running.load(std::memory_order_acquire))
+        if(!is_running)
         {
             return MAGIK_SUCCESS;
         }
@@ -81,11 +80,11 @@ namespace magik
         return MAGIK_SUCCESS;
     }
 
-    e_magik_result_types extract_config_opengl_interop(magik_render_manager_t manager, magik_framebuffer_container_config_opengl_interop_t* container, magik_framebuffer_collection_external_t external_collection_framebuffer, const char* name)
+    e_magik_result_types extract_config_opengl_interop(bool is_running, magik_framebuffer_container_config_opengl_interop_t* container, magik_framebuffer_collection_external_t external_collection_framebuffer, const char* name)
     {
-        if(!manager || !container || !external_collection_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
+        if(!container || !external_collection_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
 
-        if(!manager->is_running.load(std::memory_order_acquire))
+        if(!is_running)
         {
             return MAGIK_SUCCESS;
         }
@@ -249,33 +248,33 @@ namespace magik
         return MAGIK_SUCCESS;
     }
 
-    e_magik_result_types try_swap_front_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain, bool* is_swapped)
+    e_magik_result_types try_swap_front_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain, bool* is_swapped)
     {
-        if(!framebuffer_swapchain || !framebuffer_swapchain->ready_framebuffer.load(std::memory_order_relaxed) || !framebuffer_swapchain->front_framebuffer)
+        if(!framebuffer_swapchain.ready_framebuffer.load(std::memory_order_relaxed) || !framebuffer_swapchain.front_framebuffer)
         {
             *is_swapped = false;
             return MAGIK_ERROR_INVALID_POINTER;
         }
 
-        if(!framebuffer_swapchain->is_ready_framebuffer_updated.exchange(false, std::memory_order_acquire)) 
+        if(!framebuffer_swapchain.is_ready_framebuffer_updated.exchange(false, std::memory_order_acquire)) 
         {
             *is_swapped = false;
             return MAGIK_SUCCESS;
         }
 
-        framebuffer_swapchain->front_framebuffer = framebuffer_swapchain->ready_framebuffer.exchange(framebuffer_swapchain->front_framebuffer, std::memory_order_acq_rel);
+        framebuffer_swapchain.front_framebuffer = framebuffer_swapchain.ready_framebuffer.exchange(framebuffer_swapchain.front_framebuffer, std::memory_order_acq_rel);
 
         *is_swapped = true;
         return MAGIK_SUCCESS;
     }
 
-    e_magik_result_types memcpy_front_framebuffer_to_external_config_host(framebuffer_swapchain_t* framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    e_magik_result_types memcpy_front_framebuffer_to_external_config_host(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
     {
         for(auto iter = external_collection_framebuffer->collection.begin(); iter != external_collection_framebuffer->collection.end(); )
         {
-            auto element = framebuffer_swapchain->front_framebuffer->collection.find(iter->first);
+            auto element = framebuffer_swapchain.front_framebuffer->collection.find(iter->first);
 
-            if(element == framebuffer_swapchain->front_framebuffer->collection.end())
+            if(element == framebuffer_swapchain.front_framebuffer->collection.end())
             {
                 auto buffer = iter->second;
                 magik::free_host(buffer.config_host.h_data);
@@ -287,7 +286,7 @@ namespace magik
             }
         }
 
-        for(const auto& [key, ctx_value] : framebuffer_swapchain->front_framebuffer->collection)
+        for(const auto& [key, ctx_value] : framebuffer_swapchain.front_framebuffer->collection)
         {
             external_collection_framebuffer->collection.try_emplace(key); 
             auto& dcc_value = external_collection_framebuffer->collection.find(key)->second;
@@ -311,20 +310,20 @@ namespace magik
         return MAGIK_SUCCESS;
     };
 
-    static e_magik_result_types memcpy_front_framebuffer_to_external_config_cuda(framebuffer_swapchain_t* framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    static e_magik_result_types memcpy_front_framebuffer_to_external_config_cuda(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
     {
         return MAGIK_SUCCESS;
     };
 
-    static e_magik_result_types memcpy_front_framebuffer_to_external_config_opengl(framebuffer_swapchain_t* framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    static e_magik_result_types memcpy_front_framebuffer_to_external_config_opengl(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
     {
         e_magik_result_types _r = MAGIK_SUCCESS;
 
         for(auto iter = external_collection_framebuffer->collection.begin(); iter != external_collection_framebuffer->collection.end(); )
         {
-            auto element = framebuffer_swapchain->front_framebuffer->collection.find(iter->first);
+            auto element = framebuffer_swapchain.front_framebuffer->collection.find(iter->first);
 
-            if(element == framebuffer_swapchain->front_framebuffer->collection.end())
+            if(element == framebuffer_swapchain.front_framebuffer->collection.end())
             {
                 auto buffer = iter->second;
                 _r = magik::free_opengl_buffer(&buffer.config_open_gl_interop.gl_buffer_id, &buffer.config_open_gl_interop.cuda_resource);
@@ -336,7 +335,7 @@ namespace magik
             }
         }
 
-        for(const auto& [key, ctx_value] : framebuffer_swapchain->front_framebuffer->collection)
+        for(const auto& [key, ctx_value] : framebuffer_swapchain.front_framebuffer->collection)
         {
             external_collection_framebuffer->collection.try_emplace(key); 
             auto& dcc_value = external_collection_framebuffer->collection.find(key)->second; 
@@ -357,14 +356,14 @@ namespace magik
         return _r;
     };
 
-    static e_magik_result_types memcpy_front_framebuffer_to_external_config_vulkan(framebuffer_swapchain_t* framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    static e_magik_result_types memcpy_front_framebuffer_to_external_config_vulkan(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
     {
         return MAGIK_SUCCESS;
     };
 
-    e_magik_result_types memcpy_front_framebuffer_to_external_framebuffer(framebuffer_swapchain_t* framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
+    e_magik_result_types memcpy_front_framebuffer_to_external_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
     {
-        if(!framebuffer_swapchain || !external_collection_framebuffer || !framebuffer_swapchain->front_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
+        if(!external_collection_framebuffer || !framebuffer_swapchain.front_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
 
         if( external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_HOST && 
             external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_CUDA && 

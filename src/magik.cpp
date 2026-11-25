@@ -3,24 +3,9 @@
 */
 
 #include "magik.h"
-#include "magik_error.h"
+#include "internal_error.h"
 #include "renderer.h"
 #include "host_trace_geodesic.h"
-
-/**
-* [SECTION] Error handling & result types
-*/
-
-MAGIK_API void magik_set_error_callback(magik_error_callback callback, void* user_data)
-{
-    magik::error::set_error_callback_internal(callback, user_data);
-}
-
-MAGIK_API void check_magik(e_magik_result_types result, char const* func, const char* const file, int const line)
-{
-    magik::error::check_error_internal(result, func, file, line);
-}
-
 
 /**
 * [SECTION] Interop initialization
@@ -111,14 +96,14 @@ MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_
         new_manager->cuda_stream = descriptor.user_stream;
     }
 
-    new_manager->command_context.n_reserved_chunk = descriptor.cqs_n_reserved_chunk;
-    new_manager->command_context.drop_overflows = descriptor.cqs_drop_overflow;
+    new_manager->command_swpachain.n_reserved_chunk = descriptor.cqs_n_reserved_chunk;
+    new_manager->command_swpachain.drop_overflows = descriptor.cqs_drop_overflow;
 
-    new_manager->command_context.front = std::make_unique<magik::command_buffer_t>();
-    new_manager->command_context.back = std::make_unique<magik::command_buffer_t>();
+    new_manager->command_swpachain.front = std::make_unique<magik::command_buffer_t>();
+    new_manager->command_swpachain.back = std::make_unique<magik::command_buffer_t>();
 
-    new_manager->command_context.front->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
-    new_manager->command_context.back->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
+    new_manager->command_swpachain.front->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
+    new_manager->command_swpachain.back->data = std::make_unique<uint32_t[]>(descriptor.cqs_n_reserved_chunk);
 
     new_manager->worker_thread = std::thread(magik::run, new_manager);
 
@@ -140,11 +125,6 @@ MAGIK_API e_magik_result_types magik_render_manager_destroy(magik_render_manager
     return MAGIK_SUCCESS;
 }
 
-MAGIK_API e_magik_result_types magik_render_manager_fetch_error(magik_render_manager_t manager)
-{
-    return manager->atomic_last_error_type.load(std::memory_order_acquire);
-}
-
 
 
 /**
@@ -164,17 +144,17 @@ MAGIK_API e_magik_result_types magik_configure_framebuffer_collection(magik_fram
 
 MAGIK_API e_magik_result_types magik_framebuffer_collection_fetch(magik_render_manager_t manager, bool* is_new_fetch, magik_framebuffer_collection_external_t framebuffer)
 {
-    return magik::fetch_framebuffer_collection(manager, framebuffer, is_new_fetch);
+    return magik::fetch_framebuffer_collection(manager->is_running.load(std::memory_order_relaxed), manager->display_type, manager->framebuffer_swapchain, framebuffer, is_new_fetch);
 }
 
 MAGIK_API e_magik_result_types magik_extract_config_host(magik_render_manager_t manager, magik_framebuffer_container_config_host_t* container, magik_framebuffer_collection_external_t framebuffer, const char* name)
 {
-    return magik::extract_config_host(manager, container, framebuffer, name);
+    return magik::extract_config_host(manager->is_running.load(std::memory_order_relaxed), container, framebuffer, name);
 }
 
 MAGIK_API e_magik_result_types magik_extract_config_opengl_interop(magik_render_manager_t manager, magik_framebuffer_container_config_opengl_interop_t* container, magik_framebuffer_collection_external_t framebuffer, const char* name)
 {
-    return magik::extract_config_opengl_interop(manager, container, framebuffer, name);
+    return magik::extract_config_opengl_interop(manager->is_running.load(std::memory_order_relaxed), container, framebuffer, name);
 }
 
 MAGIK_API e_magik_result_types magik_destroy_framebuffer_collection(magik_framebuffer_collection_external_t framebuffer)
@@ -209,10 +189,10 @@ MAGIK_API e_magik_result_types magik_trace_geodesic(magik_trace_geodesic_contain
 
 MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t manager, const void* command)
 {
-    return magik::push_command(manager, command);
+    return magik::push_command(manager->command_swpachain.front.get(), manager->command_swpachain.n_reserved_chunk, manager->command_swpachain.drop_overflows, command);
 }
 
 MAGIK_API e_magik_result_types magik_cqs_dispatch_command_buffer(magik_render_manager_t manager, bool* is_dispatched)
 {
-    return magik::dispatch_command_buffer(manager, is_dispatched);
+    *is_dispatched = magik::dispatch_command_buffer(manager->command_swpachain);
 }

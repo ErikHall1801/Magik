@@ -1,6 +1,6 @@
 #pragma once
 #include "magik.h"
-#include "magik_error.h"
+#include "internal_error.h"
 #include <stdint.h>
 #include <memory>
 #include <atomic>
