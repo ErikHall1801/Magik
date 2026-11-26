@@ -48,7 +48,7 @@ namespace magik
     struct command_result_t
     {
         e_magik_result_severity_types severity = MAGIK_RESULT_SEVERITY_NONE;
-        e_magik_result_types error = MAGIK_SUCCESS;
+        e_magik_result_types error = MAGIK_RESULT_SUCCESS;
     };
 
     struct command_element_t

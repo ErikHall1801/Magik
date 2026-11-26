@@ -15,15 +15,15 @@ MAGIK_API e_magik_result_types magik_gl_init(magik_gl_loader_proc loader)
 {
     if(!loader)
     {
-        return MAGIK_ERROR_INVALID_POINTER;
+        return MAGIK_RESULT_INVALID_POINTER;
     }
 
     if(!magik::opengl_init((void* (*)(const char*))loader))
     {
-        return MAGIK_ERROR_GL_LOADER_FAILED;
+        return MAGIK_RESULT_GL_LOADER_FAILED;
     }
 
-    return MAGIK_SUCCESS;
+    return MAGIK_RESULT_SUCCESS;
 }
 
 
@@ -62,7 +62,7 @@ MAGIK_API e_magik_result_types magik_get_version(uint32_t* major, uint32_t* mino
         *as_char = buffer;
     }
 
-    return MAGIK_SUCCESS;
+    return MAGIK_RESULT_SUCCESS;
 }
 
 
@@ -83,7 +83,7 @@ MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_
 
     if(descriptor.user_device_id >= n_cuda_device)
     {
-        return MAGIK_INVALID_CUDA_DEVICE;
+        return MAGIK_RESULT_INVALID_CUDA_DEVICE;
     }
 
     magik_render_manager* new_manager = new magik_render_manager();
@@ -113,7 +113,7 @@ MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_
     new_manager->worker_thread = std::thread(magik::run, new_manager);
 
     *manager = new_manager;
-    return MAGIK_SUCCESS;
+    return MAGIK_RESULT_SUCCESS;
 }
 
 MAGIK_API e_magik_result_types magik_render_manager_destroy(magik_render_manager_t manager)
@@ -127,7 +127,7 @@ MAGIK_API e_magik_result_types magik_render_manager_destroy(magik_render_manager
     }
 
     delete manager;
-    return MAGIK_SUCCESS;
+    return MAGIK_RESULT_SUCCESS;
 }
 
 
@@ -175,15 +175,15 @@ MAGIK_API e_magik_result_types magik_destroy_framebuffer_collection(magik_frameb
 
 MAGIK_API e_magik_result_types magik_trace_geodesic(magik_trace_geodesic_container_t* container, magik_trace_geodesic_inital_conditions_t initial_conditions, magik_trace_geodesic_metric_parameters_t metric_parameters, magik_trace_geodesic_integrator_parameters_t integrator_parameters)
 {
-    if(!container || !container->steps) return MAGIK_ERROR_INVALID_POINTER;
+    if(!container || !container->steps) return MAGIK_RESULT_INVALID_POINTER;
 
-    if(container->capacity != (sizeof(magik_trace_geodesic_step_t)*container->n_allocated_step)) return MAGIK_ERROR_HOST_TRACE_ALLOCATED_STEPS_AND_CAPACITY_MISMATCH;
+    if(container->capacity != (sizeof(magik_trace_geodesic_step_t)*container->n_allocated_step)) return MAGIK_RESULT_HOST_TRACE_ALLOCATED_STEPS_AND_CAPACITY_MISMATCH;
 
     bool successful = magik::host_trace_geodesic(container, initial_conditions, metric_parameters, integrator_parameters);
 
-    if(!successful) return MAGIK_ERROR_UNKNOWN;
+    if(!successful) return MAGIK_RESULT_UNKNOWN_ERROR;
 
-    return MAGIK_SUCCESS;
+    return MAGIK_RESULT_SUCCESS;
 }
 
 
@@ -200,5 +200,5 @@ MAGIK_API e_magik_result_types magik_cqs_push_command(magik_render_manager_t man
 MAGIK_API e_magik_result_types magik_cqs_dispatch_command_buffer(magik_render_manager_t manager, bool* is_dispatched)
 {
     *is_dispatched = magik::dispatch_command_buffer(manager->command_swpachain);
-    return MAGIK_SUCCESS;
+    return MAGIK_RESULT_SUCCESS;
 }

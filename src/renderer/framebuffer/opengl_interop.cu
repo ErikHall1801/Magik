@@ -17,7 +17,7 @@ namespace magik
 
     e_magik_result_types get_opengl_info()
     {
-        if(!g_opengl_loaded) return MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+        if(!g_opengl_loaded) return MAGIK_RESULT_GL_FUNCTIONS_NOT_LOADED;
 
         const GLubyte* version  = glGetString(GL_VERSION);
         if(version)
@@ -29,12 +29,12 @@ namespace magik
             std::cout << "Failed to get OpenGL Version" << std::endl;
         }
 
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     }
 
     e_magik_result_types allocate_opengl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, uint32_t* gl_buffer_id, void** cuda_resource)
     {
-        if(!g_opengl_loaded) return MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+        if(!g_opengl_loaded) return MAGIK_RESULT_GL_FUNCTIONS_NOT_LOADED;
 
         size_t size_of_gl_buffer = (size_t)(x_resolution*y_resolution*channels) * sizeof(float);
         uint32_t pbo_id;
@@ -47,12 +47,12 @@ namespace magik
         *gl_buffer_id = pbo_id;
         *cuda_resource = (void*)cuda_res;
 
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     }
 
     e_magik_result_types free_opengl_buffer(uint32_t* gl_buffer_id, void** cuda_resource)
     {
-        if(!g_opengl_loaded) return MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+        if(!g_opengl_loaded) return MAGIK_RESULT_GL_FUNCTIONS_NOT_LOADED;
 
         if(cuda_resource && *cuda_resource)
         {
@@ -66,14 +66,14 @@ namespace magik
             *gl_buffer_id = 0;
         }
 
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     }
 
     e_magik_result_types map_cuda_to_opengl_buffer(const uint32_t x_resolution, const uint32_t y_resolution, const uint32_t channels, void** cuda_resource, float* d_ptr)
     {
-        if(!*cuda_resource || !d_ptr) return MAGIK_ERROR_INVALID_POINTER;
+        if(!*cuda_resource || !d_ptr) return MAGIK_RESULT_INVALID_POINTER;
 
-        if(!g_opengl_loaded) return MAGIK_ERROR_GL_FUNCTIONS_NOT_LOADED;
+        if(!g_opengl_loaded) return MAGIK_RESULT_GL_FUNCTIONS_NOT_LOADED;
 
         cudaGraphicsResource_t cuda_res = static_cast<cudaGraphicsResource_t>(*cuda_resource);
         check_cuda_errors(cudaGraphicsMapResources(1, &cuda_res, 0));
@@ -85,7 +85,7 @@ namespace magik
         size_t size_of_buffer = (size_t)(x_resolution*y_resolution*channels)*sizeof(float);
         if(size_of_buffer > size_of_resource) 
         {
-            return MAGIK_ERROR_GL_BUFFER_SIZE_MISMATCH;
+            return MAGIK_RESULT_GL_BUFFER_SIZE_MISMATCH;
         }
 
         else check_cuda_errors(cudaMemcpy(d_resource_ptr, d_ptr, size_of_buffer, cudaMemcpyDeviceToDevice));
@@ -93,6 +93,6 @@ namespace magik
         check_cuda_errors(cudaMemcpy(d_resource_ptr, d_ptr, size_of_buffer, cudaMemcpyDeviceToDevice));
         check_cuda_errors(cudaGraphicsUnmapResources(1, &cuda_res, 0));
 
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     }
 }

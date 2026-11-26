@@ -42,17 +42,17 @@ namespace magik
             magik::memcpy_device_to_host(ctx_value.d_data, dcc_value.config_host.h_data, size_of_buffer);
         }
 
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     };
 
     static e_magik_result_types memcpy_front_framebuffer_to_external_config_cuda(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
     {
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     };
 
     static e_magik_result_types memcpy_front_framebuffer_to_external_config_opengl(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
     {
-        e_magik_result_types _r = MAGIK_SUCCESS;
+        e_magik_result_types _r = MAGIK_RESULT_SUCCESS;
 
         for(auto iter = external_collection_framebuffer->collection.begin(); iter != external_collection_framebuffer->collection.end(); )
         {
@@ -93,20 +93,20 @@ namespace magik
 
     static e_magik_result_types memcpy_front_framebuffer_to_external_config_vulkan(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
     {
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     };
 
     static e_magik_result_types memcpy_front_framebuffer_to_external_framebuffer(framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external* external_collection_framebuffer)
     {
-        if(!external_collection_framebuffer || !framebuffer_swapchain.front_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
+        if(!external_collection_framebuffer || !framebuffer_swapchain.front_framebuffer) return MAGIK_RESULT_INVALID_POINTER;
 
         if( external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_HOST && 
             external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_CUDA && 
             external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_OPENGL_INTEROP && 
             external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_VULKAN_INTEROP
-        ) return MAGIK_UNKNOWN_ENUM_TYPE;
+        ) return MAGIK_RESULT_UNKNOWN_ENUM_TYPE;
 
-        e_magik_result_types result = MAGIK_SUCCESS;
+        e_magik_result_types result = MAGIK_RESULT_SUCCESS;
 
         switch(external_collection_framebuffer->config_type)
         {
@@ -143,19 +143,19 @@ namespace magik
         if(!framebuffer_swapchain.ready_framebuffer.load(std::memory_order_relaxed) || !framebuffer_swapchain.front_framebuffer)
         {
             *is_swapped = false;
-            return MAGIK_ERROR_INVALID_POINTER;
+            return MAGIK_RESULT_INVALID_POINTER;
         }
 
         if(!framebuffer_swapchain.is_ready_framebuffer_updated.exchange(false, std::memory_order_acquire)) 
         {
             *is_swapped = false;
-            return MAGIK_SUCCESS;
+            return MAGIK_RESULT_SUCCESS;
         }
 
         framebuffer_swapchain.front_framebuffer = framebuffer_swapchain.ready_framebuffer.exchange(framebuffer_swapchain.front_framebuffer, std::memory_order_acq_rel);
 
         *is_swapped = true;
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     }
 
     e_magik_result_types configure_external_framebuffer_collection(magik_framebuffer_collection_external_t* external_collection_framebuffer, e_magik_framebuffer_collection_config_types config_type)
@@ -164,14 +164,14 @@ namespace magik
         
         if(config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_HOST && config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_CUDA && config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_OPENGL_INTEROP && config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_VULKAN_INTEROP)
         {
-            return MAGIK_UNKNOWN_ENUM_TYPE;
+            return MAGIK_RESULT_UNKNOWN_ENUM_TYPE;
             delete buffer;
         }
 
         buffer->config_type = config_type;
 
         *external_collection_framebuffer = buffer;
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     }
 
     e_magik_result_types fetch_framebuffer_collection(bool is_running, e_magik_manager_display_types display_type, framebuffer_swapchain_t& framebuffer_swapchain, magik_framebuffer_collection_external_t external_collection_framebuffer, bool* is_new_fetch)
@@ -179,19 +179,19 @@ namespace magik
         if(!external_collection_framebuffer)
         {
             *is_new_fetch = false;
-            return MAGIK_ERROR_INVALID_POINTER;
+            return MAGIK_RESULT_INVALID_POINTER;
         }
 
         if(!is_running)
         {
             *is_new_fetch = false;
-            return MAGIK_SUCCESS;
+            return MAGIK_RESULT_SUCCESS;
         }
 
         if(display_type == MAGIK_DISPLAY_HEADLESS)
         {
             *is_new_fetch = false;
-            return MAGIK_ERROR_AOV_SWAPCHAIN_NOT_INITALIZED;
+            return MAGIK_RESULT_AOV_SWAPCHAIN_NOT_INITALIZED;
         }
 
         bool is_swapped = false;
@@ -208,23 +208,23 @@ namespace magik
 
     e_magik_result_types extract_config_host(bool is_running, magik_framebuffer_container_config_host_t* container, magik_framebuffer_collection_external_t external_collection_framebuffer, const char* name)
     {
-        if(!container || !external_collection_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
+        if(!container || !external_collection_framebuffer) return MAGIK_RESULT_INVALID_POINTER;
 
         if(!is_running)
         {
-            return MAGIK_SUCCESS;
+            return MAGIK_RESULT_SUCCESS;
         }
 
         if(external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_HOST)
         {
-            return MAGIK_ERROR_AOV_INCORRECT_EXTRACT_CALL;
+            return MAGIK_RESULT_AOV_INCORRECT_EXTRACT_CALL;
         }
 
         auto element = external_collection_framebuffer->collection.find(name);
 
         if(element == external_collection_framebuffer->collection.end())
         {
-            return MAGIK_SUCCESS;
+            return MAGIK_RESULT_SUCCESS;
         }
 
         container->x_resolution = element->second.x_resolution;
@@ -233,28 +233,28 @@ namespace magik
         container->size_of_data = element->second.config_host.host_size;
         container->h_data = element->second.config_host.h_data;
 
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     }
 
     e_magik_result_types extract_config_opengl_interop(bool is_running, magik_framebuffer_container_config_opengl_interop_t* container, magik_framebuffer_collection_external_t external_collection_framebuffer, const char* name)
     {
-        if(!container || !external_collection_framebuffer) return MAGIK_ERROR_INVALID_POINTER;
+        if(!container || !external_collection_framebuffer) return MAGIK_RESULT_INVALID_POINTER;
 
         if(!is_running)
         {
-            return MAGIK_SUCCESS;
+            return MAGIK_RESULT_SUCCESS;
         }
 
         if(external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_OPENGL_INTEROP)
         {
-            return MAGIK_ERROR_AOV_INCORRECT_EXTRACT_CALL;
+            return MAGIK_RESULT_AOV_INCORRECT_EXTRACT_CALL;
         }
 
         auto element = external_collection_framebuffer->collection.find(name);
 
         if(element == external_collection_framebuffer->collection.end())
         {
-            return MAGIK_SUCCESS;
+            return MAGIK_RESULT_SUCCESS;
         }
 
         container->x_resolution = element->second.x_resolution;
@@ -263,22 +263,22 @@ namespace magik
         container->gl_buffer_id = element->second.config_open_gl_interop.gl_buffer_id;
         container->cuda_resources = element->second.config_open_gl_interop.cuda_resource;
 
-        return MAGIK_SUCCESS;
+        return MAGIK_RESULT_SUCCESS;
     }
 
     e_magik_result_types destroy_external_framebuffer_collection(magik_framebuffer_collection_external_t external_collection_framebuffer)
     {
-        if(!external_collection_framebuffer) return MAGIK_SUCCESS;
+        if(!external_collection_framebuffer) return MAGIK_RESULT_SUCCESS;
 
         if( external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_HOST && 
             external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_CUDA && 
             external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_OPENGL_INTEROP && 
             external_collection_framebuffer->config_type != MAGIK_FRAMEBUFFER_COLLECTION_CONFIG_VULKAN_INTEROP)
         {
-            return MAGIK_UNKNOWN_ENUM_TYPE;
+            return MAGIK_RESULT_UNKNOWN_ENUM_TYPE;
         }
 
-        e_magik_result_types _r = MAGIK_SUCCESS;
+        e_magik_result_types _r = MAGIK_RESULT_SUCCESS;
 
         for(auto& [key, value] : external_collection_framebuffer->collection)
         {

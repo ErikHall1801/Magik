@@ -35,7 +35,7 @@ namespace magik
         *args.total_iterations = 0;
 
         *args.status = MAGIK_STATUS_0;
-        *args.status_reason = MAGIK_SUCCESS;
+        *args.status_reason = MAGIK_RESULT_SUCCESS;
         *args.initial_status = MAGIK_STATUS_0;
 
         *args.is_running = true;
