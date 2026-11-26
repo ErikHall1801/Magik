@@ -175,6 +175,10 @@ namespace magik
 
         initialize_framebuffer_swapchain(manager->framebuffer_swapchain);
 
+        manager->pending.color_pipeline = MAGIK_COLOR_PIPELINE_UPDATE_POLICY_STRICT;
+        manager->pending.framebuffer = MAGIK_FRAMEBUFFER_UPDATE_POLICY_REALLOC_RENDERBUFFER;
+        manager->pending.wavefront = MAGIK_WAVEFRONT_UPDATE_POLICY_REALLOC;
+
         while(manager->is_nominal())
         {
             process_command_buffers(process_command_buffers_t::create(manager));

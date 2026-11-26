@@ -76,6 +76,7 @@ namespace magik
                 magik::framebuffer_t fb;
                 fb.channels = cmd.channels;
                 ctx.framebuffer_swapchain.render_framebuffer.collection.emplace(aov_name, fb);
+                raise_update_policy(ctx.framebuffer_update_policy, MAGIK_FRAMEBUFFER_UPDATE_POLICY_REALLOC_RENDERBUFFER);
                 return ok();
             }
         ),
@@ -86,6 +87,7 @@ namespace magik
             {
                 std::string aov_name(cmd.name, cmd.length_of_name);
                 ctx.framebuffer_swapchain.render_framebuffer.collection.erase(aov_name);
+                raise_update_policy(ctx.framebuffer_update_policy, MAGIK_FRAMEBUFFER_UPDATE_POLICY_REALLOC_RENDERBUFFER);
                 return ok();
             }
         ),
