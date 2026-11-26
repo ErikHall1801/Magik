@@ -26,7 +26,7 @@ namespace magik
 
         color_pipeline_descriptor_t color_pipeline_descriptor;
 
-        __host__ void create(wavefront_buffer_t& wavefront_buffer, stage_t& stage, color_pipeline_descriptor_t& color_pipeline_descriptor)
+        __host__ void create(wavefront_buffer_t& wavefront_buffer, stage_t& stage, color_pipeline_descriptor_t& host_color_pipeline_descriptor)
         {
             d_random_device = wavefront_buffer.ray_pool.get<random_device_t>();
             d_initial_observer_spatial_direction = wavefront_buffer.ray_pool.get<initial_observer_spatial_direction_t>();
@@ -44,7 +44,7 @@ namespace magik
             position = stage.optical_system_settings.position;
             orientation = stage.optical_system_settings.orientation;
 
-            color_pipeline_descriptor = color_pipeline_descriptor;
+            color_pipeline_descriptor = host_color_pipeline_descriptor;
         }
     };
 

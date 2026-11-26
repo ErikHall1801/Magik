@@ -21,13 +21,13 @@ namespace magik
         float min_wavelength_nm;
         uint32_t x_sample;
 
-        __host__ void create(wavefront_buffer_t& wavefront_buffer, color_settings_t& color_settings, color_pipeline_descriptor_t& color_pipeline_descriptor, uint32_t sample, float* d_target_buffer)
+        __host__ void create(wavefront_buffer_t& wavefront_buffer, color_settings_t& color_settings, color_pipeline_descriptor_t& host_color_pipeline_descriptor, uint32_t sample, float* d_target_buffer)
         {
             d_intrinsic_spectral_irradiance = wavefront_buffer.ray_pool.get<intrinsic_spectral_irradiance_t>();
             d_splat_queue_count = wavefront_buffer.queue_pool.get_count_ptr<splat_queue_t>();
             d_splat_queue_id = wavefront_buffer.queue_pool.get_id_ptr<splat_queue_t>();
             d_renderbuffer = d_target_buffer;
-            color_pipeline_descriptor = color_pipeline_descriptor;
+            color_pipeline_descriptor = host_color_pipeline_descriptor;
 
             n_isi_bin = color_settings.n_isi_bin;
             max_wavelength_nm = color_settings.isi_max_wavelength_nm;
