@@ -4,41 +4,47 @@ namespace magik
 {
     struct initialize_t
     {
-        uint32_t* cuda_device;
-        bool* owns_stream;
-        std::atomic<bool>* is_running;
-        size_t* total_iterations;
-        e_magik_manager_status_types* status;
-        e_magik_result_types* status_reason;
-        e_magik_manager_status_types* initial_status;
+        magik_render_manager::sub_system_update_policies_t& pending_policies;
+        framebuffer_swapchain_t& swapchain;
+
+        size_t& iterations;
+        e_magik_manager_status_types& worker_status;
+        e_magik_result_types& worker_status_reason;
+
+        uint32_t& worker_cuda_device;
+
+        std::atomic<bool>& worker_running;
 
         static MAGIK_HOST initialize_t create(magik_render_manager* manager)
         {
-            initialize_t result;
-
-            result.cuda_device = &manager->cuda_device;
-            result.owns_stream = &manager->owns_stream;
-            result.is_running = &manager->is_running;
-            result.total_iterations = &manager->total_iterations;
-            result.status = &manager->status;
-            result.status_reason = &manager->status_reason;
-            result.initial_status = &manager->initial_status;
-
-            return result;
+            return
+            {
+                manager->pending,
+                manager->framebuffer_swapchain,
+                manager->total_iterations,
+                manager->status,
+                manager->status_reason,
+                manager->cuda_device,
+                manager->is_running
+            };
         }
     };
 
     static MAGIK_HOST void initialize(initialize_t args)
     {
-        set_cuda_device(*args.cuda_device);
+        initialize_framebuffer_swapchain(args.swapchain);
 
-        *args.total_iterations = 0;
+        args.pending_policies.framebuffer = MAGIK_FRAMEBUFFER_UPDATE_POLICY_REALLOC_RENDERBUFFER;
+        args.pending_policies.wavefront = MAGIK_WAVEFRONT_UPDATE_POLICY_REALLOC;
+        args.pending_policies.color_pipeline = MAGIK_COLOR_PIPELINE_UPDATE_POLICY_STRICT;
 
-        *args.status = MAGIK_STATUS_0;
-        *args.status_reason = MAGIK_RESULT_SUCCESS;
-        *args.initial_status = MAGIK_STATUS_0;
+        args.iterations = 0;
+        args.worker_status = MAGIK_STATUS_0;
+        args.worker_status_reason = MAGIK_RESULT_SUCCESS;
 
-        *args.is_running = true;
+        set_cuda_device(args.worker_cuda_device); 
+
+        args.worker_running = true;
     }
 
     struct process_command_buffers_t
@@ -164,12 +170,6 @@ namespace magik
     void run(magik_render_manager* manager)
     {
         initialize(initialize_t::create(manager));
-
-        initialize_framebuffer_swapchain(manager->framebuffer_swapchain);
-
-        manager->pending.color_pipeline = MAGIK_COLOR_PIPELINE_UPDATE_POLICY_STRICT;
-        manager->pending.framebuffer = MAGIK_FRAMEBUFFER_UPDATE_POLICY_REALLOC_RENDERBUFFER;
-        manager->pending.wavefront = MAGIK_WAVEFRONT_UPDATE_POLICY_REALLOC;
 
         while(manager->is_nominal())
         {
