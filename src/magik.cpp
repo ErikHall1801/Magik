@@ -95,6 +95,11 @@ MAGIK_API e_magik_result_types magik_render_manager_create(magik_render_manager_
         new_manager->owns_stream = false;
         new_manager->cuda_stream = descriptor.user_stream;
     }
+    else
+    {
+        new_manager->owns_stream = true;
+        magik::create_cuda_stream(&new_manager->cuda_stream);
+    }
 
     new_manager->command_swpachain.n_reserved_chunk = descriptor.cqs_n_reserved_chunk;
     new_manager->command_swpachain.drop_overflows = descriptor.cqs_drop_overflow;

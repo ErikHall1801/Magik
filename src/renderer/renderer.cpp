@@ -5,7 +5,6 @@ namespace magik
     struct initialize_t
     {
         uint32_t* cuda_device;
-        void** cuda_stream;
         bool* owns_stream;
         std::atomic<bool>* is_running;
         size_t* total_iterations;
@@ -18,7 +17,6 @@ namespace magik
             initialize_t result;
 
             result.cuda_device = &manager->cuda_device;
-            result.cuda_stream = &manager->cuda_stream;
             result.owns_stream = &manager->owns_stream;
             result.is_running = &manager->is_running;
             result.total_iterations = &manager->total_iterations;
@@ -33,12 +31,6 @@ namespace magik
     static MAGIK_HOST void initialize(initialize_t args)
     {
         set_cuda_device(*args.cuda_device);
-
-        if(!*args.owns_stream)
-        {
-            *args.owns_stream = true;
-            create_cuda_stream(args.cuda_stream);
-        }
 
         *args.total_iterations = 0;
 
