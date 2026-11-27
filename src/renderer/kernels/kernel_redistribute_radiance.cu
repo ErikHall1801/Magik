@@ -11,8 +11,8 @@ namespace magik
     {
         uint32_t* d_redistribute_queue_count = nullptr;
         uint32_t* d_redistribute_queue_id = nullptr;
-        uint32_t* d_splat_queue_count = nullptr;
-        uint32_t* d_splat_queue_id = nullptr;
+        uint32_t* d_complete_queue_count = nullptr;
+        uint32_t* d_complete_queue_id = nullptr;
         float* d_spectral_radiance = nullptr;
         float* d_throughput = nullptr;
         float* d_intrinsic_spectral_irradiance = nullptr;
@@ -33,8 +33,8 @@ namespace magik
         {
             d_redistribute_queue_count = wavefront_buffer.queue_pool.get_count_ptr<redistribute_queue_t>();
             d_redistribute_queue_id = wavefront_buffer.queue_pool.get_id_ptr<redistribute_queue_t>();
-            d_splat_queue_count = wavefront_buffer.queue_pool.get_count_ptr<splat_queue_t>();
-            d_splat_queue_id = wavefront_buffer.queue_pool.get_id_ptr<splat_queue_t>();
+            d_complete_queue_count = wavefront_buffer.queue_pool.get_count_ptr<complete_queue_t>();
+            d_complete_queue_id = wavefront_buffer.queue_pool.get_id_ptr<complete_queue_t>();
             d_spectral_radiance = wavefront_buffer.ray_pool.get<spectral_radiance_t>();
             d_throughput = wavefront_buffer.ray_pool.get<throughput_t>();
             d_intrinsic_spectral_irradiance = wavefront_buffer.ray_pool.get<intrinsic_spectral_irradiance_t>();
@@ -88,8 +88,8 @@ namespace magik
             }
         }
 
-        uint32_t slot = atomicAdd(args.d_splat_queue_count, 1);
-        args.d_splat_queue_id[slot] = ray_id;
+        uint32_t slot = atomicAdd(args.d_complete_queue_count, 1);
+        args.d_complete_queue_id[slot] = ray_id;
     }
 
     void launch_kernel_redistribute_radiance_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, stage_t& stage)

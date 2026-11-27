@@ -151,20 +151,10 @@ namespace magik
 
         static MAGIK_HOST compute_wavefront_sample_t create(magik_render_manager* manager)
         {
-            auto temp = manager->framebuffer_swapchain.render_framebuffer.collection.find("test");
-
-            float* d_ptr = nullptr;
-
-            if(temp != manager->framebuffer_swapchain.render_framebuffer.collection.end())
-            {
-                d_ptr = temp->second.d_data;
-            }
-
             return
             {
                 .wavefront_args = 
                 {
-                    .d_renderbuffer = d_ptr,
                     .wavefront_buffer = manager->wavefront_buffer,
                     .x_sample = manager->activity.x_sample,
                     .stage = manager->stage,
@@ -184,6 +174,45 @@ namespace magik
         if(args.activity_args.type != MAGIK_RENDERING) return;
 
         wavefront_sample(args.wavefront_args);
+    }
+
+    struct splat_to_renderbuffer_t
+    {
+        wavefront_buffer_t& wavefront_buffer;
+        cudaStream_t user_stream;
+        render_settings_t& render_settings;
+        color_settings_t& color_settings;
+        color_pipeline_descriptor_t& color_pipeline_descriptor;
+        uint32_t x_sample;
+        float* d_renderbuffer;
+
+        static MAGIK_HOST splat_to_renderbuffer_t create(magik_render_manager* manager)
+        {
+            auto temp = manager->framebuffer_swapchain.render_framebuffer.collection.find("test");
+
+            float* d_ptr = nullptr;
+
+            if(temp != manager->framebuffer_swapchain.render_framebuffer.collection.end())
+            {
+                d_ptr = temp->second.d_data;
+            }
+
+            return
+            {
+                .wavefront_buffer = manager->wavefront_buffer,
+                .user_stream = static_cast<cudaStream_t>(manager->cuda_stream),
+                .render_settings = manager->stage.render_settings,
+                .color_settings = manager->stage.color_settings,
+                .color_pipeline_descriptor = manager->color_pipeline_descriptor,
+                .x_sample = manager->activity.x_sample,
+                .d_renderbuffer = d_ptr,
+            };
+        }
+    };
+
+    static MAGIK_HOST void splat_to_renderbuffer(splat_to_renderbuffer_t args)
+    {
+        launch_kernel_splat_to_renderbuffer_sync(args.wavefront_buffer, args.user_stream, args.render_settings, args.color_settings, args.color_pipeline_descriptor, args.x_sample, args.d_renderbuffer);
     }
 
     struct release_t
@@ -223,7 +252,7 @@ namespace magik
 
             compute_wavefront_sample(compute_wavefront_sample_t::create(manager));
 
-            // splat_to_renderbuffer()
+            splat_to_renderbuffer(splat_to_renderbuffer_t::create(manager));
         }
 
         release(release_t::create(manager));

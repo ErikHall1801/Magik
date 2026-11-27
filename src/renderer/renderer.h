@@ -2,6 +2,7 @@
 
 #include "magik.h"
 #include "wavefront.h"
+#include "kernel_splat_to_renderbuffer.cuh"
 #include "framebuffer.h"
 #include "command.h"
 #include "stage.h"

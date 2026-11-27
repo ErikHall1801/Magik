@@ -149,10 +149,6 @@ namespace magik
 
             args.wavefront_buffer.queue_pool.swap_advance_queues();
 
-            // launch_kernel_push_to_ready_buffer()
-
-            launch_kernel_splat_to_renderbuffer_async(args.wavefront_buffer, args.user_stream, args.stage.render_settings, args.stage.color_settings, args.color_pipeline, args.x_sample, args.d_renderbuffer);
-
             is_work_done_sync(&working, &args.wavefront_buffer.queue_ceiling, args.wavefront_buffer.queue_pool.get_count_ptr<advance_A_queue_t>(), args.user_stream);
 
             args.wavefront_buffer.iteration++; // This is safe despite the Async kernels for two reasons. 1. The sync point is above us; 2. When a kernel is launched all arguments are captured. 

@@ -13,8 +13,8 @@ namespace magik
         uint32_t* d_advance_A_queue_id = nullptr;
         uint32_t* d_advance_B_queue_count = nullptr;
         uint32_t* d_advance_B_queue_id = nullptr;
-        uint32_t* d_splat_queue_count = nullptr;
-        uint32_t* d_splat_queue_id = nullptr;
+        uint32_t* d_complete_queue_count = nullptr;
+        uint32_t* d_complete_queue_id = nullptr;
 
         uint32_t n_geodesic_step_limit;
         uint32_t n_reflected_limit;
@@ -27,8 +27,8 @@ namespace magik
             d_advance_A_queue_id = wavefront_buffer.queue_pool.get_id_ptr<advance_A_queue_t>();
             d_advance_B_queue_count = wavefront_buffer.queue_pool.get_count_ptr<advance_B_queue_t>();
             d_advance_B_queue_id = wavefront_buffer.queue_pool.get_id_ptr<advance_B_queue_t>();
-            d_splat_queue_count = wavefront_buffer.queue_pool.get_count_ptr<splat_queue_t>();
-            d_splat_queue_id = wavefront_buffer.queue_pool.get_id_ptr<splat_queue_t>();
+            d_complete_queue_count = wavefront_buffer.queue_pool.get_count_ptr<complete_queue_t>();
+            d_complete_queue_id = wavefront_buffer.queue_pool.get_id_ptr<complete_queue_t>();
 
             n_geodesic_step_limit = render_settings.n_geodesic_step_limit;
             n_reflected_limit = render_settings.n_reflected_limit;
@@ -54,8 +54,8 @@ namespace magik
 
         if(terminate)
         {
-            slot = atomicAdd(args.d_splat_queue_count, 1);
-            args.d_splat_queue_id[slot] = ray_id;
+            slot = atomicAdd(args.d_complete_queue_count, 1);
+            args.d_complete_queue_id[slot] = ray_id;
         }
         else
         {

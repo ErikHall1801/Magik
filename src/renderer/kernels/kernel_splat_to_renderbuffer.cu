@@ -10,6 +10,9 @@ namespace magik
 {
     struct kernel_splat_to_renderbuffer_t
     {
+        uint32_t x_resolution;
+        uint32_t y_resolution;
+
         float* d_intrinsic_spectral_irradiance;
         uint32_t* d_splat_queue_count;
         uint32_t* d_splat_queue_id;
@@ -23,9 +26,10 @@ namespace magik
 
         __host__ void create(wavefront_buffer_t& wavefront_buffer, color_settings_t& color_settings, color_pipeline_descriptor_t& host_color_pipeline_descriptor, uint32_t sample, float* d_target_buffer)
         {
+            x_resolution = wavefront_buffer.x_resolution;
+            y_resolution = wavefront_buffer.y_resolution;
+
             d_intrinsic_spectral_irradiance = wavefront_buffer.ray_pool.get<intrinsic_spectral_irradiance_t>();
-            d_splat_queue_count = wavefront_buffer.queue_pool.get_count_ptr<splat_queue_t>();
-            d_splat_queue_id = wavefront_buffer.queue_pool.get_id_ptr<splat_queue_t>();
             d_renderbuffer = d_target_buffer;
             color_pipeline_descriptor = host_color_pipeline_descriptor;
 
@@ -38,13 +42,13 @@ namespace magik
 
     template<e_magik_view_transform_types T> static __global__ void kernel_splat_to_renderbuffer(typename generic_view_transform_t<T>::params_t view_transform_params, kernel_splat_to_renderbuffer_t args)
     {
-        uint32_t queue_index = blockIdx.x * blockDim.x + threadIdx.x;
-        if(queue_index >= *args.d_splat_queue_count) return;
-        uint32_t ray_id = args.d_splat_queue_id[queue_index];
+        if(!magik::is_valid_thread(args.x_resolution, args.y_resolution)) return;
+
+        uint32_t thread_id = magik::get_n_dimensional_thread_id(args.x_resolution, 1);
 
         intrinsic_spectral_irradiance_to_color_args_t isi_args;
         isi_args.n_isi_bin = args.n_isi_bin;
-        isi_args.ray_id = ray_id;
+        isi_args.ray_id = thread_id;
         isi_args.d_intrinsic_spectral_irradiance = args.d_intrinsic_spectral_irradiance;
         isi_args.isi_to_scene_referred_weights = args.color_pipeline_descriptor.isi_to_scene_referred_weights;
         isi_args.x_sample = args.x_sample;
@@ -53,17 +57,17 @@ namespace magik
 
         vec3f display_color = scene_to_display_referred_color<T>(view_transform_params, scene_color, args.color_pipeline_descriptor);
 
-        args.d_renderbuffer[ray_id * 3 + 0] = display_color.x;
-        args.d_renderbuffer[ray_id * 3 + 1] = display_color.y;
-        args.d_renderbuffer[ray_id * 3 + 2] = display_color.z;
+        args.d_renderbuffer[thread_id * 3 + 0] = display_color.x;
+        args.d_renderbuffer[thread_id * 3 + 1] = display_color.y;
+        args.d_renderbuffer[thread_id * 3 + 2] = display_color.z;
     }
 
-    void launch_kernel_splat_to_renderbuffer_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, render_settings_t& render_settings, color_settings_t& color_settings, color_pipeline_descriptor_t& color_pipeline_descriptor, uint32_t x_sample, float* d_renderbuffer)
+    void launch_kernel_splat_to_renderbuffer_sync(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, render_settings_t& render_settings, color_settings_t& color_settings, color_pipeline_descriptor_t& color_pipeline_descriptor, uint32_t x_sample, float* d_renderbuffer)
     {
         if(!d_renderbuffer) return;
 
-        uint32_t threads_per_block = render_settings.wavefront_threads_per_block;
-        uint32_t n_block = (wavefront_buffer.queue_ceiling + threads_per_block - 1) / threads_per_block;
+        dim3 threads_per_block = dim3(render_settings.threads_per_block_x, render_settings.threads_per_block_y, 1);
+        dim3 n_block = magik::compute_n_blocks(wavefront_buffer.x_resolution, wavefront_buffer.y_resolution, render_settings.threads_per_block_x, render_settings.threads_per_block_y);
 
         kernel_splat_to_renderbuffer_t args;
         args.create(wavefront_buffer, color_settings, color_pipeline_descriptor, x_sample, d_renderbuffer);
@@ -76,8 +80,5 @@ namespace magik
         });
 
         check_cuda_errors(cudaGetLastError());
-
-        wavefront_buffer.queue_pool.store_count_in_history<splat_queue_t>(user_stream, wavefront_buffer.iteration, render_settings.n_geodesic_step_limit);
-        wavefront_buffer.queue_pool.zero_count_async<splat_queue_t>(user_stream);
     }
 }

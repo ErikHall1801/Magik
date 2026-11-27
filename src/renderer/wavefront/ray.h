@@ -26,7 +26,7 @@ namespace magik
 
     struct redistribute_queue_t : ray_queue_base_t {};
 
-    struct splat_queue_t : ray_queue_base_t {};
+    struct complete_queue_t : ray_queue_base_t {};
 
     template<typename... T_queue> struct queue_pool_t : T_queue...
     {
