@@ -47,6 +47,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_state_render_t& cmd)
             {
+                ctx.activity_type = MAGIK_RENDERING;
                 return ok();
             }
         ),
@@ -55,6 +56,7 @@ namespace magik
         (
             [](command_context_t ctx, const magik_command_set_state_pause_t& cmd)
             {
+                ctx.activity_type = MAGIK_USER_PAUSE;
                 return ok();
             }
         ),
@@ -517,6 +519,16 @@ namespace magik
         // ########################
         // ### 7000-7999 Render ###
         // ######################## 
+        command<MAGIK_COMMAND_SET_N_SAMPLE_LIMIT>
+        (
+            [](command_context_t ctx, const magik_command_set_n_sample_limit_t& cmd)
+            {
+                raise_update_policy(ctx.wavefront_update_policy, MAGIK_WAVEFRONT_UPDATE_POLICY_RESET);
+                ctx.stage.render_settings.x_sample_limit = cmd.n_sample_limit;
+                return ok();
+            }
+        ),
+
         command<MAGIK_COMMAND_SET_N_GEODESIC_STEP_LIMIT>
         (
             [](command_context_t ctx, const magik_command_set_n_geodesic_step_limit_t& cmd)

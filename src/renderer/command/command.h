@@ -43,6 +43,8 @@ namespace magik
         command_swapchain_t& command_swapchain;
         framebuffer_swapchain_t& framebuffer_swapchain;
         stage_t& stage;
+
+        e_magik_activity_types& activity_type;
     };
 
     struct command_result_t

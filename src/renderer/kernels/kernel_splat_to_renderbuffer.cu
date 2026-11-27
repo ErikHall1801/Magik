@@ -60,6 +60,8 @@ namespace magik
 
     void launch_kernel_splat_to_renderbuffer_async(wavefront_buffer_t& wavefront_buffer, cudaStream_t user_stream, render_settings_t& render_settings, color_settings_t& color_settings, color_pipeline_descriptor_t& color_pipeline_descriptor, uint32_t x_sample, float* d_renderbuffer)
     {
+        if(!d_renderbuffer) return;
+
         uint32_t threads_per_block = render_settings.wavefront_threads_per_block;
         uint32_t n_block = (wavefront_buffer.queue_ceiling + threads_per_block - 1) / threads_per_block;
 

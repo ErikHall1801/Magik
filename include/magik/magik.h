@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <cstddef>
+#include "stdbool.h"
 
 #if defined(_WIN32)
     #if defined(MAGIK_BUILD_DLL)
@@ -49,6 +50,13 @@ typedef enum e_magik_manager_status_types
     MAGIK_STATUS_1 = 1, // Suspended - Such as bad allocs 
     MAGIK_STATUS_2 = 2, // Rebuild - Such as the CUDA device being dropped
 } e_magik_manager_status_types;
+
+typedef enum e_magik_activity_types
+{
+    MAGIK_IDLE = 0,
+    MAGIK_RENDERING = 1,
+    MAGIK_USER_PAUSE = 2
+} e_magik_activity_types; 
 
 typedef enum e_magik_result_types // Rename to MAGIK_RESULT_ We also need to cull these down. 
 {
@@ -847,18 +855,25 @@ typedef enum e_magik_cqs_command_types
     // ########################
     // ### 7000-7999 Render ###
     // ########################
+
+    /**
+    * @brief The number of samples evaluated before Magik automatically
+    * changes state to "IDLE". Note, "0" samples does not mean "infinite".
+    */
+    MAGIK_COMMAND_SET_N_SAMPLE_LIMIT = 7000,
+
     /**
     * @brief Sets the maximum number of geodesic steps Magik is
     * allowed to take throughout an entire path's trajectory. This 
     * is not the same as the bounce limits ! For every interaction,
     * such as reflections, many geodesic steps might be consumed. 
     */
-    MAGIK_COMMAND_SET_N_GEODESIC_STEP_LIMIT = 7000,
+    MAGIK_COMMAND_SET_N_GEODESIC_STEP_LIMIT = 7001,
     
     /**
     * @brief Sets the maximum number of reflections. 
     */
-    MAGIK_COMMAND_SET_N_REFLECTED_LIMIT = 7001,
+    MAGIK_COMMAND_SET_N_REFLECTED_LIMIT = 7002,
 
 
 
@@ -928,12 +943,6 @@ typedef struct MAGIK_ALIGN4 magik_command_printf_t
     uint32_t length_of_text;
     char text[512];
 } magik_command_printf_t;
-
-
-
-// ##########################
-// ### 3000-3999 Settings ###
-// ##########################
 
 
 
@@ -1177,6 +1186,12 @@ typedef struct MAGIK_ALIGN4 magik_command_set_view_transform_agx_look_t
 // ########################
 // ### 7000-7999 Render ###
 // ########################
+typedef struct MAGIK_ALIGN4 magik_command_set_n_sample_limit_t
+{
+    magik_command_header_t header; // MAGIK_COMMAND_SET_N_SAMPLE_LIMIT;
+    uint32_t n_sample_limit;
+} magik_command_set_n_sample_limit_t;
+
 typedef struct MAGIK_ALIGN4 magik_command_set_n_geodesic_step_limit_t
 {
     magik_command_header_t header; // MAGIK_COMMAND_SET_N_GEODESIC_STEP_LIMIT;
